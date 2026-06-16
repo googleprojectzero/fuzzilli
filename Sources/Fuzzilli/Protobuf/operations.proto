@@ -1481,7 +1481,6 @@ message WasmEndTypeGroup {
 message WasmDefineSignatureType {
     repeated WasmILType parameterTypes = 1;
     repeated WasmILType outputTypes = 2;
-    bool hasSuperType = 3;
 }
 
 message WasmDefineAdHocSignatureType {

@@ -5794,8 +5794,6 @@ public struct Fuzzilli_Protobuf_WasmDefineSignatureType: Sendable {
 
   public var outputTypes: [Fuzzilli_Protobuf_WasmILType] = []
 
-  public var hasSuperType_p: Bool = false
-
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -15386,7 +15384,7 @@ extension Fuzzilli_Protobuf_WasmEndTypeGroup: SwiftProtobuf.Message, SwiftProtob
 
 extension Fuzzilli_Protobuf_WasmDefineSignatureType: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmDefineSignatureType"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}parameterTypes\0\u{1}outputTypes\0\u{1}hasSuperType\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}parameterTypes\0\u{1}outputTypes\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -15396,7 +15394,6 @@ extension Fuzzilli_Protobuf_WasmDefineSignatureType: SwiftProtobuf.Message, Swif
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.parameterTypes) }()
       case 2: try { try decoder.decodeRepeatedMessageField(value: &self.outputTypes) }()
-      case 3: try { try decoder.decodeSingularBoolField(value: &self.hasSuperType_p) }()
       default: break
       }
     }
@@ -15409,16 +15406,12 @@ extension Fuzzilli_Protobuf_WasmDefineSignatureType: SwiftProtobuf.Message, Swif
     if !self.outputTypes.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.outputTypes, fieldNumber: 2)
     }
-    if self.hasSuperType_p != false {
-      try visitor.visitSingularBoolField(value: self.hasSuperType_p, fieldNumber: 3)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmDefineSignatureType, rhs: Fuzzilli_Protobuf_WasmDefineSignatureType) -> Bool {
     if lhs.parameterTypes != rhs.parameterTypes {return false}
     if lhs.outputTypes != rhs.outputTypes {return false}
-    if lhs.hasSuperType_p != rhs.hasSuperType_p {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -1623,12 +1623,8 @@ public class FuzzILLifter: Lifter {
             w.emit("\(outputs) <- WasmEndTypeGroup [\(inputs)]")
 
         case .wasmDefineSignatureType(let op):
-            let superTypeInput = op.hasSuperType ? " superType=\(lift(instr.inputs.first!))" : ""
-            let sigInputs = (op.hasSuperType ? instr.inputs.dropFirst() : instr.inputs).map(lift)
-                .joined(separator: ", ")
-            w.emit(
-                "\(output()) <- WasmDefineSignatureType(\(op.signature))\(superTypeInput) [\(sigInputs)]"
-            )
+            let inputs = instr.inputs.map(lift).joined(separator: ", ")
+            w.emit("\(output()) <- WasmDefineSignatureType(\(op.signature)) [\(inputs)]")
 
         case .wasmDefineAdHocSignatureType(let op):
             let inputs = instr.inputs.map(lift).joined(separator: ", ")

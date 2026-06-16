@@ -1682,16 +1682,6 @@ class TypeSystemTests: XCTestCase {
         XCTAssertFalse(subStructDescMultiWidthAndDepth.subsumes(superStructDescMulti))
     }
 
-    func testWasmSignatureSubtypingRules() {
-        let superSigDesc = WasmSignatureTypeDescription(
-            signature: [] => [], typeGroupIndex: 0)
-        let subSigDesc = WasmSignatureTypeDescription(
-            signature: [] => [], typeGroupIndex: 1, concreteHeapSupertype: superSigDesc)
-
-        XCTAssertTrue(superSigDesc.subsumes(subSigDesc))
-        XCTAssertFalse(subSigDesc.subsumes(superSigDesc))
-    }
-
     func testWasmTypeExtensionUnionTypeExtensionVsWasmTypeExtension() {
         let tagA = ILType.object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmi32]))
         let tagB = ILType.object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmi64]))

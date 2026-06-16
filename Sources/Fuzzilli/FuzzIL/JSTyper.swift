@@ -513,9 +513,7 @@ public struct JSTyper: Analyzer {
     }
 
     mutating func addSignatureType(
-        def: Variable, signature: WasmSignature, inputs: ArraySlice<Variable>,
-        isAdHoc: Bool = false,
-        concreteHeapSupertype: WasmTypeDescription? = nil
+        def: Variable, signature: WasmSignature, inputs: ArraySlice<Variable>, isAdHoc: Bool = false
     ) {
         assert(isWithinTypeGroup)
         var inputs = inputs.makeIterator()
@@ -573,8 +571,7 @@ public struct JSTyper: Analyzer {
                 description: WasmSignatureTypeDescription(
                     signature: resolvedParameterTypes => resolvedOutputTypes,
                     typeGroupIndex: tgIndex,
-                    isAdHoc: isAdHoc,
-                    concreteHeapSupertype: concreteHeapSupertype)))
+                    isAdHoc: isAdHoc)))
         typeGroups[typeGroups.count - 1].append(def)
     }
 
@@ -2608,12 +2605,7 @@ public struct JSTyper: Analyzer {
             }
 
         case .wasmDefineSignatureType(let op):
-            let concreteHeapSupertype =
-                op.hasSuperType ? getTypeDescription(of: instr.inputs.first!) : nil
-            let sigInputs = op.hasSuperType ? instr.inputs.dropFirst() : instr.inputs
-            addSignatureType(
-                def: instr.output, signature: op.signature, inputs: sigInputs,
-                concreteHeapSupertype: concreteHeapSupertype)
+            addSignatureType(def: instr.output, signature: op.signature, inputs: instr.inputs)
 
         case .wasmDefineArrayType(let op):
             let elementRef = op.elementType.requiredInputCount() == 1 ? instr.inputs.last! : nil
