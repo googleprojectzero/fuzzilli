@@ -5005,7 +5005,7 @@ class LifterTests: XCTestCase {
         let actual = fuzzer.lifter.lift(program)
 
         // Verify that it produced a Wasm module instantiation with the correct header
-        XCTAssertEqual(actual, ("0x00, 0x61, 0x73, 0x6D"))
+        XCTAssert(actual.contains("0x00, 0x61, 0x73, 0x6D"))
     }
 
     func testNestedDestructuringLifting() {
