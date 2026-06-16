@@ -412,6 +412,47 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testExponentiationWithNegativeNumberLHS() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.loadInt(-4)
+        let v1 = b.loadFloat(4.3)
+        let _ = b.binary(v0, v1, with: .Exp)
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        // We expect the negative number to be wrapped in parentheses.
+        let expected = """
+            (-4) ** 4.3;
+
+            """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testExponentiationWithUnaryOperatorLHS() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.loadInt(4)
+        let v1 = b.unary(.Minus, v0)
+        let v2 = b.loadFloat(4.3)
+        let _ = b.binary(v1, v2, with: .Exp)
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        // We expect the unary expression to be wrapped in parentheses.
+        let expected = """
+            (-4) ** 4.3;
+
+            """
+
+        XCTAssertEqual(actual, expected)
+    }
+
     func testExpressionUninlining() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()

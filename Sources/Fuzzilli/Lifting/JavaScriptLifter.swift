@@ -1101,9 +1101,11 @@ public class JavaScriptLifter: Lifter {
             case .binaryOperation(let op):
                 var lhs = input(0)
                 let rhs = input(1)
-                // Special case: we need parenthesis when performing an exponentiation on a negative number literal, otherwise we get a syntax error:
+                // Special case: we need parenthesis when performing an exponentiation on a negative number literal or a unary expression, otherwise we get a syntax error:
                 // "Unary operator used immediately before exponentiation expression. Parenthesis must be used to disambiguate operator precedence"
-                if op.op == .Exp && lhs.type === NegativeNumberLiteral {
+                if op.op == .Exp
+                    && (lhs.type === NegativeNumberLiteral || lhs.type === UnaryExpression)
+                {
                     lhs = NumberLiteral.new("(\(lhs.text))")
                 }
                 let expr = BinaryExpression.new() + lhs + " " + op.op.token + " " + rhs
