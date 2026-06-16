@@ -12,36 +12,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import XCTest
+import Testing
 
 @testable import Fuzzilli
 
-class TypeSystemTests: XCTestCase {
+struct TypeSystemTests {
 
+    @Test
     func testSymbolGroups() {
-        XCTAssert(ILType.jsSymbol(ofGroup: "Symbol.dispose").Is(.jsSymbol))
-        XCTAssertEqual(ILType.jsSymbol(ofGroup: "Symbol.dispose").union(with: .jsSymbol), .jsSymbol)
-        XCTAssertEqual(ILType.jsSymbol.union(with: .jsSymbol(ofGroup: "Symbol.dispose")), .jsSymbol)
-        XCTAssertEqual(
-            ILType.jsSymbol(ofGroup: "Symbol.dispose").intersection(with: .jsSymbol),
-            .jsSymbol(ofGroup: "Symbol.dispose"))
-        XCTAssertEqual(
-            ILType.jsSymbol.intersection(with: .jsSymbol(ofGroup: "Symbol.dispose")),
-            .jsSymbol(ofGroup: "Symbol.dispose"))
+        #expect(ILType.jsSymbol(ofGroup: "Symbol.dispose").Is(.jsSymbol))
+        #expect(ILType.jsSymbol(ofGroup: "Symbol.dispose").union(with: .jsSymbol) == .jsSymbol)
+        #expect(ILType.jsSymbol.union(with: .jsSymbol(ofGroup: "Symbol.dispose")) == .jsSymbol)
+        #expect(
+            ILType.jsSymbol(ofGroup: "Symbol.dispose").intersection(with: .jsSymbol)
+                == .jsSymbol(ofGroup: "Symbol.dispose"))
+        #expect(
+            ILType.jsSymbol.intersection(with: .jsSymbol(ofGroup: "Symbol.dispose"))
+                == .jsSymbol(ofGroup: "Symbol.dispose"))
     }
 
+    @Test
     func testSubsumptionReflexivity() {
         for t in typeSuite {
-            XCTAssert(t >= t, "\(t) >= \(t)")
+            #expect(t >= t, "\(t) >= \(t)")
         }
     }
 
+    @Test
     func testSubsumptionTransitivity() {
         for t1 in typeSuite {
             for t2 in typeSuite {
                 for t3 in typeSuite {
                     if t1 >= t2 && t2 >= t3 {
-                        XCTAssert(
+                        #expect(
                             t1 >= t3, "\(t1) >= \(t2) && \(t2) >= \(t3) implies \(t1) => \(t3)")
                     }
                 }
@@ -49,160 +52,160 @@ class TypeSystemTests: XCTestCase {
         }
     }
 
+    @Test
     func testSubsumptionAntisymmetry() {
         for t1 in typeSuite {
             for t2 in typeSuite {
                 if t1 >= t2 && t2 >= t1 {
-                    XCTAssert(t1 == t2, "\(t1) >= \(t2) && \(t2) >= \(t1) implies \(t1) == \(t2)")
+                    #expect(t1 == t2, "\(t1) >= \(t2) && \(t2) >= \(t1) implies \(t1) == \(t2)")
                 } else if t1 >= t2 {
-                    XCTAssertFalse(
-                        t2 >= t1, "\(t1) >= \(t2) && \(t1) != \(t2) implies \(t2) !>= \(t1)")
+                    #expect(!(t2 >= t1), "\(t1) >= \(t2) && \(t1) != \(t2) implies \(t2) !>= \(t1)")
                 }
             }
         }
     }
 
+    @Test
     func testTypeEquality() {
         // Do some ad-hoc tests
-        XCTAssert(.integer == .integer)
-        XCTAssert(.integer != .float)
+        #expect(.integer == .integer)
+        #expect(.integer != .float)
 
-        XCTAssert(.object() == .object())
-        XCTAssert(.object(withProperties: ["foo"]) == .object(withProperties: ["foo"]))
-        XCTAssert(.object(withProperties: ["foo"]) != .object(withProperties: ["bar"]))
-        XCTAssert(.object(withProperties: ["foo"]) != .object())
-        XCTAssert(.object(withProperties: ["x"]) != .object(withMethods: ["x"]))
-        XCTAssert(.object(withMethods: ["m1"]) == .object(withMethods: ["m1"]))
-        XCTAssert(.object(withMethods: ["m1"]) != .object(withMethods: ["m2"]))
-        XCTAssert(.object(withMethods: ["m1"]) != .object())
+        #expect(.object() == .object())
+        #expect(.object(withProperties: ["foo"]) == .object(withProperties: ["foo"]))
+        #expect(.object(withProperties: ["foo"]) != .object(withProperties: ["bar"]))
+        #expect(.object(withProperties: ["foo"]) != .object())
+        #expect(.object(withProperties: ["x"]) != .object(withMethods: ["x"]))
+        #expect(.object(withMethods: ["m1"]) == .object(withMethods: ["m1"]))
+        #expect(.object(withMethods: ["m1"]) != .object(withMethods: ["m2"]))
+        #expect(.object(withMethods: ["m1"]) != .object())
 
-        XCTAssert(.function() == .function())
-        XCTAssert(
+        #expect(.function() == .function())
+        #expect(
             .function([.integer, .rest(.integer)] => .undefined)
                 == .function([.integer, .rest(.integer)] => .undefined))
-        XCTAssert(.function([.integer, .rest(.integer)] => .undefined) != .function())
+        #expect(.function([.integer, .rest(.integer)] => .undefined) != .function())
 
         // Test equality properties for all types in the test suite
         for t1 in typeSuite {
             for t2 in typeSuite {
                 if t1 == t2 {
-                    XCTAssert(t1 >= t2, "\(t1) == \(t2) implies \(t1) >= \(t2)")
-                    XCTAssert(t2 >= t1, "\(t1) == \(t2) implies \(t2) >= \(t1)")
+                    #expect(t1 >= t2, "\(t1) == \(t2) implies \(t1) >= \(t2)")
+                    #expect(t2 >= t1, "\(t1) == \(t2) implies \(t2) >= \(t1)")
                 } else {
-                    XCTAssertFalse(
-                        t1 >= t2 && t2 >= t1,
+                    #expect(
+                        !(t1 >= t2 && t2 >= t1),
                         "\(t1) != \(t2) implies !(\(t1) >= \(t2) && \(t2) >= \(t1))")
                 }
             }
         }
     }
 
+    @Test
     func testSubsumptionOperators() {
         // Test that the >= and <= operators and the .subsumes method
         // behave as expected for all types in the test suite
         for t1 in typeSuite {
             for t2 in typeSuite {
                 if t1 >= t2 {
-                    XCTAssert(t1.subsumes(t2))
-                    XCTAssert(t2 <= t1, "\(t1) >= \(t2) implies \(t2) <= \(t1)")
+                    #expect(t1.subsumes(t2))
+                    #expect(t2 <= t1, "\(t1) >= \(t2) implies \(t2) <= \(t1)")
                 } else if t2 >= t1 {
-                    XCTAssert(t2.subsumes(t1))
-                    XCTAssert(t1 <= t2, "\(t2) >= \(t1) implies \(t1) <= \(t2)")
+                    #expect(t2.subsumes(t1))
+                    #expect(t1 <= t2, "\(t2) >= \(t1) implies \(t1) <= \(t2)")
                 } else {
-                    XCTAssertFalse(t1.subsumes(t2) || t2.subsumes(t1))
+                    #expect(!(t1.subsumes(t2) || t2.subsumes(t1)))
                 }
             }
         }
     }
 
+    @Test
     func testIsAndMayBe() {
         // An A Is a B iff A <= B.
         // E.g. a object with a property "foo" is an object
-        XCTAssert(ILType.object(withProperties: ["foo"]).Is(.object()))
+        #expect(ILType.object(withProperties: ["foo"]).Is(.object()))
         // and an integer is a number
-        XCTAssert(ILType.integer.Is(.number))
+        #expect(ILType.integer.Is(.number))
         // but an integer is not an object
-        XCTAssertFalse(ILType.integer.Is(.object()))
+        #expect(!ILType.integer.Is(.object()))
         // and is also not a boolean
-        XCTAssertFalse(ILType.integer.Is(.boolean))
+        #expect(!ILType.integer.Is(.boolean))
         // and a boolean is not a number
-        XCTAssertFalse(ILType.boolean.Is(.number))
+        #expect(!ILType.boolean.Is(.number))
         // but an integer is a number
-        XCTAssert(ILType.integer.Is(.number))
-        XCTAssertFalse(ILType.integer.MayNotBe(.number))
+        #expect(ILType.integer.Is(.number))
+        #expect(!ILType.integer.MayNotBe(.number))
         // even though a number may not be an integer (it could also be a float)
-        XCTAssert(ILType.number.MayNotBe(.integer))
+        #expect(ILType.number.MayNotBe(.integer))
         // A function f1 is a function f2 if the signatures are compatible, such that f1
         // can be used when a function f2 is required (i.e. if the call to the functions
         // assumes the function has the signature of f2).
         // See also the signature subsumption test for more complicated examples.
-        XCTAssert(ILType.function([.jsAnything] => .integer).Is(.function([.integer] => .number)))
-        XCTAssertFalse(
-            ILType.function([.integer] => .integer).Is(.function([.jsAnything] => .number)))
-        XCTAssertFalse(
-            ILType.function([.jsAnything] => .number).Is(.function([.jsAnything] => .integer)))
+        #expect(ILType.function([.jsAnything] => .integer).Is(.function([.integer] => .number)))
+        #expect(!ILType.function([.integer] => .integer).Is(.function([.jsAnything] => .number)))
+        #expect(!ILType.function([.jsAnything] => .number).Is(.function([.jsAnything] => .integer)))
 
         for t1 in typeSuite {
             for t2 in typeSuite {
                 if t1 >= t2 {
-                    XCTAssert(t2.Is(t1), "\(t1) >= \(t2) <=> (\(t2)).Is(\(t1))")
-                    XCTAssertFalse(t2.MayNotBe(t1), "\(t1) >= \(t2) <=> !((\(t2)).MayNotBe(\(t1)))")
+                    #expect(t2.Is(t1), "\(t1) >= \(t2) <=> (\(t2)).Is(\(t1))")
+                    #expect(!t2.MayNotBe(t1), "\(t1) >= \(t2) <=> !(\(t2)).MayNotBe(\(t1))")
                 } else {
-                    XCTAssertFalse(t2.Is(t1), "\(t1) >= \(t2) <=> (\(t2)).Is(\(t1))")
-                    XCTAssert(t2.MayNotBe(t1), "\(t1) >= \(t2) <=> !((\(t2)).MayNotBe(\(t1)))")
+                    #expect(!t2.Is(t1), "\(t1) >= \(t2) <=> (\(t2)).Is(\(t1))")
+                    #expect(t2.MayNotBe(t1), "\(t1) >= \(t2) <=> !(\(t2)).MayNotBe(\(t1))")
                 }
 
                 if t2.Is(t1) {
-                    XCTAssertFalse(
-                        t2.MayNotBe(t1), "(\(t2)).Is(\(t1)) <=> !((\(t2)).MayNotBe(\(t1)))")
-                    XCTAssert(t1 >= t2, "\(t1) >= \(t2) <=> (\(t2)).Is(\(t1))")
+                    #expect(!t2.MayNotBe(t1), "(\(t2)).Is(\(t1)) <=> !(\(t2)).MayNotBe(\(t1))")
+                    #expect(t1 >= t2, "\(t1) >= \(t2) <=> (\(t2)).Is(\(t1))")
                 } else {
-                    XCTAssertFalse(t1 >= t2, "\(t1) >= \(t2) <=> (\(t2)).Is(\(t1))")
-                    XCTAssert(t2.MayNotBe(t1), "(\(t2)).Is(\(t1)) <=> !((\(t2)).MayNotBe(\(t1)))")
+                    #expect(!(t1 >= t2), "\(t1) >= \(t2) <=> (\(t2)).Is(\(t1))")
+                    #expect(t2.MayNotBe(t1), "(\(t2)).Is(\(t1)) <=> !(\(t2)).MayNotBe(\(t1))")
                 }
             }
         }
 
         // An A MayBe a B iff the intersection between A and B is non-empty.
         // E.g. a .primitive MayBe a .number because the intersection of the two is non-empty (is .number).
-        XCTAssert(ILType.primitive.MayBe(.number))
+        #expect(ILType.primitive.MayBe(.number))
         // and a .number MayBe a .integer or a .float
-        XCTAssert(ILType.number.MayBe(.integer))
-        XCTAssert(ILType.number.MayBe(.float))
+        #expect(ILType.number.MayBe(.integer))
+        #expect(ILType.number.MayBe(.float))
         // but a number can never be a .boolean or a .object etc.
-        XCTAssertFalse(ILType.number.MayBe(.boolean))
-        XCTAssertFalse(ILType.number.MayBe(.object()))
+        #expect(!ILType.number.MayBe(.boolean))
+        #expect(!ILType.number.MayBe(.object()))
         // The union of two types MayBe eiher of the two types. Phrased differently,
         // if something is either a number or a boolean, then it may be either of these.
-        XCTAssert((.integer | .boolean).MayBe(.integer))
-        XCTAssert((.integer | .boolean).MayBe(.boolean))
+        #expect((.integer | .boolean).MayBe(.integer))
+        #expect((.integer | .boolean).MayBe(.boolean))
         // But it may still not be a string.
-        XCTAssertFalse((.integer | .boolean).MayBe(.string))
+        #expect(!(.integer | .boolean).MayBe(.string))
         // Less obviously, an object MayBe an object with a property "foo"
-        XCTAssert(ILType.object().MayBe(.object(withProperties: ["foo"])))
+        #expect(ILType.object().MayBe(.object(withProperties: ["foo"])))
         // and a function that takes an integer may be a function that also takes anything as first parameter.
         // The way to think about is is (probably) that a function taking .jsAnything may still be called
         // with a .integer as argument. However, from a practical point of view the function that takes .integer
         // may in fact also be fine with a different argument.
-        XCTAssert(
+        #expect(
             ILType.function([.integer] => .jsAnything).MayBe(
                 .function([.jsAnything] => .jsAnything)))
         // But (at least from a theoretical point-of-view) a function taking a .integer is definitely not a function
         // that takes (only) a string as first parameter.
-        XCTAssertFalse(
-            ILType.function([.integer] => .jsAnything).MayBe(.function([.string] => .jsAnything)))
+        #expect(
+            !ILType.function([.integer] => .jsAnything).MayBe(.function([.string] => .jsAnything)))
 
-        XCTAssert((ILType.integer | ILType.boolean).MayBe(ILType.integer | ILType.string))
-        XCTAssertFalse((ILType.integer + ILType.object()).MayBe(ILType.string + ILType.object()))
+        #expect((ILType.integer | ILType.boolean).MayBe(ILType.integer | ILType.string))
+        #expect(!(ILType.integer + ILType.object()).MayBe(ILType.string + ILType.object()))
 
         // An object with properties .a and .b Is definitely an object with property .a. However, an
         // object with property .a MayBe an object with properties .a and .b.
         let o1 = ILType.object(withProperties: ["a", "b"], withMethods: ["m", "n"])
         let o2 = ILType.object(withProperties: ["a"], withMethods: ["m"])
-        XCTAssert(o1.Is(o2))
-        XCTAssertFalse(o2.Is(o1))
-        XCTAssert(o1.MayBe(o2))
-        XCTAssert(o2.MayBe(o2))
+        #expect(o1.Is(o2))
+        #expect(!o2.Is(o1))
+        #expect(o1.MayBe(o2))
+        #expect(o2.MayBe(o2))
 
         for t1 in typeSuite {
             for t2 in typeSuite {
@@ -214,24 +217,23 @@ class TypeSystemTests: XCTestCase {
 
                 // If t2 is a t1 then it clearly may be a t1.
                 if t2.Is(t1) {
-                    XCTAssert(t2.MayBe(t1), "(\(t2)).Is(a: \(t1)) => (\(t2)).MayBe(\(t1))")
+                    #expect(t2.MayBe(t1), "(\(t2)).Is(a: \(t1)) => (\(t2)).MayBe(\(t1))")
                 }
 
                 if t1 & t2 != .nothing {
-                    XCTAssert(t2.MayBe(t1), "\(t1) & \(t2) != .nothing <=> (\(t2)).MayBe(\(t1))")
+                    #expect(t2.MayBe(t1), "\(t1) & \(t2) != .nothing <=> (\(t2)).MayBe(\(t1))")
                 } else {
-                    XCTAssertFalse(
-                        t2.MayBe(t1), "\(t1) & \(t2) == .nothing <=> !(\(t2)).MayBe(\(t1))")
+                    #expect(!t2.MayBe(t1), "\(t1) & \(t2) == .nothing <=> !(\(t2)).MayBe(\(t1))")
                 }
 
-                XCTAssert((t1 | t2).MayBe(t1), "A union type may be one of its parts")
-                XCTAssert((t1 | t2).MayBe(t2), "A union type may be one of its parts")
+                #expect((t1 | t2).MayBe(t1), "A union type may be one of its parts")
+                #expect((t1 | t2).MayBe(t2), "A union type may be one of its parts")
 
                 if t2.MayBe(t1) {
-                    XCTAssert(
+                    #expect(
                         t1 & t2 != .nothing, "\(t1) & \(t2) != .nothing <=> (\(t2)).MayBe(\(t1))")
                 } else {
-                    XCTAssert(
+                    #expect(
                         t1 & t2 == .nothing, "\(t1) & \(t2) == .nothing <=> !(\(t2)).MayBe(\(t1))")
                 }
             }
@@ -239,50 +241,53 @@ class TypeSystemTests: XCTestCase {
 
         // .jsAnything MayBe anything (in JS), but definitely is only .jsAnything
         for t in typeSuite where t != .jsAnything && t != .nothing {
-            XCTAssert(ILType.jsAnything.MayBe(t) || t.Is(.wasmAnything), ".jsAnything MayBe \(t)")
-            XCTAssertFalse(ILType.jsAnything.Is(t), ".jsAnything Is not definitely \(t)")
+            #expect(ILType.jsAnything.MayBe(t) || t.Is(.wasmAnything), ".jsAnything MayBe \(t)")
+            #expect(!ILType.jsAnything.Is(t), ".jsAnything Is not definitely \(t)")
         }
 
         // .wasmAnything MayBe anything (in Wasm), but definitely is only .wasmAnything
         for t in typeSuite where t != .wasmAnything && t != .nothing {
-            XCTAssert(ILType.wasmAnything.MayBe(t) || t.Is(.jsAnything), ".wasmAnything MayBe \(t)")
-            XCTAssertFalse(ILType.wasmAnything.Is(t), ".jsAnything Is not definitely \(t)")
+            #expect(ILType.wasmAnything.MayBe(t) || t.Is(.jsAnything), ".wasmAnything MayBe \(t)")
+            #expect(!ILType.wasmAnything.Is(t), ".jsAnything Is not definitely \(t)")
         }
     }
 
+    @Test
     func testPrimitiveTypeSubsumption() {
         for t1 in primitiveTypes {
             for t2 in primitiveTypes {
                 if t1 == t2 {
-                    XCTAssert(t1 >= t2 && t2 >= t1)
+                    #expect(t1 >= t2 && t2 >= t1)
                 } else {
-                    XCTAssertFalse(t1 >= t2 || t2 >= t1)
+                    #expect(!(t1 >= t2 || t2 >= t1))
                 }
             }
         }
     }
 
+    @Test
     func testAnythingAndNothingSubsumption() {
         for t in typeSuite {
             // .jsAnything subsumes every other type and no other type subsumes .jsAnything
-            XCTAssert(.jsAnything >= t || t.Is(.wasmAnything))
+            #expect(.jsAnything >= t || t.Is(.wasmAnything))
             if t != .jsAnything {
-                XCTAssertFalse(t >= .jsAnything)
+                #expect(!(t >= .jsAnything))
             }
 
-            XCTAssert(.wasmAnything >= t || t.Is(.jsAnything))
+            #expect(.wasmAnything >= t || t.Is(.jsAnything))
             if t != .wasmAnything {
-                XCTAssertFalse(t >= .wasmAnything)
+                #expect(!(t >= .wasmAnything))
             }
 
             // .nothing is subsumed by all types and subsumes no other type but itself
-            XCTAssert(t >= .nothing)
+            #expect(t >= .nothing)
             if t != .nothing {
-                XCTAssertFalse(.nothing >= t)
+                #expect(!(.nothing >= t))
             }
         }
     }
 
+    @Test
     func testObjectTypeSubsumption() {
         // Verify that object type A >= object type B implies that B has at least
         // the properties and methods of A.
@@ -297,8 +302,8 @@ class TypeSystemTests: XCTestCase {
                 // (a FooBar object is a Foo object because it has a property "foo").
                 // .nothing must be excluded here though, because .nothing is also an object.
                 if t1 >= t2 && t2 != .nothing {
-                    XCTAssert(t1.properties.isSubset(of: t2.properties))
-                    XCTAssert(t1.methods.isSubset(of: t2.methods))
+                    #expect(t1.properties.isSubset(of: t2.properties))
+                    #expect(t1.methods.isSubset(of: t2.methods))
                 }
 
                 // The opposite direction holds if the base types are equal and if the groups are compatible.
@@ -308,7 +313,7 @@ class TypeSystemTests: XCTestCase {
                     if t1.properties.isSubset(of: t2.properties)
                         && t1.methods.isSubset(of: t2.methods) && t1.wasmType == t2.wasmType
                     {
-                        XCTAssert(t1 >= t2, "\(t1) >= \(t2)")
+                        #expect(t1 >= t2, "\(t1) >= \(t2)")
                     }
                 }
             }
@@ -352,150 +357,152 @@ class TypeSystemTests: XCTestCase {
                 withProperties: fooBazProperties, withMethods: fooBazMethods)
 
             // Foo, Bar, Baz, FooBar, and FooBaz objects are all objects, but not every object is a Foo, Bar, Baz, FooBar, or FooBaz object.
-            XCTAssert(object >= fooObj)
-            XCTAssertFalse(fooObj >= object)
-            XCTAssert(object >= barObj)
-            XCTAssertFalse(barObj >= object)
-            XCTAssert(object >= bazObj)
-            XCTAssertFalse(bazObj >= object)
-            XCTAssert(object >= fooBarObj)
-            XCTAssertFalse(fooBarObj >= object)
-            XCTAssert(object >= fooBazObj)
-            XCTAssertFalse(fooBazObj >= object)
+            #expect(object >= fooObj)
+            #expect(!(fooObj >= object))
+            #expect(object >= barObj)
+            #expect(!(barObj >= object))
+            #expect(object >= bazObj)
+            #expect(!(bazObj >= object))
+            #expect(object >= fooBarObj)
+            #expect(!(fooBarObj >= object))
+            #expect(object >= fooBazObj)
+            #expect(!(fooBazObj >= object))
 
             // Order of property and methods names does not matter.
-            XCTAssert(
+            #expect(
                 fooBarObj
                     >= ILType.object(withProperties: fooBarProperties, withMethods: fooBarMethods))
-            XCTAssert(
+            #expect(
                 fooBarObj
                     >= ILType.object(
                         withProperties: fooBarProperties.reversed(),
                         withMethods: fooBarMethods.reversed()))
-            XCTAssert(
+            #expect(
                 fooBarObj
                     == ILType.object(withProperties: fooBarProperties, withMethods: fooBarMethods))
-            XCTAssert(
+            #expect(
                 fooBarObj
                     == ILType.object(
                         withProperties: fooBarProperties.reversed(),
                         withMethods: fooBarMethods.reversed()))
 
             // No subsumption relationship between Foo, Bar, and Baz objects
-            XCTAssertFalse(fooObj >= barObj)
-            XCTAssertFalse(fooObj >= bazObj)
-            XCTAssertFalse(barObj >= fooObj)
-            XCTAssertFalse(barObj >= bazObj)
-            XCTAssertFalse(bazObj >= fooObj)
-            XCTAssertFalse(bazObj >= barObj)
+            #expect(!(fooObj >= barObj))
+            #expect(!(fooObj >= bazObj))
+            #expect(!(barObj >= fooObj))
+            #expect(!(barObj >= bazObj))
+            #expect(!(bazObj >= fooObj))
+            #expect(!(bazObj >= barObj))
 
             // ... However, their unions are still objects
-            XCTAssert(object >= fooObj | barObj)
-            XCTAssert(object >= fooObj | bazObj)
-            XCTAssert(object >= barObj | bazObj)
-            XCTAssert(object >= fooObj | barObj | bazObj)
+            #expect(object >= fooObj | barObj)
+            #expect(object >= fooObj | bazObj)
+            #expect(object >= barObj | bazObj)
+            #expect(object >= fooObj | barObj | bazObj)
 
             // ... And their merged type is a Foo, Bar, and Baz object
-            XCTAssert(fooObj >= fooObj + barObj + bazObj)
-            XCTAssert(barObj >= fooObj + barObj + bazObj)
-            XCTAssert(bazObj >= fooObj + barObj + bazObj)
+            #expect(fooObj >= fooObj + barObj + bazObj)
+            #expect(barObj >= fooObj + barObj + bazObj)
+            #expect(bazObj >= fooObj + barObj + bazObj)
 
             // ... Moreover, Foo objects merged with Bar objects yields FooBar objects. Same for Foo and Baz.
-            XCTAssert(fooBarObj == fooObj + barObj)
-            XCTAssert(fooBazObj == fooObj + bazObj)
+            #expect(fooBarObj == fooObj + barObj)
+            #expect(fooBazObj == fooObj + bazObj)
 
             // The intersection of FooBar and Foo or Bar objects again yield FooBar objects as they are a subtype. Same for FooBaz.
-            XCTAssert(fooBarObj & fooObj == fooBarObj)
-            XCTAssert(fooBarObj & barObj == fooBarObj)
-            XCTAssert(fooBazObj & fooObj == fooBazObj)
-            XCTAssert(fooBazObj & bazObj == fooBazObj)
+            #expect(fooBarObj & fooObj == fooBarObj)
+            #expect(fooBarObj & barObj == fooBarObj)
+            #expect(fooBazObj & fooObj == fooBazObj)
+            #expect(fooBazObj & bazObj == fooBazObj)
 
             // ... However, the other intersections are empty.
-            XCTAssert(fooObj & barObj == .nothing)
-            XCTAssert(fooObj & bazObj == .nothing)
-            XCTAssert(barObj & bazObj == .nothing)
-            XCTAssert(barObj & fooBazObj == .nothing)
-            XCTAssert(bazObj & fooBarObj == .nothing)
-            XCTAssert(fooBarObj & fooBazObj == .nothing)
+            #expect(fooObj & barObj == .nothing)
+            #expect(fooObj & bazObj == .nothing)
+            #expect(barObj & bazObj == .nothing)
+            #expect(barObj & fooBazObj == .nothing)
+            #expect(bazObj & fooBarObj == .nothing)
+            #expect(fooBarObj & fooBazObj == .nothing)
 
             // FooBar objects are Foo objects but not every Foo object is a FooBar object. Same for FooBar and Bar objects.
-            XCTAssert(fooObj >= fooBarObj)
-            XCTAssertFalse(fooBarObj >= fooObj)
-            XCTAssert(barObj >= fooBarObj)
-            XCTAssertFalse(fooBarObj >= barObj)
+            #expect(fooObj >= fooBarObj)
+            #expect(!(fooBarObj >= fooObj))
+            #expect(barObj >= fooBarObj)
+            #expect(!(fooBarObj >= barObj))
 
             // Same as above, but for FooBaz, Foo, and Baz objects.
-            XCTAssert(fooObj >= fooBazObj)
-            XCTAssertFalse(fooBazObj >= fooObj)
-            XCTAssert(bazObj >= fooBazObj)
-            XCTAssertFalse(fooBazObj >= bazObj)
+            #expect(fooObj >= fooBazObj)
+            #expect(!(fooBazObj >= fooObj))
+            #expect(bazObj >= fooBazObj)
+            #expect(!(fooBazObj >= bazObj))
 
             // FooBar objects are not Baz objects and FooBaz objects are not Bar objects.
-            XCTAssertFalse(bazObj >= fooBarObj)
-            XCTAssertFalse(barObj >= fooBazObj)
+            #expect(!(bazObj >= fooBarObj))
+            #expect(!(barObj >= fooBazObj))
 
             // There is no subsumption relationship between FooBar and FooBaz objects
-            XCTAssertFalse(fooBarObj >= fooBazObj)
-            XCTAssertFalse(fooBazObj >= fooBarObj)
+            #expect(!(fooBarObj >= fooBazObj))
+            #expect(!(fooBazObj >= fooBarObj))
 
             // ... However, their union is still a Foo object
-            XCTAssert(fooObj >= fooBarObj | fooBazObj)
+            #expect(fooObj >= fooBarObj | fooBazObj)
 
             // ... And their merged type is a FooBar and a FooBaz object
-            XCTAssert(fooBarObj >= fooBarObj + fooBazObj)
-            XCTAssert(fooBazObj >= fooBarObj + fooBazObj)
+            #expect(fooBarObj >= fooBarObj + fooBazObj)
+            #expect(fooBazObj >= fooBarObj + fooBazObj)
 
             //... in particular, it is a FooBarBaz object.
             let fooBarBazProperties = fooProperties + barProperties + bazProperties
             let fooBarBazMethods = fooMethods + barMethods + bazMethods
-            XCTAssert(fooObj + barObj + bazObj == fooBarObj + fooBazObj)
-            XCTAssert(
+            #expect(fooObj + barObj + bazObj == fooBarObj + fooBazObj)
+            #expect(
                 fooBarObj + fooBazObj
                     == .object(withProperties: fooBarBazProperties, withMethods: fooBarBazMethods))
         }
     }
 
+    @Test
     func testObjectInspection() {
         let aObj = ILType.object(ofGroup: "A", withProperties: ["foo"], withMethods: ["m1", "m2"])
         let bObj = ILType.object(ofGroup: "B", withProperties: ["foo", "bar"])
 
-        XCTAssert(aObj.properties.contains("foo"))
-        XCTAssert(bObj.properties.contains("bar"))
-        XCTAssert(bObj.properties.contains("foo"))
+        #expect(aObj.properties.contains("foo"))
+        #expect(bObj.properties.contains("bar"))
+        #expect(bObj.properties.contains("foo"))
 
-        XCTAssert(aObj.numProperties == 1)
-        XCTAssert(aObj.numMethods == 2)
-        XCTAssert(bObj.numProperties == 2)
-        XCTAssert(bObj.numMethods == 0)
+        #expect(aObj.numProperties == 1)
+        #expect(aObj.numMethods == 2)
+        #expect(bObj.numProperties == 2)
+        #expect(bObj.numMethods == 0)
 
         // We can be more precise.
-        XCTAssert(aObj.properties == ["foo"])
-        XCTAssert(bObj.properties == ["foo", "bar"])
+        #expect(aObj.properties == ["foo"])
+        #expect(bObj.properties == ["foo", "bar"])
 
-        XCTAssert(aObj.methods.contains("m1"))
-        XCTAssert(aObj.methods.contains("m2"))
+        #expect(aObj.methods.contains("m1"))
+        #expect(aObj.methods.contains("m2"))
 
-        XCTAssert(aObj.methods == ["m1", "m2"])
-        XCTAssert(bObj.methods == [])
+        #expect(aObj.methods == ["m1", "m2"])
+        #expect(bObj.methods == [])
 
-        XCTAssert(aObj.group == "A")
-        XCTAssert(bObj.group == "B")
+        #expect(aObj.group == "A")
+        #expect(bObj.group == "B")
 
         let fooBarObj = ILType.object(withProperties: ["foo", "bar"])
         let fooBazObj = ILType.object(withProperties: ["foo", "baz"])
-        XCTAssert((fooBarObj | fooBazObj).properties == ["foo"])
-        XCTAssert((fooBarObj + fooBazObj).properties == ["foo", "bar", "baz"])
-        XCTAssert((fooBarObj & fooBazObj).properties == [])
+        #expect((fooBarObj | fooBazObj).properties == ["foo"])
+        #expect((fooBarObj + fooBazObj).properties == ["foo", "bar", "baz"])
+        #expect((fooBarObj & fooBazObj).properties == [])
 
         // Unions of objects with non-objects do not have any definite properties or methods.
-        XCTAssert((aObj | .integer).properties == [])
-        XCTAssert((aObj | .integer).methods == [])
+        #expect((aObj | .integer).properties == [])
+        #expect((aObj | .integer).methods == [])
 
         // However, merging preserves the properties and methods as expected.
-        XCTAssert((aObj + .integer).properties == ["foo"])
-        XCTAssert((aObj + .integer).methods == ["m1", "m2"])
+        #expect((aObj + .integer).properties == ["foo"])
+        #expect((aObj + .integer).methods == ["m1", "m2"])
     }
 
+    @Test
     func testPropertyTypeTransitions() {
         let object = ILType.object(ofGroup: "A")
         let fooObj = ILType.object(ofGroup: "A", withProperties: ["foo"])
@@ -504,17 +511,18 @@ class TypeSystemTests: XCTestCase {
         let fooBarObj = ILType.object(ofGroup: "A", withProperties: ["foo", "bar"])
         let fooBazObj = ILType.object(ofGroup: "A", withProperties: ["foo", "baz"])
 
-        XCTAssertEqual(object.adding(property: "foo"), fooObj)
-        XCTAssertEqual(fooObj.adding(property: "bar"), fooBarObj)
-        XCTAssertEqual(barObj.adding(property: "foo"), fooBarObj)
-        XCTAssertEqual(fooObj.adding(property: "baz"), fooBazObj)
-        XCTAssertEqual(bazObj.adding(property: "foo"), fooBazObj)
+        #expect(object.adding(property: "foo") == fooObj)
+        #expect(fooObj.adding(property: "bar") == fooBarObj)
+        #expect(barObj.adding(property: "foo") == fooBarObj)
+        #expect(fooObj.adding(property: "baz") == fooBazObj)
+        #expect(bazObj.adding(property: "foo") == fooBazObj)
 
-        XCTAssertEqual(fooBarObj.removing(propertyOrMethod: "baz"), fooBarObj)
-        XCTAssertEqual(fooBarObj.removing(propertyOrMethod: "foo"), barObj)
-        XCTAssertEqual(barObj.removing(propertyOrMethod: "bar"), object)
+        #expect(fooBarObj.removing(propertyOrMethod: "baz") == fooBarObj)
+        #expect(fooBarObj.removing(propertyOrMethod: "foo") == barObj)
+        #expect(barObj.removing(propertyOrMethod: "bar") == object)
     }
 
+    @Test
     func testMethodTypeTransitions() {
         let object = ILType.object(ofGroup: "A")
         let fooObj = ILType.object(ofGroup: "A", withMethods: ["foo"])
@@ -523,17 +531,18 @@ class TypeSystemTests: XCTestCase {
         let fooBarObj = ILType.object(ofGroup: "A", withMethods: ["foo", "bar"])
         let fooBazObj = ILType.object(ofGroup: "A", withMethods: ["foo", "baz"])
 
-        XCTAssertEqual(object.adding(method: "foo"), fooObj)
-        XCTAssertEqual(fooObj.adding(method: "bar"), fooBarObj)
-        XCTAssertEqual(barObj.adding(method: "foo"), fooBarObj)
-        XCTAssertEqual(fooObj.adding(method: "baz"), fooBazObj)
-        XCTAssertEqual(bazObj.adding(method: "foo"), fooBazObj)
+        #expect(object.adding(method: "foo") == fooObj)
+        #expect(fooObj.adding(method: "bar") == fooBarObj)
+        #expect(barObj.adding(method: "foo") == fooBarObj)
+        #expect(fooObj.adding(method: "baz") == fooBazObj)
+        #expect(bazObj.adding(method: "foo") == fooBazObj)
 
-        XCTAssertEqual(fooBarObj.removing(method: "baz"), fooBarObj)
-        XCTAssertEqual(fooBarObj.removing(method: "foo"), barObj)
-        XCTAssertEqual(barObj.removing(method: "bar"), object)
+        #expect(fooBarObj.removing(method: "baz") == fooBarObj)
+        #expect(fooBarObj.removing(method: "foo") == barObj)
+        #expect(barObj.removing(method: "bar") == object)
     }
 
+    @Test
     func testCallableTypeSubsumption() {
         let signature1 = [.integer, .string] => .jsAnything
         let signature2 = [.boolean, .rest(.jsAnything)] => .object()
@@ -558,124 +567,129 @@ class TypeSystemTests: XCTestCase {
             let callable2 = callable2s[i]
 
             // Both callable1 and callable2 are callables
-            XCTAssert(anyCallable >= callable1)
-            XCTAssert(anyCallable >= callable2)
+            #expect(anyCallable >= callable1)
+            #expect(anyCallable >= callable2)
 
             // Not every callable is a callable1 or a callable2
-            XCTAssertFalse(callable1 >= anyCallable)
-            XCTAssertFalse(callable2 >= anyCallable)
+            #expect(!(callable1 >= anyCallable))
+            #expect(!(callable2 >= anyCallable))
 
             // Callable1 is not a callable2 and vice versa
-            XCTAssertFalse(callable1 >= callable2)
-            XCTAssertFalse(callable2 >= callable1)
+            #expect(!(callable1 >= callable2))
+            #expect(!(callable2 >= callable1))
 
             // Callable1 and callable2 cannot be merged (because they have different signatures)
-            XCTAssertFalse(callable1.canMerge(with: callable2))
-            XCTAssertFalse(callable2.canMerge(with: callable1))
+            #expect(!callable1.canMerge(with: callable2))
+            #expect(!callable2.canMerge(with: callable1))
 
             // ... But they can be unioned, and the union is still a callable
-            XCTAssert(anyCallable >= callable1 | callable2)
+            #expect(anyCallable >= callable1 | callable2)
         }
 
         // See testSignatureSubsumption for more complicated examples related specifically to signatures.
     }
 
+    @Test
     func testObjectGroupSubsumption() {
         let aObj = ILType.object(ofGroup: "A", withProperties: ["foo"])
         let bObj = ILType.object(ofGroup: "B", withProperties: ["foo", "bar"])
 
         // Both aObj and bObj are objects.
-        XCTAssert(.object() >= aObj)
-        XCTAssert(.object() >= bObj)
+        #expect(.object() >= aObj)
+        #expect(.object() >= bObj)
 
         // aObj is an object with a property "foo",
-        XCTAssert(.object(withProperties: ["foo"]) >= aObj)
+        #expect(.object(withProperties: ["foo"]) >= aObj)
         // and an object of group A,
-        XCTAssert(.object(ofGroup: "A") >= aObj)
+        #expect(.object(ofGroup: "A") >= aObj)
         // but is not an object of group B,
-        XCTAssertFalse(.object(ofGroup: "B") >= aObj)
+        #expect(!(.object(ofGroup: "B") >= aObj))
         // and not every object with a property "foo" is an object of group A.
-        XCTAssertFalse(aObj >= .object(withProperties: ["foo"]))
+        #expect(!(aObj >= .object(withProperties: ["foo"])))
 
         // Same as above.
-        XCTAssert(.object(withProperties: ["bar"]) >= bObj)
-        XCTAssert(.object(withProperties: ["foo"]) >= bObj)
-        XCTAssert(.object(withProperties: ["foo", "bar"]) >= bObj)
-        XCTAssert(.object(ofGroup: "B") >= bObj)
-        XCTAssertFalse(.object(ofGroup: "A") >= bObj)
-        XCTAssertFalse(bObj >= .object(withProperties: ["bar"]))
-        XCTAssertFalse(bObj >= .object(withProperties: ["foo"]))
-        XCTAssertFalse(bObj >= .object(withProperties: ["foo", "bar"]))
+        #expect(.object(withProperties: ["bar"]) >= bObj)
+        #expect(.object(withProperties: ["foo"]) >= bObj)
+        #expect(.object(withProperties: ["foo", "bar"]) >= bObj)
+        #expect(.object(ofGroup: "B") >= bObj)
+        #expect(!(.object(ofGroup: "A") >= bObj))
+        #expect(!(bObj >= .object(withProperties: ["bar"])))
+        #expect(!(bObj >= .object(withProperties: ["foo"])))
+        #expect(!(bObj >= .object(withProperties: ["foo", "bar"])))
 
         // No relationship between different groups.
-        XCTAssertFalse(bObj == aObj || bObj >= aObj || aObj >= bObj)
+        #expect(!(bObj == aObj || bObj >= aObj || aObj >= bObj))
     }
 
+    @Test
     func testJsModuleSubsumption() {
         let emptyModule = ILType.jsModule()
         let module1 = ILType.jsModule(exports: ["a": .object(), "b": .integer])
         let module2 = ILType.jsModule(exports: ["a": .object()])
         let module3 = ILType.jsModule(exports: ["a": .object(withProperties: ["p"]), "b": .integer])
 
-        XCTAssertTrue(emptyModule.subsumes(module1))
-        XCTAssertFalse(module1.subsumes(emptyModule))
+        #expect(emptyModule.subsumes(module1))
+        #expect(!module1.subsumes(emptyModule))
 
-        XCTAssertTrue(module2.subsumes(module1))
-        XCTAssertFalse(module1.subsumes(module2))
+        #expect(module2.subsumes(module1))
+        #expect(!module1.subsumes(module2))
 
-        XCTAssertTrue(module1.subsumes(module3))
-        XCTAssertFalse(module3.subsumes(module1))
+        #expect(module1.subsumes(module3))
+        #expect(!module3.subsumes(module1))
 
-        XCTAssertTrue(module2.subsumes(module3))
-        XCTAssertFalse(module3.subsumes(module2))
+        #expect(module2.subsumes(module3))
+        #expect(!module3.subsumes(module2))
     }
 
+    @Test
     func testJsModuleUnion() {
         let module1 = ILType.jsModule(exports: ["a": .object(), "b": .integer])
         let module2 = ILType.jsModule(exports: ["a": .object()])
         let module3 = ILType.jsModule(exports: ["a": .object(withProperties: ["p"]), "b": .integer])
 
         let module1Or2 = module1 | module2
-        XCTAssertNotNil(module1Or2.exports["a"])
-        XCTAssertEqual(.object(), module1Or2.exports["a"])
-        XCTAssertNil(module1Or2.exports["b"])
+        #expect(module1Or2.exports["a"] != nil)
+        #expect(.object() == module1Or2.exports["a"])
+        #expect(module1Or2.exports["b"] == nil)
 
         let module1Or3 = module1 | module3
-        XCTAssertNotNil(module1Or3.exports["a"])
-        XCTAssertEqual(.object(), module1Or3.exports["a"])
-        XCTAssertNotNil(module1Or3.exports["b"])
-        XCTAssertEqual(.integer, module1Or3.exports["b"])
+        #expect(module1Or3.exports["a"] != nil)
+        #expect(.object() == module1Or3.exports["a"])
+        #expect(module1Or3.exports["b"] != nil)
+        #expect(.integer == module1Or3.exports["b"])
 
         let module2Or3 = module2 | module3
-        XCTAssertNotNil(module2Or3.exports["a"])
-        XCTAssertEqual(.object(), module2Or3.exports["a"])
-        XCTAssertNil(module2Or3.exports["b"])
+        #expect(module2Or3.exports["a"] != nil)
+        #expect(.object() == module2Or3.exports["a"])
+        #expect(module2Or3.exports["b"] == nil)
     }
 
+    @Test
     func testJsModuleIntersection() {
         let module1 = ILType.jsModule(exports: ["a": .object(), "b": .integer])
         let module2 = ILType.jsModule(exports: ["a": .object()])
         let module3 = ILType.jsModule(exports: ["a": .object(withProperties: ["p"]), "b": .integer])
 
         let module1And2 = module1 & module2
-        XCTAssertNotNil(module1And2.exports["a"])
-        XCTAssertEqual(.object(), module1And2.exports["a"])
-        XCTAssertNotNil(module1And2.exports["b"])
-        XCTAssertEqual(.integer, module1And2.exports["b"])
+        #expect(module1And2.exports["a"] != nil)
+        #expect(.object() == module1And2.exports["a"])
+        #expect(module1And2.exports["b"] != nil)
+        #expect(.integer == module1And2.exports["b"])
 
         let module1And3 = module1 & module3
-        XCTAssertNotNil(module1And3.exports["a"])
-        XCTAssertEqual(.object(withProperties: ["p"]), module1And3.exports["a"])
-        XCTAssertNotNil(module1And3.exports["b"])
-        XCTAssertEqual(.integer, module1And3.exports["b"])
+        #expect(module1And3.exports["a"] != nil)
+        #expect(.object(withProperties: ["p"]) == module1And3.exports["a"])
+        #expect(module1And3.exports["b"] != nil)
+        #expect(.integer == module1And3.exports["b"])
 
         let module2And3 = module2 & module3
-        XCTAssertNotNil(module2And3.exports["a"])
-        XCTAssertEqual(.object(withProperties: ["p"]), module2And3.exports["a"])
-        XCTAssertNotNil(module2And3.exports["b"])
-        XCTAssertEqual(.integer, module2And3.exports["b"])
+        #expect(module2And3.exports["a"] != nil)
+        #expect(.object(withProperties: ["p"]) == module2And3.exports["a"])
+        #expect(module2And3.exports["b"] != nil)
+        #expect(.integer == module2And3.exports["b"])
     }
 
+    @Test
     func testWasmGlobalSubsumption() {
         let wasmi32Mutable = WasmGlobalType(valueType: ILType.wasmi32, isMutable: true)
         let wasmi32NonMutable = WasmGlobalType(valueType: ILType.wasmi32, isMutable: false)
@@ -688,13 +702,13 @@ class TypeSystemTests: XCTestCase {
         let ILTypeGlobalI64Mutable = ILType.object(
             ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmi64Mutable)
 
-        XCTAssert(ILTypeGlobalI32Mutable >= ILTypeGlobalI32Mutable)
+        #expect(ILTypeGlobalI32Mutable >= ILTypeGlobalI32Mutable)
         // Types which don't have equal WasmTypeExtension don't subsume.
-        XCTAssertFalse(ILTypeGlobalI32NonMutable >= ILTypeGlobalI32Mutable)
-        XCTAssertFalse(ILTypeGlobalI32Mutable >= ILTypeGlobalI32NonMutable)
-        XCTAssertFalse(ILTypeGlobalI32Mutable >= ILTypeGlobalI64Mutable)
-        XCTAssertFalse(ILTypeGlobalI64Mutable >= ILTypeGlobalI32Mutable)
-        XCTAssertFalse(ILTypeGlobalI32NonMutable >= ILTypeGlobalI64Mutable)
+        #expect(!(ILTypeGlobalI32NonMutable >= ILTypeGlobalI32Mutable))
+        #expect(!(ILTypeGlobalI32Mutable >= ILTypeGlobalI32NonMutable))
+        #expect(!(ILTypeGlobalI32Mutable >= ILTypeGlobalI64Mutable))
+        #expect(!(ILTypeGlobalI64Mutable >= ILTypeGlobalI32Mutable))
+        #expect(!(ILTypeGlobalI32NonMutable >= ILTypeGlobalI64Mutable))
 
         let ILTypeGlobalI32MutableNoGroup: ILType = ILType.object(
             withProperties: ["value"], withWasmType: wasmi32Mutable)
@@ -706,25 +720,26 @@ class TypeSystemTests: XCTestCase {
         let ILTypeGlobalOnlyProperty: ILType = ILType.object(withProperties: ["value"])
 
         // If the WasmGlobalTypes are equal, the other subsumption rules apply.
-        XCTAssert(ILTypeGlobalI32MutableNoGroup >= ILTypeGlobalI32Mutable)
-        XCTAssert(ILTypeGlobalI32MutableNoProperty >= ILTypeGlobalI32Mutable)
-        XCTAssert(ILTypeGlobalI32MutableNoWasmType >= ILTypeGlobalI32Mutable)
-        XCTAssert(ILTypeGlobalOnlyGroup >= ILTypeGlobalI32Mutable)
-        XCTAssert(ILTypeGlobalOnlyProperty >= ILTypeGlobalI32Mutable)
+        #expect(ILTypeGlobalI32MutableNoGroup >= ILTypeGlobalI32Mutable)
+        #expect(ILTypeGlobalI32MutableNoProperty >= ILTypeGlobalI32Mutable)
+        #expect(ILTypeGlobalI32MutableNoWasmType >= ILTypeGlobalI32Mutable)
+        #expect(ILTypeGlobalOnlyGroup >= ILTypeGlobalI32Mutable)
+        #expect(ILTypeGlobalOnlyProperty >= ILTypeGlobalI32Mutable)
         // But not the other way around: the WasmGlobalType matters.
-        XCTAssertFalse(ILTypeGlobalI32Mutable >= ILTypeGlobalI32MutableNoGroup)
-        XCTAssertFalse(ILTypeGlobalI32Mutable >= ILTypeGlobalI32MutableNoProperty)
-        XCTAssertFalse(ILTypeGlobalI32Mutable >= ILTypeGlobalI32MutableNoWasmType)
-        XCTAssertFalse(ILTypeGlobalI32Mutable >= ILTypeGlobalOnlyGroup)
-        XCTAssertFalse(ILTypeGlobalI32Mutable >= ILTypeGlobalOnlyProperty)
+        #expect(!(ILTypeGlobalI32Mutable >= ILTypeGlobalI32MutableNoGroup))
+        #expect(!(ILTypeGlobalI32Mutable >= ILTypeGlobalI32MutableNoProperty))
+        #expect(!(ILTypeGlobalI32Mutable >= ILTypeGlobalI32MutableNoWasmType))
+        #expect(!(ILTypeGlobalI32Mutable >= ILTypeGlobalOnlyGroup))
+        #expect(!(ILTypeGlobalI32Mutable >= ILTypeGlobalOnlyProperty))
 
         // Groups should match.
         let ILTypeWrongGroup = ILType.object(
             ofGroup: "SomeOtherGroup", withProperties: ["value"], withWasmType: wasmi32Mutable)
-        XCTAssertFalse(ILTypeWrongGroup >= ILTypeGlobalI32Mutable)
-        XCTAssertFalse(ILTypeGlobalI32Mutable >= ILTypeWrongGroup)
+        #expect(!(ILTypeWrongGroup >= ILTypeGlobalI32Mutable))
+        #expect(!(ILTypeGlobalI32Mutable >= ILTypeWrongGroup))
     }
 
+    @Test
     func testWasmGlobalUnion() {
         let wasmi32Mutable = WasmGlobalType(valueType: ILType.wasmi32, isMutable: true)
         let wasmi32NonMutable = WasmGlobalType(valueType: ILType.wasmi32, isMutable: false)
@@ -737,32 +752,33 @@ class TypeSystemTests: XCTestCase {
         let ILTypeGlobalF32Mutable = ILType.object(
             ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmf32Mutable)
 
-        XCTAssertEqual(ILTypeGlobalI32Mutable | ILTypeGlobalI32Mutable, ILTypeGlobalI32Mutable)
+        #expect(ILTypeGlobalI32Mutable | ILTypeGlobalI32Mutable == ILTypeGlobalI32Mutable)
 
         // Types with not equal WasmTypeExtension don't have a WasmTypeExtension in their union.
         let unionMutabilityDiff = ILType.object(withProperties: ["value"])
-        XCTAssertEqual(ILTypeGlobalI32Mutable | ILTypeGlobalI32NonMutable, unionMutabilityDiff)
+        #expect(ILTypeGlobalI32Mutable | ILTypeGlobalI32NonMutable == unionMutabilityDiff)
         // Invariant: the union of two types subsumes both types.
-        XCTAssert(unionMutabilityDiff >= ILTypeGlobalI32Mutable)
-        XCTAssert(unionMutabilityDiff >= ILTypeGlobalI32NonMutable)
+        #expect(unionMutabilityDiff >= ILTypeGlobalI32Mutable)
+        #expect(unionMutabilityDiff >= ILTypeGlobalI32NonMutable)
 
         let unionValueTypeDiff = ILType.object(withProperties: ["value"])
-        XCTAssertEqual(ILTypeGlobalI32Mutable | ILTypeGlobalF32Mutable, unionValueTypeDiff)
-        XCTAssert(unionValueTypeDiff >= ILTypeGlobalI32Mutable)
-        XCTAssert(unionValueTypeDiff >= ILTypeGlobalI32NonMutable)
+        #expect(ILTypeGlobalI32Mutable | ILTypeGlobalF32Mutable == unionValueTypeDiff)
+        #expect(unionValueTypeDiff >= ILTypeGlobalI32Mutable)
+        #expect(unionValueTypeDiff >= ILTypeGlobalI32NonMutable)
 
         // When removing the WasmTypeExtension, the group is also removed. (Note that this specific
         // case is artificial as a .object(ofGroup: WasmGlobal) should only be used e.g. as a
         // search criteria but never appear as a type for a variable without a corresponding
         // .wasmGlobalType extension.)
-        XCTAssertEqual(ILTypeGlobalI32Mutable | .object(ofGroup: "WasmGlobal"), .object())
-        XCTAssert(.object(ofGroup: "WasmGlobal") >= ILTypeGlobalI32Mutable)
-        XCTAssertEqual(
-            ILTypeGlobalI32Mutable | .object(withProperties: ["value"]),
-            .object(withProperties: ["value"]))
-        XCTAssert(.object(withProperties: ["value"]) >= ILTypeGlobalI32Mutable)
+        #expect(ILTypeGlobalI32Mutable | .object(ofGroup: "WasmGlobal") == .object())
+        #expect(.object(ofGroup: "WasmGlobal") >= ILTypeGlobalI32Mutable)
+        #expect(
+            ILTypeGlobalI32Mutable | .object(withProperties: ["value"])
+                == .object(withProperties: ["value"]))
+        #expect(.object(withProperties: ["value"]) >= ILTypeGlobalI32Mutable)
     }
 
+    @Test
     func testWasmGlobalIntersection() {
         let wasmi64Mutable = WasmGlobalType(valueType: ILType.wasmi64, isMutable: true)
         let wasmi64NonMutable = WasmGlobalType(valueType: ILType.wasmi64, isMutable: false)
@@ -775,17 +791,18 @@ class TypeSystemTests: XCTestCase {
         let ILTypeGlobalF64Mutable = ILType.object(
             ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmf64Mutable)
 
-        XCTAssertEqual(ILTypeGlobalI64Mutable & ILTypeGlobalI64Mutable, ILTypeGlobalI64Mutable)
-        XCTAssertEqual(ILTypeGlobalI64Mutable & ILTypeGlobalI64NonMutable, .nothing)
-        XCTAssertEqual(ILTypeGlobalI64Mutable & ILTypeGlobalF64Mutable, .nothing)
-        XCTAssertEqual(
-            ILTypeGlobalI64Mutable & .object(withProperties: ["value"]), ILTypeGlobalI64Mutable)
-        XCTAssertEqual(
-            (ILTypeGlobalI64Mutable & ILType.object(withWasmType: wasmi64Mutable)),
-            ILType.object(
-                ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmi64Mutable))
+        #expect(ILTypeGlobalI64Mutable & ILTypeGlobalI64Mutable == ILTypeGlobalI64Mutable)
+        #expect(ILTypeGlobalI64Mutable & ILTypeGlobalI64NonMutable == .nothing)
+        #expect(ILTypeGlobalI64Mutable & ILTypeGlobalF64Mutable == .nothing)
+        #expect(
+            ILTypeGlobalI64Mutable & .object(withProperties: ["value"]) == ILTypeGlobalI64Mutable)
+        #expect(
+            (ILTypeGlobalI64Mutable & ILType.object(withWasmType: wasmi64Mutable))
+                == ILType.object(
+                    ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmi64Mutable))
     }
 
+    @Test
     func testWasmGlobalIsAndMayBe() {
         let wasmi32Mutable = WasmGlobalType(valueType: ILType.wasmi32, isMutable: true)
         let wasmi32NonMutable = WasmGlobalType(valueType: ILType.wasmi32, isMutable: false)
@@ -798,56 +815,58 @@ class TypeSystemTests: XCTestCase {
         let ILTypeGlobalF64Mutable: ILType = ILType.object(
             ofGroup: "WasmGlobal", withProperties: ["value"], withWasmType: wasmf64Mutable)
 
-        XCTAssert(ILTypeGlobalI32Mutable.Is(.object(ofGroup: "WasmGlobal")))
-        XCTAssert(ILTypeGlobalI32Mutable.Is(.object(withProperties: ["value"])))
-        XCTAssert(ILTypeGlobalI32Mutable.Is(.object(withWasmType: wasmi32Mutable)))
-        XCTAssertFalse(ILTypeGlobalI32Mutable.Is(ILTypeGlobalI32NonMutable))
-        XCTAssertFalse(ILTypeGlobalI32NonMutable.Is(ILTypeGlobalI32Mutable))
-        XCTAssertFalse(ILTypeGlobalI32Mutable.Is(ILTypeGlobalF64Mutable))
-        XCTAssertFalse(ILTypeGlobalF64Mutable.Is(ILTypeGlobalI32Mutable))
+        #expect(ILTypeGlobalI32Mutable.Is(.object(ofGroup: "WasmGlobal")))
+        #expect(ILTypeGlobalI32Mutable.Is(.object(withProperties: ["value"])))
+        #expect(ILTypeGlobalI32Mutable.Is(.object(withWasmType: wasmi32Mutable)))
+        #expect(!ILTypeGlobalI32Mutable.Is(ILTypeGlobalI32NonMutable))
+        #expect(!ILTypeGlobalI32NonMutable.Is(ILTypeGlobalI32Mutable))
+        #expect(!ILTypeGlobalI32Mutable.Is(ILTypeGlobalF64Mutable))
+        #expect(!ILTypeGlobalF64Mutable.Is(ILTypeGlobalI32Mutable))
 
-        XCTAssertTrue(ILTypeGlobalI32Mutable.MayBe(.object(ofGroup: "WasmGlobal")))
-        XCTAssertTrue(ILTypeGlobalI32Mutable.MayBe(.object(withProperties: ["value"])))
-        XCTAssert(ILTypeGlobalI32Mutable.MayBe(.object(withWasmType: wasmi32Mutable)))
-        XCTAssert(ILTypeGlobalI32Mutable.MayBe(ILTypeGlobalI32Mutable))
-        XCTAssertFalse(ILTypeGlobalI32Mutable.MayBe(ILTypeGlobalI32NonMutable))
-        XCTAssertFalse(ILTypeGlobalI32NonMutable.MayBe(ILTypeGlobalI32Mutable))
+        #expect(ILTypeGlobalI32Mutable.MayBe(.object(ofGroup: "WasmGlobal")))
+        #expect(ILTypeGlobalI32Mutable.MayBe(.object(withProperties: ["value"])))
+        #expect(ILTypeGlobalI32Mutable.MayBe(.object(withWasmType: wasmi32Mutable)))
+        #expect(ILTypeGlobalI32Mutable.MayBe(ILTypeGlobalI32Mutable))
+        #expect(!ILTypeGlobalI32Mutable.MayBe(ILTypeGlobalI32NonMutable))
+        #expect(!ILTypeGlobalI32NonMutable.MayBe(ILTypeGlobalI32Mutable))
     }
 
+    @Test
     func testTypeUnioning() {
         // Basic union tests
-        XCTAssert(.integer | .float >= .integer)
-        XCTAssert(.integer | .float >= .float)
+        #expect(.integer | .float >= .integer)
+        #expect(.integer | .float >= .float)
 
-        XCTAssert(.integer | .float >= .integer | .float)
-        XCTAssert(.integer | .float == .integer | .float)
+        #expect(.integer | .float >= .integer | .float)
+        #expect(.integer | .float == .integer | .float)
 
-        XCTAssert(.integer | .float | .string >= .integer)
-        XCTAssert(.integer | .float | .string >= .float)
-        XCTAssert(.integer | .float | .string >= .string)
-        XCTAssert(.integer | .float | .string >= .integer | .float)
-        XCTAssert(.integer | .float | .string >= .integer | .string)
-        XCTAssert(.integer | .float | .string >= .float | .string)
-        XCTAssert(.integer | .float | .string >= .integer | .float | .string)
-        XCTAssert(.integer | .float | .string == .integer | .float | .string)
+        #expect(.integer | .float | .string >= .integer)
+        #expect(.integer | .float | .string >= .float)
+        #expect(.integer | .float | .string >= .string)
+        #expect(.integer | .float | .string >= .integer | .float)
+        #expect(.integer | .float | .string >= .integer | .string)
+        #expect(.integer | .float | .string >= .float | .string)
+        #expect(.integer | .float | .string >= .integer | .float | .string)
+        #expect(ILType.integer | .float | .string == .integer | .float | .string)
+        #expect(ILType.integer | .float | .string == .float | .string | .integer)
 
         // Test special union cases
-        XCTAssertEqual(.jsAnything | .integer, .jsAnything)
-        XCTAssertEqual(.jsAnything | .integer, .jsAnything)
-        XCTAssertEqual(.jsAnything | .nothing, .jsAnything)
-        XCTAssertEqual(.nothing | .nothing, .nothing)
-        XCTAssertEqual(.nothing | .jsAnything, .jsAnything)
-        XCTAssertEqual(.nothing | .integer, .integer)
+        #expect(.jsAnything | .integer == .jsAnything)
+        #expect(.jsAnything | .integer == .jsAnything)
+        #expect(.jsAnything | .nothing == .jsAnything)
+        #expect(.nothing | .nothing == .nothing)
+        #expect(.nothing | .jsAnything == .jsAnything)
+        #expect(.nothing | .integer == .integer)
 
         // Test subsumption of unions of related types.
         let objectUnion = .object(withProperties: ["a"]) | .object(withProperties: ["b"])
         // The union is still definitely an object
-        XCTAssert(.object() >= objectUnion)
+        #expect(.object() >= objectUnion)
 
         let objUnionA = .object(withProperties: ["a", "b"]) | .object(withProperties: ["a", "c"])
         // The union type is still an object with a property "a"
-        XCTAssert(.object() >= objUnionA)
-        XCTAssert(.object(withProperties: ["a"]) >= objUnionA)
+        #expect(.object() >= objUnionA)
+        #expect(.object(withProperties: ["a"]) >= objUnionA)
 
         // Unioning primitive types a and b does not suddenly produce something that is a c
         // for an unrelated primitive type c. The same is true for other types, but is more
@@ -856,8 +875,8 @@ class TypeSystemTests: XCTestCase {
             for t2 in primitiveTypes {
                 for t3 in primitiveTypes {
                     if t3 != t1 && t3 != t2 {
-                        XCTAssertFalse(
-                            t1 | t2 >= t3,
+                        #expect(
+                            !(t1 | t2 >= t3),
                             "\(t3) != \(t1) && \(t3) != \(t2) => \(t1) | \(t2) !>= \(t3)")
                     }
                 }
@@ -865,125 +884,127 @@ class TypeSystemTests: XCTestCase {
         }
 
         for t1 in typeSuite {
-            XCTAssert(t1 | t1 == t1, "\(t1) | \(t1) (\(t1 | t1)) == \(t1)")
+            #expect(t1 | t1 == t1, "\(t1) | \(t1) (\(t1 | t1)) == \(t1)")
 
             for t2 in typeSuite {
                 // Unioning is symmetric
-                XCTAssert(t1 | t2 == t2 | t1)
+                #expect(t1 | t2 == t2 | t1)
 
                 let union1 = t1 | t2
 
                 // Union of a and b must subsume a and b: a | b >= a && a | b >= b
-                XCTAssert(union1 >= t1, "\(t1) | \(t2) (\(union1)) >= \(t1)")
-                XCTAssert(union1 >= t2, "\(t1) | \(t2) (\(union1)) >= \(t2)")
+                #expect(union1 >= t1, "\(t1) | \(t2) (\(union1)) >= \(t1)")
+                #expect(union1 >= t2, "\(t1) | \(t2) (\(union1)) >= \(t2)")
 
                 // One additional guaruantee of the union operation is that it preserves properties common to
                 // both input type. E.g. unioning something that is definitely an object with something else
                 // that is also definitely an object again produces something that definitely is an object.
                 // Test this here loosely by checking the base types.
                 if t1.baseType == t2.baseType {
-                    XCTAssert(union1.baseType == t1.baseType)
+                    #expect(union1.baseType == t1.baseType)
                 }
 
                 for t3 in typeSuite {
                     let union2 = union1 | t3
-                    XCTAssert(union2 >= t1, "\(t1) | \(t2) | \(t3) (\(union2)) >= \(t1)")
-                    XCTAssert(union2 >= t2, "\(t1) | \(t2) | \(t3) (\(union2)) >= \(t2)")
-                    XCTAssert(union2 >= t3, "\(t1) | \(t2) | \(t3) (\(union2)) >= \(t3)")
+                    #expect(union2 >= t1, "\(t1) | \(t2) | \(t3) (\(union2)) >= \(t1)")
+                    #expect(union2 >= t2, "\(t1) | \(t2) | \(t3) (\(union2)) >= \(t2)")
+                    #expect(union2 >= t3, "\(t1) | \(t2) | \(t3) (\(union2)) >= \(t3)")
                 }
             }
         }
     }
 
+    @Test
     func testTypeIntersection() {
         // The intersection of .string and .object() is empty (as is the case for all unrelated types)
-        XCTAssert(ILType.string & ILType.object() == .nothing)
+        #expect(ILType.string & ILType.object() == .nothing)
         // the same is true for all "unrelated" types, in particular the primitive types
         for t1 in primitiveTypes {
             for t2 in primitiveTypes {
                 if t1 != t2 {
-                    XCTAssert(t1 & t2 == .nothing, "\(t1) & \(t2) (\(t1 & t2)) == .nothing")
+                    #expect(t1 & t2 == .nothing, "\(t1) & \(t2) (\(t1 & t2)) == .nothing")
                 }
             }
         }
         // however, the intersection of StringObject and .string is again a StringObject
         let stringObj = ILType.string + ILType.object()
-        XCTAssertEqual(stringObj & .string, stringObj)
+        #expect(stringObj & .string == stringObj)
         // in the same way as the intersection of .number (.integer | .float) and .integer is .integer (the smaller type)
-        XCTAssertEqual(ILType.number & ILType.integer, ILType.integer)
+        #expect(ILType.number & ILType.integer == ILType.integer)
         // but the intersection of a StringObject and an IntegerObject is empty
         let integerObj = ILType.integer + ILType.object()
-        XCTAssertEqual(stringObj & integerObj, .nothing)
+        #expect(stringObj & integerObj == .nothing)
 
         // There are some interesting edge cases here.
         // E.g. the intersection of .function() and .function() + .constructor() is the latter (because that's already a subtype)
         let funcCtor = ILType.function() + ILType.constructor()
-        XCTAssertEqual(funcCtor & .function(), funcCtor)
-        XCTAssertEqual(.function() & funcCtor, funcCtor)
+        #expect(funcCtor & .function() == funcCtor)
+        #expect(.function() & funcCtor == funcCtor)
         // and the intersection of .function() and .function([.string] => .float) is also the latter (for the same reason)
-        let sig = [.string] => .float
-        XCTAssertEqual(ILType.function() & .function(sig), .function(sig))
+        let sig = ([.string] => .float)
+        #expect(ILType.function() & .function(sig) == .function(sig))
         // as such, the intersection of .function([.string] => .float) and .function() + .constructor() now becomes
         // .function([.string] => .float) + .constructor([.string] => .float)
-        XCTAssertEqual(ILType.function(sig) & funcCtor, .constructor(sig) + .function(sig))
+        #expect(ILType.function(sig) & funcCtor == .constructor(sig) + .function(sig))
         // Maybe a bit less intuitively, the intersection of two functions with different signatures can also exist.
         // In the following example, the more general signature of the two functions is the intersection as that's what
         // both functions "have in common".
-        XCTAssertEqual(
-            ILType.function([.jsAnything] => .integer) & .function([.integer] => .jsAnything),
-            .function([.jsAnything] => .integer))
-        XCTAssertEqual(
-            ILType.function([.jsAnything] => .jsAnything) & .function([.integer] => .jsAnything),
-            .function([.jsAnything] => .jsAnything))
+        #expect(
+            ILType.function([.jsAnything] => .integer) & .function([.integer] => .jsAnything)
+                == .function([.jsAnything] => .integer))
+        #expect(
+            ILType.function([.jsAnything] => .jsAnything) & .function([.integer] => .jsAnything)
+                == .function([.jsAnything] => .jsAnything))
         // In this example, the parameter type is widened and the return type is narrowed.
-        XCTAssertEqual(
-            ILType.function([.integer] => .integer) & .function([.jsAnything] => .jsAnything),
-            .function([.jsAnything] => .integer))
+        #expect(
+            ILType.function([.integer] => .integer) & .function([.jsAnything] => .jsAnything)
+                == .function([.jsAnything] => .integer))
         // However, here the return types are incompatible
-        XCTAssertEqual(
-            ILType.function([.integer] => .integer) & .function([.integer] => .string), .nothing)
+        #expect(
+            ILType.function([.integer] => .integer) & .function([.integer] => .string) == .nothing)
 
         // Now test the basic invariants of intersections for all types in the type suite.
         for t1 in typeSuite {
-            XCTAssert(t1 & t1 == t1, "\(t1) & \(t1) (\(t1 | t1)) == \(t1)")
+            #expect(t1 & t1 == t1, "\(t1) & \(t1) (\(t1 | t1)) == \(t1)")
 
             for t2 in typeSuite {
                 // Intersecting is symmetric
-                XCTAssert(
+                #expect(
                     t1 & t2 == t2 & t1, "\(t1) & \(t2) (\(t2 & t2)) == \(t2) & \(t1) (\(t2 & t1))")
 
                 let intersection = t1 & t2
 
                 // The intersection of a and b must be subsumed by both a and b: a >= a & b && b >= a & b
-                XCTAssert(t1 >= intersection, "\(t1) >= \(t1) & \(t2) (\(intersection))")
-                XCTAssert(t2 >= intersection, "\(t2) >= \(t1) & \(t2) (\(intersection))")
+                #expect(t1 >= intersection, "\(t1) >= \(t1) & \(t2) (\(intersection))")
+                #expect(t2 >= intersection, "\(t2) >= \(t1) & \(t2) (\(intersection))")
 
                 // If one of the two inputs subsumes the other, then the result will be the subsumed type.
                 if t1 >= t2 {
-                    XCTAssert(
+                    #expect(
                         t1 & t2 == t2, "\(t1) >= \(t2) => \(t1) & \(t2) (\(t1 & t2)) == \(t2)")
                 }
             }
         }
     }
 
+    @Test
     func testTypeMerging() {
         let obj = ILType.object(withProperties: ["foo"])
         let str = ILType.string
         let strObj = obj + str
 
         // A string object is both a string and an object.
-        XCTAssert(str >= strObj)
-        XCTAssert(obj >= strObj)
+        #expect(str >= strObj)
+        #expect(obj >= strObj)
 
         // But is not suddenly e.g. an integer.
-        XCTAssertFalse(.integer >= strObj)
+        #expect(!(.integer >= strObj))
         // Or an integer object
-        XCTAssertFalse(.integer + .object() >= strObj)
+        #expect(!(.integer + .object() >= strObj))
 
         // And not every string or every object is a string object.
-        XCTAssertFalse(strObj >= str)
-        XCTAssertFalse(strObj >= obj)
+        #expect(!(strObj >= str))
+        #expect(!(strObj >= obj))
 
         // Test the above (as good as possible) for all types in the test suite.
         for t1 in typeSuite {
@@ -991,18 +1012,18 @@ class TypeSystemTests: XCTestCase {
                 guard t1.canMerge(with: t2) else { continue }
 
                 // Merging is symmetric
-                XCTAssert(t1 + t2 == t2 + t1)
+                #expect(t1 + t2 == t2 + t1)
 
                 let merged = t1 + t2
 
                 // Merging t1 and t2 yields a type that is both a t1 and a t2
-                XCTAssert(t1 >= merged, "\(t1) >= \(t1) + \(t2) (\(merged))")
-                XCTAssert(t2 >= merged, "\(t2) >= \(t1) + \(t2) (\(merged))")
+                #expect(t1 >= merged, "\(t1) >= \(t1) + \(t2) (\(merged))")
+                #expect(t2 >= merged, "\(t2) >= \(t1) + \(t2) (\(merged))")
 
                 for t3 in typeSuite {
                     if t3 >= t1 || t3 >= t2 {
                         // If t1 or t2 are a t3, than the merged type t1 + t2 must also be a t3.
-                        XCTAssert(
+                        #expect(
                             t3 >= merged,
                             "\(t3) >= \(t1) || \(t3) >= \(t2) implies \(t3) >= \(t1) + \(t2) (\(merged))"
                         )
@@ -1010,7 +1031,7 @@ class TypeSystemTests: XCTestCase {
 
                     guard t1.canMerge(with: t3) && t2.canMerge(with: t3) else { continue }
                     if t1 >= t2 {
-                        XCTAssert(
+                        #expect(
                             t1 + t3 >= t2 + t3,
                             "\(t1) >= \(t2) implies \(t1) + \(t3) >= \(t2) + \(t3)")
                     }
@@ -1023,255 +1044,260 @@ class TypeSystemTests: XCTestCase {
             for t2 in typeSuite {
                 // Union types cannot be merged
                 if t1.isUnion || t2.isUnion {
-                    XCTAssertFalse(t1.canMerge(with: t2))
+                    #expect(!t1.canMerge(with: t2))
                 }
 
                 // .nothing cannot be merged
                 else if t1 == .nothing || t2 == .nothing {
-                    XCTAssertFalse(t1.canMerge(with: t2))
+                    #expect(!t1.canMerge(with: t2))
                 }
 
                 // Callables with different signatures cannot be merged
                 else if t1.isCallable && t2.isCallable && t1.signature != nil && t2.signature != nil
                     && t1.signature != t2.signature
                 {
-                    XCTAssertFalse(t1.canMerge(with: t2))
+                    #expect(!t1.canMerge(with: t2))
                 }
 
                 else if t1.isCallable && t2.isCallable && t1.receiver != nil && t2.receiver != nil
                     && t1.receiver != t2.receiver
                 {
-                    XCTAssertFalse(t1.canMerge(with: t2))
+                    #expect(!t1.canMerge(with: t2))
                 }
 
                 // Objects of different groups cannot be merged
                 else if t1.group != nil && t2.group != nil && t1.group != t2.group {
-                    XCTAssertFalse(t1.canMerge(with: t2))
+                    #expect(!t1.canMerge(with: t2))
                 }
 
                 // Objects with different WasmTypeExtensions cannot be merged.
                 else if t1.wasmType != nil && t2.wasmType != nil && t1.wasmType != t2.wasmType {
-                    XCTAssertFalse(t1.canMerge(with: t2))
+                    #expect(!t1.canMerge(with: t2))
                 }
 
                 // Iterables with different parameterization cannot be merged.
                 else if t1.iterableElementType != nil && t2.iterableElementType != nil
                     && t1.iterableElementType != t2.iterableElementType
                 {
-                    XCTAssertFalse(t1.canMerge(with: t2))
+                    #expect(!t1.canMerge(with: t2))
                 }
 
                 // Everything else can be merged
                 else {
-                    XCTAssert(t1.canMerge(with: t2), "\(t1) \(t2)")
+                    #expect(t1.canMerge(with: t2), "\(t1) \(t2)")
                     // Merging is symmetric
-                    XCTAssert(t2.canMerge(with: t1))
+                    #expect(t2.canMerge(with: t1))
                 }
             }
         }
     }
 
+    @Test
     func testSignatureTypes() {
         let sig1 = [.jsAnything, .string, .integer, .opt(.integer), .opt(.float)] => .undefined
-        XCTAssertFalse(sig1.parameters[0].isOptionalParameter)
-        XCTAssertFalse(sig1.parameters[1].isOptionalParameter)
-        XCTAssertFalse(sig1.parameters[2].isOptionalParameter)
-        XCTAssert(sig1.parameters[3].isOptionalParameter)
-        XCTAssert(sig1.parameters[4].isOptionalParameter)
+        #expect(!sig1.parameters[0].isOptionalParameter)
+        #expect(!sig1.parameters[1].isOptionalParameter)
+        #expect(!sig1.parameters[2].isOptionalParameter)
+        #expect(sig1.parameters[3].isOptionalParameter)
+        #expect(sig1.parameters[4].isOptionalParameter)
 
         let sig2 = [.integer, .opt(.integer), .rest(.float)] => .undefined
-        XCTAssertFalse(sig2.parameters[0].isOptionalParameter)
-        XCTAssertFalse(sig2.parameters[0].isRestParameter)
-        XCTAssert(sig2.parameters[1].isOptionalParameter)
-        XCTAssertFalse(sig2.parameters[1].isRestParameter)
-        XCTAssertFalse(sig2.parameters[2].isOptionalParameter)
-        XCTAssert(sig2.parameters[2].isRestParameter)
+        #expect(!sig2.parameters[0].isOptionalParameter)
+        #expect(!sig2.parameters[0].isRestParameter)
+        #expect(sig2.parameters[1].isOptionalParameter)
+        #expect(!sig2.parameters[1].isRestParameter)
+        #expect(!sig2.parameters[2].isOptionalParameter)
+        #expect(sig2.parameters[2].isRestParameter)
 
         let sig3 = [.either(.integer, .string)] => .undefined
-        XCTAssertFalse(sig3.parameters[0].isOptionalParameter)
-        XCTAssertFalse(sig3.parameters[0].isRestParameter)
+        #expect(!sig3.parameters[0].isOptionalParameter)
+        #expect(!sig3.parameters[0].isRestParameter)
     }
 
+    @Test
     func testSignatureSubsumption() {
         // For sig1 to subsume sig2, sig1's parameters must be subsumed by their
         // counterparts in sig2.
         // In other words, if we need a function that accepts an integer as first
         // parameter, then we're fine receiving a function that accepts anything
         // (or e.g. a number) as first parameter.
-        XCTAssert([.integer] => .undefined >= [.jsAnything] => .undefined)
-        XCTAssert([.integer, .string] => .undefined >= [.number, .string] => .undefined)
-        XCTAssert([.integer, .string] => .undefined >= [.integer, .primitive] => .undefined)
+        #expect(([.integer] => .undefined) >= ([.jsAnything] => .undefined))
+        #expect(([.integer, .string] => .undefined) >= ([.number, .string] => .undefined))
+        #expect(([.integer, .string] => .undefined) >= ([.integer, .primitive] => .undefined))
         // but not one that requires a string.
-        XCTAssertFalse([.integer] => .undefined >= [.string] => .undefined)
-        XCTAssertFalse([.integer, .integer] => .undefined >= [.integer, .string] => .undefined)
+        #expect(!(([.integer] => .undefined) >= ([.string] => .undefined)))
+        #expect(!(([.integer, .integer] => .undefined) >= ([.integer, .string] => .undefined)))
         // Or, phrased differentley still, a function that accepts anything as first
         // parameter is a function that accepts an integer as first parameter.
-        XCTAssert(
+        #expect(
             ILType.function([.jsAnything] => .undefined).Is(.function([.integer] => .undefined)))
         // However, the other direction does not hold: if we want a function that
         // accepts anything as first parameter, we cannot use a function that
         // requires an integer as first parameter instead.
-        XCTAssertFalse([.jsAnything] => .undefined >= [.integer] => .undefined)
+        #expect(!(([.jsAnything] => .undefined) >= ([.integer] => .undefined)))
 
         // Signatures with more parameters subsume signatures with fewer parameters
         // because the additional parameters are simply ignored.
-        XCTAssert([.integer] => .undefined >= [] => .undefined)
-        XCTAssert([.jsAnything, .jsAnything] => .undefined >= [.jsAnything] => .undefined)
+        #expect(([.integer] => .undefined) >= ([] => .undefined))
+        #expect(([.jsAnything, .jsAnything] => .undefined) >= ([.jsAnything] => .undefined))
         // But the other way doesn't work: if we want a function that takes no parameters,
         // we cannot use one that requires parameters instead.
-        XCTAssertFalse([] => .undefined >= [.jsAnything] => .undefined)
+        #expect(!(([] => .undefined) >= ([.jsAnything] => .undefined)))
 
         // A signature with rest parameters is subsumed by a signature with no rest parameters
         // if either there are no parameters that will "turn into" rest parameters, or if
         // they all have the correct type.
-        XCTAssert([] => .undefined >= [.jsAnything...] => .undefined)
-        XCTAssert([.jsAnything] => .undefined >= [.jsAnything...] => .undefined)
-        XCTAssert([.integer, .number] => .undefined >= [.jsAnything...] => .undefined)
-        XCTAssert([.integer, .integer] => .undefined >= [.integer...] => .undefined)
-        XCTAssertFalse([.integer, .boolean] => .undefined >= [.integer...] => .undefined)
-        XCTAssert([.integer, .boolean] => .undefined >= [.primitive...] => .undefined)
+        #expect(([] => .undefined) >= ([.jsAnything...] => .undefined))
+        #expect(([.jsAnything] => .undefined) >= ([.jsAnything...] => .undefined))
+        #expect(([.integer, .number] => .undefined) >= ([.jsAnything...] => .undefined))
+        #expect(([.integer, .integer] => .undefined) >= ([.integer...] => .undefined))
+        #expect(!(([.integer, .boolean] => .undefined) >= ([.integer...] => .undefined)))
+        #expect(([.integer, .boolean] => .undefined) >= ([.primitive...] => .undefined))
         // A signature with rest parameters subsumes a signature with no rest parameters
         // only if the subsumed function expects no parameters at the position of the
         // rest parameter (because it can be omitted by the caller).
-        XCTAssert([.jsAnything...] => .undefined >= [] => .undefined)
-        XCTAssertFalse([.jsAnything...] => .undefined >= [.jsAnything] => .undefined)
+        #expect(([.jsAnything...] => .undefined) >= ([] => .undefined))
+        #expect(!(([.jsAnything...] => .undefined) >= ([.jsAnything] => .undefined)))
         // If both signatures have rest parameters, then these must be compatible.
-        XCTAssert([.jsAnything...] => .undefined >= [.jsAnything...] => .undefined)
-        XCTAssert([.integer...] => .undefined >= [.jsAnything...] => .undefined)
-        XCTAssert([.integer, .integer...] => .undefined >= [.jsAnything...] => .undefined)
-        XCTAssertFalse([.integer, .boolean...] => .undefined >= [.number...] => .undefined)
-        XCTAssertFalse([.jsAnything...] => .undefined >= [.integer...] => .undefined)
-        XCTAssertFalse([.integer, .jsAnything...] => .undefined >= [.integer...] => .undefined)
+        #expect(([.jsAnything...] => .undefined) >= ([.jsAnything...] => .undefined))
+        #expect(([.integer...] => .undefined) >= ([.jsAnything...] => .undefined))
+        #expect(([.integer, .integer...] => .undefined) >= ([.jsAnything...] => .undefined))
+        #expect(!(([.integer, .boolean...] => .undefined) >= ([.number...] => .undefined)))
+        #expect(!(([.jsAnything...] => .undefined) >= ([.integer...] => .undefined)))
+        #expect(!(([.integer, .jsAnything...] => .undefined) >= ([.integer...] => .undefined)))
 
         // Optional parameters behave mostly identical to rest parameters, except that they
         // are only expanded once.
-        XCTAssert([] => .undefined >= [.opt(.integer), .opt(.float)] => .undefined)
-        XCTAssert([.opt(.integer)] => .undefined >= [.opt(.jsAnything)] => .undefined)
-        XCTAssert([.opt(.integer)] => .undefined >= [] => .undefined)
-        XCTAssert(
-            [.string, .opt(.integer)] => .undefined >= [.string, .jsAnything...] => .undefined)
-        XCTAssert([.integer] => .undefined >= [.opt(.integer)] => .undefined)
-        XCTAssertFalse(
-            [.integer, .integer] => .undefined >= [.opt(.integer), .opt(.string)] => .undefined)
-        XCTAssertFalse([.opt(.integer)] => .undefined >= [.integer] => .undefined)
-        XCTAssertFalse([.opt(.integer)] => .undefined >= [.string...] => .undefined)
-        XCTAssertFalse([.string...] => .undefined >= [.opt(.integer)] => .undefined)
+        #expect(([] => .undefined) >= ([.opt(.integer), .opt(.float)] => .undefined))
+        #expect(([.opt(.integer)] => .undefined) >= ([.opt(.jsAnything)] => .undefined))
+        #expect(([.opt(.integer)] => .undefined) >= ([] => .undefined))
+        #expect(
+            ([.string, .opt(.integer)] => .undefined) >= ([.string, .jsAnything...] => .undefined))
+        #expect(([.integer] => .undefined) >= ([.opt(.integer)] => .undefined))
+        #expect(
+            !(([.integer, .integer] => .undefined)
+                >= ([.opt(.integer), .opt(.string)] => .undefined)))
+        #expect(!(([.opt(.integer)] => .undefined) >= ([.integer] => .undefined)))
+        #expect(!(([.opt(.integer)] => .undefined) >= ([.string...] => .undefined)))
+        #expect(!(([.string...] => .undefined) >= ([.opt(.integer)] => .undefined)))
 
         // Signatures with .either parameters
-        XCTAssert([.either(.integer, .float)] => .undefined >= [.number] => .undefined)
-        XCTAssertFalse([.either(.integer, .string)] => .undefined >= [.number] => .undefined)
-        XCTAssert([.integer] => .undefined >= [.either(.number, .string)] => .undefined)
-        XCTAssert([.integer] => .undefined >= [.either(.string, .number)] => .undefined)
-        XCTAssertFalse([.integer] => .undefined >= [.either(.string, .boolean)] => .undefined)
-        XCTAssert(
-            [.either(.integer, .string)] => .undefined >= [.either(.number, .jsAnything)]
-                => .undefined)
-        XCTAssert(
-            [.either(.integer, .string)] => .undefined >= [.either(.jsAnything, .number)]
-                => .undefined)
-        XCTAssertFalse(
-            [.either(.integer, .string)] => .undefined >= [.either(.number, .boolean)] => .undefined
-        )
+        #expect(([.either(.integer, .float)] => .undefined) >= ([.number] => .undefined))
+        #expect(!(([.either(.integer, .string)] => .undefined) >= ([.number] => .undefined)))
+        #expect(([.integer] => .undefined) >= ([.either(.number, .string)] => .undefined))
+        #expect(([.integer] => .undefined) >= ([.either(.string, .number)] => .undefined))
+        #expect(!(([.integer] => .undefined) >= ([.either(.string, .boolean)] => .undefined)))
+        #expect(
+            ([.either(.integer, .string)] => .undefined)
+                >= ([.either(.number, .jsAnything)]
+                    => .undefined))
+        #expect(
+            ([.either(.integer, .string)] => .undefined)
+                >= ([.either(.jsAnything, .number)]
+                    => .undefined))
+        #expect(
+            !(([.either(.integer, .string)] => .undefined)
+                >= ([.either(.number, .boolean)] => .undefined)))
 
         // Test return value subsumption: sig1 subsumes sig2 if sig1's return value subsumes that
         // of sig2. For example, a function returning .integer is a function returning a .number.
-        XCTAssert([] => .number >= [] => .integer)
-        XCTAssert([] => .jsAnything >= [] => .integer)
-        XCTAssertFalse([] => .integer >= [] => .number)
-        XCTAssertFalse([] => .integer >= [] => .jsAnything)
+        #expect(([] => .number) >= ([] => .integer))
+        #expect(([] => .jsAnything) >= ([] => .integer))
+        #expect(!(([] => .integer) >= ([] => .number)))
+        #expect(!(([] => .integer) >= ([] => .jsAnything)))
 
         // Check that the unknown function signature is subsumed by most other signatures.
-        XCTAssert(Signature.forUnknownFunction <= [] => .jsAnything)
-        XCTAssert(Signature.forUnknownFunction <= [.jsAnything] => .jsAnything)
-        XCTAssert(Signature.forUnknownFunction <= [.integer, .string] => .jsAnything)
+        #expect(Signature.forUnknownFunction <= ([] => .jsAnything))
+        #expect(Signature.forUnknownFunction <= ([.jsAnything] => .jsAnything))
+        #expect(Signature.forUnknownFunction <= ([.integer, .string] => .jsAnything))
     }
 
+    @Test
     func testCustomGroupsSubsumption() {
         // This is ok, see also the comment in TypeSystem.subsumes.
         // Essentially, we have these ObjectGroups such that we can ask them about their types for more informed CodeGeneration.
         // Previously we would just say that all objects are the same anyways.
         // Now we want them to be interchangeable, e.g. for splicing in JS.
-        XCTAssertTrue(ILType.object(ofGroup: "_fuzz_Object0").Is(.object(ofGroup: "_fuzz_Object1")))
-        XCTAssertTrue(
+        #expect(ILType.object(ofGroup: "_fuzz_Object0").Is(.object(ofGroup: "_fuzz_Object1")))
+        #expect(
             ILType.object(ofGroup: "_fuzz_WasmExports0").Is(.object(ofGroup: "_fuzz_WasmExports1")))
-        XCTAssertTrue(
+        #expect(
             ILType.object(ofGroup: "_fuzz_WasmModule0").Is(.object(ofGroup: "_fuzz_WasmModule1")))
-        XCTAssertTrue(ILType.object(ofGroup: "_fuzz_Class1").Is(.object(ofGroup: "_fuzz_Class0")))
-        XCTAssertTrue(
+        #expect(ILType.object(ofGroup: "_fuzz_Class1").Is(.object(ofGroup: "_fuzz_Class0")))
+        #expect(
             ILType.object(ofGroup: "_fuzz_Constructor1").Is(.object(ofGroup: "_fuzz_Constructor0")))
 
-        XCTAssertFalse(
-            ILType.object(ofGroup: "_fuzz_Constructor1").Is(.object(ofGroup: "_fuzz_Class0")))
-        XCTAssertFalse(
-            ILType.object(ofGroup: "_fuzz_Class1").Is(.object(ofGroup: "_fuzz_Constructor1")))
+        #expect(!ILType.object(ofGroup: "_fuzz_Constructor1").Is(.object(ofGroup: "_fuzz_Class0")))
+        #expect(!ILType.object(ofGroup: "_fuzz_Class1").Is(.object(ofGroup: "_fuzz_Constructor1")))
 
         // Negative tests to make sure they don't subsume if they don't subsume based on properties / methods..
-        XCTAssertTrue(
+        #expect(
             ILType.object(ofGroup: "_fuzz_Object1", withMethods: ["a"]).Is(
                 .object(ofGroup: "_fuzz_Object0")))
-        XCTAssertFalse(
-            ILType.object(ofGroup: "_fuzz_Object1").Is(
+        #expect(
+            !ILType.object(ofGroup: "_fuzz_Object1").Is(
                 .object(ofGroup: "_fuzz_Object0", withMethods: ["a"])))
 
-        XCTAssertTrue(
+        #expect(
             ILType.object(ofGroup: "_fuzz_Class1", withProperties: ["a"]).Is(
                 .object(ofGroup: "_fuzz_Class0")))
-        XCTAssertFalse(
-            ILType.object(ofGroup: "_fuzz_Class1").Is(
+        #expect(
+            !ILType.object(ofGroup: "_fuzz_Class1").Is(
                 .object(ofGroup: "_fuzz_Class0", withProperties: ["a"])))
 
-        XCTAssertTrue(
+        #expect(
             ILType.object(ofGroup: "_fuzz_Object1", withProperties: ["a", "b"]).Is(
                 .object(ofGroup: "_fuzz_Object0", withProperties: ["a"])))
-        XCTAssertFalse(
-            ILType.object(ofGroup: "_fuzz_Object1", withProperties: ["b"]).Is(
+        #expect(
+            !ILType.object(ofGroup: "_fuzz_Object1", withProperties: ["b"]).Is(
                 .object(ofGroup: "_fuzz_Object0", withProperties: ["a"])))
 
     }
 
+    @Test
     func testNamedStrings() {
         let namedA = ILType.namedString(ofName: "A")
-        XCTAssert(namedA.Is(.string))
+        #expect(namedA.Is(.string))
         let namedB = ILType.namedString(ofName: "B")
-        XCTAssertEqual(namedA | namedB, .string)
-        XCTAssertEqual(namedA & namedB, .nothing)
+        #expect(namedA | namedB == .string)
+        #expect(namedA & namedB == .nothing)
         let objectA = ILType.object(ofGroup: "A", withProperties: ["a"])
-        XCTAssertEqual(namedA & objectA, .nothing)
+        #expect(namedA & objectA == .nothing)
     }
 
+    @Test
     func testTypeDescriptions() {
         // Test primitive types
-        XCTAssertEqual(ILType.undefined.description, ".undefined")
-        XCTAssertEqual(ILType.integer.description, ".integer")
-        XCTAssertEqual(ILType.bigint.description, ".bigint")
-        XCTAssertEqual(ILType.float.description, ".float")
-        XCTAssertEqual(ILType.string.description, ".string")
-        XCTAssertEqual(ILType.regexp.description, ".regexp")
-        XCTAssertEqual(ILType.boolean.description, ".boolean")
-        XCTAssertEqual(ILType.bigint.description, ".bigint")
-        XCTAssertEqual(ILType.iterable().description, ".iterable")
+        #expect(ILType.undefined.description == ".undefined")
+        #expect(ILType.integer.description == ".integer")
+        #expect(ILType.bigint.description == ".bigint")
+        #expect(ILType.float.description == ".float")
+        #expect(ILType.string.description == ".string")
+        #expect(ILType.regexp.description == ".regexp")
+        #expect(ILType.boolean.description == ".boolean")
+        #expect(ILType.bigint.description == ".bigint")
+        #expect(ILType.iterable().description == ".iterable")
 
         // Test object types
-        XCTAssertEqual(ILType.object().description, ".object()")
-        XCTAssertEqual(
-            ILType.object(withProperties: ["foo"]).description, ".object(withProperties: [\"foo\"])"
-        )
-        XCTAssertEqual(
-            ILType.object(withMethods: ["m"]).description, ".object(withMethods: [\"m\"])")
+        #expect(ILType.object().description == ".object()")
+        #expect(
+            ILType.object(withProperties: ["foo"]).description
+                == ".object(withProperties: [\"foo\"])")
+        #expect(ILType.object(withMethods: ["m"]).description == ".object(withMethods: [\"m\"])")
 
         // Property and method order is not defined
         let fooBarObj = ILType.object(withProperties: ["foo", "bar"])
-        XCTAssert(
+        #expect(
             fooBarObj.description == ".object(withProperties: [\"foo\", \"bar\"])"
                 || fooBarObj.description == ".object(withProperties: [\"bar\", \"foo\"])")
 
         let objWithMethods = ILType.object(withMethods: ["m1", "m2"])
-        XCTAssert(
+        #expect(
             objWithMethods.description == ".object(withMethods: [\"m1\", \"m2\"])"
                 || objWithMethods.description == ".object(withMethods: [\"m2\", \"m1\"])")
 
         let fooBarObjWithMethod = ILType.object(withProperties: ["foo", "bar"], withMethods: ["m"])
-        XCTAssert(
+        #expect(
             fooBarObjWithMethod.description
                 == ".object(withProperties: [\"foo\", \"bar\"], withMethods: [\"m\"])"
                 || fooBarObjWithMethod.description
@@ -1279,81 +1305,81 @@ class TypeSystemTests: XCTestCase {
         )
 
         // Test function and constructor types
-        XCTAssertEqual(ILType.function().description, ".function()")
-        XCTAssertEqual(
-            ILType.function([.rest(.jsAnything)] => .jsAnything).description,
-            ".function([.jsAnything...] => .jsAnything)")
-        XCTAssertEqual(
-            ILType.function([.float, .opt(.integer)] => .object()).description,
-            ".function([.float, .opt(.integer)] => .object())")
-        XCTAssertEqual(
-            ILType.function([.integer, .boolean, .rest(.jsAnything)] => .object()).description,
-            ".function([.integer, .boolean, .jsAnything...] => .object())")
+        #expect(ILType.function().description == ".function()")
+        #expect(
+            ILType.function([.rest(.jsAnything)] => .jsAnything).description
+                == ".function([.jsAnything...] => .jsAnything)")
+        #expect(
+            ILType.function([.float, .opt(.integer)] => .object()).description
+                == ".function([.float, .opt(.integer)] => .object())")
+        #expect(
+            ILType.function([.integer, .boolean, .rest(.jsAnything)] => .object()).description
+                == ".function([.integer, .boolean, .jsAnything...] => .object())")
 
-        XCTAssertEqual(ILType.constructor().description, ".constructor()")
-        XCTAssertEqual(
-            ILType.constructor([.rest(.jsAnything)] => .jsAnything).description,
-            ".constructor([.jsAnything...] => .jsAnything)")
-        XCTAssertEqual(
-            ILType.constructor([.integer, .boolean, .rest(.jsAnything)] => .object()).description,
-            ".constructor([.integer, .boolean, .jsAnything...] => .object())")
+        #expect(ILType.constructor().description == ".constructor()")
+        #expect(
+            ILType.constructor([.rest(.jsAnything)] => .jsAnything).description
+                == ".constructor([.jsAnything...] => .jsAnything)")
+        #expect(
+            ILType.constructor([.integer, .boolean, .rest(.jsAnything)] => .object()).description
+                == ".constructor([.integer, .boolean, .jsAnything...] => .object())")
 
-        XCTAssertEqual(ILType.functionAndConstructor().description, ".function() + .constructor()")
-        XCTAssertEqual(
-            ILType.functionAndConstructor([.rest(.jsAnything)] => .jsAnything).description,
-            ".function([.jsAnything...] => .jsAnything) + .constructor([.jsAnything...] => .jsAnything)"
+        #expect(ILType.functionAndConstructor().description == ".function() + .constructor()")
+        #expect(
+            ILType.functionAndConstructor([.rest(.jsAnything)] => .jsAnything).description
+                == ".function([.jsAnything...] => .jsAnything) + .constructor([.jsAnything...] => .jsAnything)"
         )
-        XCTAssertEqual(
+        #expect(
             ILType.functionAndConstructor([.integer, .boolean, .rest(.jsAnything)] => .object())
-                .description,
-            ".function([.integer, .boolean, .jsAnything...] => .object()) + .constructor([.integer, .boolean, .jsAnything...] => .object())"
+                .description
+                == ".function([.integer, .boolean, .jsAnything...] => .object()) + .constructor([.integer, .boolean, .jsAnything...] => .object())"
         )
 
-        XCTAssertEqual(
+        #expect(
             ILType.unboundFunction(
-                [.integer, .boolean, .rest(.jsAnything)] => .object(), receiver: .object()
-            ).description,
-            ".unboundFunction([.integer, .boolean, .jsAnything...] => .object(), receiver: .object())"
+                ([.integer, .boolean, .rest(.jsAnything)] => .object()), receiver: .object()
+            ).description
+                == ".unboundFunction([.integer, .boolean, .jsAnything...] => .object(), receiver: .object())"
         )
-        XCTAssertEqual(ILType.unboundFunction().description, ".unboundFunction(nil, receiver: nil)")
+        #expect(ILType.unboundFunction().description == ".unboundFunction(nil, receiver: nil)")
 
         // Test other "well-known" types
-        XCTAssertEqual(ILType.nothing.description, ".nothing")
-        XCTAssertEqual(ILType.jsAnything.description, ".jsAnything")
+        #expect(ILType.nothing.description == ".nothing")
+        #expect(ILType.jsAnything.description == ".jsAnything")
 
-        XCTAssertEqual(ILType.primitive.description, ".primitive")
-        XCTAssertEqual(ILType.number.description, ".number")
+        #expect(ILType.primitive.description == ".primitive")
+        #expect(ILType.number.description == ".number")
 
         // Test union types
         let strOrInt = ILType.integer | ILType.string
-        XCTAssertEqual(strOrInt.description, ".integer | .string")
+        #expect(strOrInt.description == ".integer | .string")
 
         let strOrIntOrObj = ILType.integer | ILType.string | ILType.object(withProperties: ["foo"])
         // Note: information about properties and methods is discarded when unioning with non-object types.
-        XCTAssertEqual(strOrIntOrObj.description, ".integer | .string | .object()")
+        #expect(strOrIntOrObj.description == ".integer | .string | .object()")
 
         let objOrFunc = ILType.object() | ILType.function([.integer, .integer] => .integer)
         // Note: information about signatures is discarded when unioning callable types.
-        XCTAssertEqual(objOrFunc.description, ".object() | .function()")
+        #expect(objOrFunc.description == ".object() | .function()")
 
         // Test merged types
         let strObj = ILType.string + ILType.object(withProperties: ["foo"])
-        XCTAssertEqual(strObj.description, ".string + .object(withProperties: [\"foo\"])")
+        #expect(strObj.description == ".string + .object(withProperties: [\"foo\"])")
 
         let funcObj =
             ILType.object(withProperties: ["foo"], withMethods: ["m"])
             + ILType.function([.integer, .rest(.jsAnything)] => .boolean)
-        XCTAssertEqual(
-            funcObj.description,
-            ".object(withProperties: [\"foo\"], withMethods: [\"m\"]) + .function([.integer, .jsAnything...] => .boolean)"
+        #expect(
+            funcObj.description
+                == ".object(withProperties: [\"foo\"], withMethods: [\"m\"]) + .function([.integer, .jsAnything...] => .boolean)"
         )
 
         let funcConstrObj =
             ILType.object(withProperties: ["foo"], withMethods: ["m"])
             + ILType.functionAndConstructor([.integer, .rest(.jsAnything)] => .boolean)
-        XCTAssertEqual(
-            funcConstrObj.description,
-            ".object(withProperties: [\"foo\"], withMethods: [\"m\"]) + .function([.integer, .jsAnything...] => .boolean) + .constructor([.integer, .jsAnything...] => .boolean)"
+        #expect(
+            funcConstrObj.description
+                == ".object(withProperties: [\"foo\"], withMethods: [\"m\"]) + .function([.integer, .jsAnything...] => .boolean) + .constructor([.integer, .jsAnything...] => .boolean)"
         )
 
         // Test union of merged types
@@ -1361,21 +1387,21 @@ class TypeSystemTests: XCTestCase {
             (ILType.string + ILType.object(withProperties: ["foo"]))
             | (ILType.function([.rest(.jsAnything)] => .float)
                 + ILType.object(withProperties: ["foo"]))
-        XCTAssertEqual(
-            strObjOrFuncObj.description,
-            ".string + .object(withProperties: [\"foo\"]) | .object(withProperties: [\"foo\"]) + .function()"
+        #expect(
+            strObjOrFuncObj.description
+                == ".string + .object(withProperties: [\"foo\"]) | .object(withProperties: [\"foo\"]) + .function()"
         )
 
         let nullExn = ILType.wasmRef(.WasmExn, shared: true, nullability: true)
         let nonNullAny = ILType.wasmRef(.WasmAny, shared: false, nullability: false)
-        XCTAssertEqual(nullExn.description, ".wasmRef(.Abstract(null shared WasmExn))")
-        XCTAssertEqual(nonNullAny.description, ".wasmRef(.Abstract(WasmAny))")
+        #expect(nullExn.description == ".wasmRef(.Abstract(null shared WasmExn))")
+        #expect(nonNullAny.description == ".wasmRef(.Abstract(WasmAny))")
 
         // TODO(pawkra): add shared variant.
         let arrayDesc = WasmArrayTypeDescription(
             elementType: .wasmi32, mutability: false, typeGroupIndex: 0)
         let arrayRef = ILType.wasmIndexRef(arrayDesc, nullability: true)
-        XCTAssertEqual(arrayRef.description, ".wasmRef(null Index 0 Array[immutable .wasmi32])")
+        #expect(arrayRef.description == ".wasmRef(null Index 0 Array[immutable .wasmi32])")
         let nullableSelfRef = ILType.wasmRef(
             .Index(.init(WasmTypeDescription.selfReference)), nullability: true)
         let structDesc = WasmStructTypeDescription(
@@ -1385,60 +1411,58 @@ class TypeSystemTests: XCTestCase {
                 .init(type: arrayRef, mutability: true),
             ], typeGroupIndex: 1)
         let structRef = ILType.wasmIndexRef(structDesc, nullability: false)
-        XCTAssertEqual(
-            structRef.description,
-            ".wasmRef(Index 1 Struct[mutable .wasmf32, "
+        #expect(
+            structRef.description == ".wasmRef(Index 1 Struct[mutable .wasmf32, "
                 + "immutable .wasmRef(null Index selfReference), mutable .wasmRef(null Index 0 Array)])"
         )
         // Create a cycle (a "resolved" self reference) for an array element type.
         arrayDesc.elementType = arrayRef
-        XCTAssertEqual(
-            arrayRef.description,
-            ".wasmRef(null Index 0 Array[immutable .wasmRef(null Index 0 Array)])")
+        #expect(
+            arrayRef.description
+                == ".wasmRef(null Index 0 Array[immutable .wasmRef(null Index 0 Array)])")
         // Create a cycle for a struct field type.
         structDesc.fields[1].type = .wasmIndexRef(structDesc, nullability: true)
-        XCTAssertEqual(
-            structRef.description,
-            ".wasmRef(Index 1 Struct[mutable .wasmf32, "
+        #expect(
+            structRef.description == ".wasmRef(Index 1 Struct[mutable .wasmf32, "
                 + "immutable .wasmRef(null Index 1 Struct), mutable .wasmRef(null Index 0 Array)])")
 
         // Type definitions print the same thing as references just with .wasmTypeDef instead of
         // .wasmRef.
         let arrayDef = ILType.wasmTypeDef(description: arrayDesc)
-        XCTAssertEqual(
-            arrayDef.description,
-            ".wasmTypeDef(0 Array[immutable .wasmRef(null Index 0 Array)])")
+        #expect(
+            arrayDef.description == ".wasmTypeDef(0 Array[immutable .wasmRef(null Index 0 Array)])")
         let structDef = ILType.wasmTypeDef(description: structDesc)
-        XCTAssertEqual(
-            structDef.description,
-            ".wasmTypeDef(1 Struct[mutable .wasmf32, "
+        #expect(
+            structDef.description == ".wasmTypeDef(1 Struct[mutable .wasmf32, "
                 + "immutable .wasmRef(null Index 1 Struct), mutable .wasmRef(null Index 0 Array)])")
         let signatureDesc = WasmSignatureTypeDescription(
             signature: [.wasmi32, arrayRef] => [structRef, .wasmNullRef(shared: true)],
             typeGroupIndex: 0)
         let signatureDef = ILType.wasmTypeDef(description: signatureDesc)
-        XCTAssertEqual(
-            signatureDef.description,
-            ".wasmTypeDef(0 Func[[.wasmi32, .wasmRef(null Index 0 Array)] => "
+        #expect(
+            signatureDef.description
+                == ".wasmTypeDef(0 Func[[.wasmi32, .wasmRef(null Index 0 Array)] => "
                 + "[.wasmRef(Index 1 Struct), .wasmRef(.Abstract(null shared WasmNone))]])")
 
         // A generic index type without a type description.
         // These are e.g. used by the element types for arrays and structs inside the operation as
         // the operation doesn't know about the actual type definition inputs.
         let nullableGenericIndexRef = ILType.wasmRef(.Index(), nullability: true)
-        XCTAssertEqual(nullableGenericIndexRef.description, ".wasmRef(null Index)")
-        XCTAssertEqual(ILType.anyNonNullableIndexRef.description, ".wasmRef(Index)")
+        #expect(nullableGenericIndexRef.description == ".wasmRef(null Index)")
+        #expect(ILType.anyNonNullableIndexRef.description == ".wasmRef(Index)")
     }
 
+    @Test
     func testWasmSubsumptionRules() {
         let wasmTypes: [ILType] =
             [.wasmi32, .wasmi64, .wasmf32, .wasmf64] + ILType.allNullableAbstractWasmRefTypes()
         // Make sure that no Wasm type is subsumed by (JS-)anything.
         for t in wasmTypes {
-            XCTAssertEqual(t <= .jsAnything, false)
+            #expect(!(t <= .jsAnything))
         }
     }
 
+    @Test
     func testWasmTypeExtensionSubsumptionRules() {
         let arrayi32Desc = WasmArrayTypeDescription(
             elementType: .wasmi32, mutability: true, typeGroupIndex: 0)
@@ -1446,90 +1470,91 @@ class TypeSystemTests: XCTestCase {
             elementType: .wasmi64, mutability: true, typeGroupIndex: 0)
 
         // Test Wasm reference type definitions.
-        XCTAssertNotEqual(ILType.wasmTypeDef(), ILType.wasmTypeDef(description: arrayi32Desc))
-        XCTAssertNotEqual(
-            ILType.wasmTypeDef(description: arrayi64Desc),
-            ILType.wasmTypeDef(description: arrayi32Desc))
-        XCTAssertEqual(
-            ILType.wasmTypeDef(description: arrayi32Desc),
-            ILType.wasmTypeDef(description: arrayi32Desc))
-        XCTAssert(ILType.wasmTypeDef(description: arrayi32Desc) <= ILType.wasmTypeDef())
-        XCTAssert(
+        #expect(ILType.wasmTypeDef() != ILType.wasmTypeDef(description: arrayi32Desc))
+        #expect(
+            ILType.wasmTypeDef(description: arrayi64Desc)
+                != ILType.wasmTypeDef(description: arrayi32Desc))
+        #expect(
+            ILType.wasmTypeDef(description: arrayi32Desc)
+                == ILType.wasmTypeDef(description: arrayi32Desc))
+        #expect(ILType.wasmTypeDef(description: arrayi32Desc) <= ILType.wasmTypeDef())
+        #expect(
             ILType.wasmTypeDef(description: arrayi32Desc)
                 <= ILType.wasmTypeDef(description: arrayi32Desc))
-        XCTAssertFalse(
-            ILType.wasmTypeDef(description: arrayi32Desc)
-                <= ILType.wasmTypeDef(description: arrayi64Desc))
+        #expect(
+            !(ILType.wasmTypeDef(description: arrayi32Desc)
+                <= ILType.wasmTypeDef(description: arrayi64Desc)))
 
         // Test Wasm references.
-        XCTAssert(
+        #expect(
             ILType.wasmRef(.Index(), nullability: true)
                 <= ILType.wasmRef(.Index(), nullability: true))
-        XCTAssert(
+        #expect(
             ILType.wasmRef(.Index(), nullability: false)
                 <= ILType.wasmRef(.Index(), nullability: false))
-        XCTAssert(
+        #expect(
             ILType.wasmRef(.Index(), nullability: false)
                 <= ILType.wasmRef(.Index(), nullability: true))
-        XCTAssertFalse(
-            ILType.wasmRef(.Index(), nullability: true)
-                <= ILType.wasmRef(.Index(), nullability: false))
-        XCTAssertFalse(ILType.wasmi32 <= ILType.wasmRef(.Index(), nullability: true))
-        XCTAssertFalse(ILType.wasmRef(.Index(), nullability: true) <= ILType.wasmi32)
-        XCTAssertFalse(
+        #expect(
+            !(ILType.wasmRef(.Index(), nullability: true)
+                <= ILType.wasmRef(.Index(), nullability: false)))
+        #expect(!(ILType.wasmi32 <= ILType.wasmRef(.Index(), nullability: true)))
+        #expect(!(ILType.wasmRef(.Index(), nullability: true) <= ILType.wasmi32))
+        #expect(
+            !(ILType.wasmIndexRef(arrayi32Desc, nullability: true)
+                >= ILType.wasmIndexRef(arrayi64Desc, nullability: true)))
+        #expect(
+            !(ILType.wasmIndexRef(arrayi64Desc, nullability: true)
+                >= ILType.wasmIndexRef(arrayi32Desc, nullability: true)))
+        #expect(
             ILType.wasmIndexRef(arrayi32Desc, nullability: true)
-                >= ILType.wasmIndexRef(arrayi64Desc, nullability: true))
-        XCTAssertFalse(
-            ILType.wasmIndexRef(arrayi64Desc, nullability: true)
                 >= ILType.wasmIndexRef(arrayi32Desc, nullability: true))
-        XCTAssert(
-            ILType.wasmIndexRef(arrayi32Desc, nullability: true)
-                >= ILType.wasmIndexRef(arrayi32Desc, nullability: true))
-        XCTAssert(
+        #expect(
             ILType.wasmIndexRef(arrayi32Desc, nullability: true)
                 >= ILType.wasmIndexRef(arrayi32Desc, nullability: false))
-        XCTAssert(
+        #expect(
             ILType.wasmRef(.Index(), nullability: true)
                 >= ILType.wasmIndexRef(arrayi32Desc, nullability: true))
-        XCTAssertFalse(
-            ILType.wasmRef(.Index(), nullability: true)
-                <= ILType.wasmIndexRef(arrayi32Desc, nullability: true))
+        #expect(
+            !(ILType.wasmRef(.Index(), nullability: true)
+                <= ILType.wasmIndexRef(arrayi32Desc, nullability: true)))
 
-        XCTAssert(ILType.wasmRef(.Index(), nullability: true) <= ILType.wasmGenericRef)
-        XCTAssertFalse(ILType.wasmGenericRef <= ILType.wasmRef(.Index(), nullability: true))
+        #expect(ILType.wasmRef(.Index(), nullability: true) <= ILType.wasmGenericRef)
+        #expect(!(ILType.wasmGenericRef <= ILType.wasmRef(.Index(), nullability: true)))
 
         // Test nullability rules for abstract Wasm types.
         for heapType: WasmAbstractHeapType in WasmAbstractHeapType.allCases {
             for shared in [true, false] {
                 let nullable = ILType.wasmRef(heapType, shared: shared, nullability: true)
                 let nonNullable = ILType.wasmRef(heapType, shared: shared, nullability: false)
-                XCTAssert(nonNullable.Is(nullable))
-                XCTAssertFalse(nullable.Is(nonNullable))
-                XCTAssertEqual(nullable.union(with: nonNullable), nullable)
-                XCTAssertEqual(nonNullable.union(with: nullable), nullable)
-                XCTAssertEqual(nullable.intersection(with: nonNullable), nonNullable)
-                XCTAssertEqual(nonNullable.intersection(with: nullable), nonNullable)
+                #expect(nonNullable.Is(nullable))
+                #expect(!nullable.Is(nonNullable))
+                #expect(nullable.union(with: nonNullable) == nullable)
+                #expect(nonNullable.union(with: nullable) == nullable)
+                #expect(nullable.intersection(with: nonNullable) == nonNullable)
+                #expect(nonNullable.intersection(with: nullable) == nonNullable)
             }
         }
     }
 
+    @Test
     func testWasmSubtypingRules() {
         let baseDesc = WasmTypeDescription(typeGroupIndex: 0)
         let subDesc = WasmTypeDescription(typeGroupIndex: 1, concreteHeapSupertype: baseDesc)
         let subSubDesc = WasmTypeDescription(typeGroupIndex: 2, concreteHeapSupertype: subDesc)
         let unrelatedDesc = WasmTypeDescription(typeGroupIndex: 3)
 
-        XCTAssertTrue(baseDesc.subsumes(baseDesc))
-        XCTAssertTrue(baseDesc.subsumes(subDesc))
-        XCTAssertTrue(baseDesc.subsumes(subSubDesc))
-        XCTAssertTrue(subDesc.subsumes(subSubDesc))
+        #expect(baseDesc.subsumes(baseDesc))
+        #expect(baseDesc.subsumes(subDesc))
+        #expect(baseDesc.subsumes(subSubDesc))
+        #expect(subDesc.subsumes(subSubDesc))
 
-        XCTAssertFalse(subDesc.subsumes(baseDesc))
-        XCTAssertFalse(subSubDesc.subsumes(baseDesc))
-        XCTAssertFalse(subSubDesc.subsumes(subDesc))
+        #expect(!subDesc.subsumes(baseDesc))
+        #expect(!subSubDesc.subsumes(baseDesc))
+        #expect(!subSubDesc.subsumes(subDesc))
 
-        XCTAssertFalse(baseDesc.subsumes(unrelatedDesc))
-        XCTAssertFalse(unrelatedDesc.subsumes(baseDesc))
+        #expect(!baseDesc.subsumes(unrelatedDesc))
+        #expect(!unrelatedDesc.subsumes(baseDesc))
 
         let anyTypeDef = ILType.wasmTypeDef()
         let baseDef = ILType.wasmTypeDef(description: baseDesc)
@@ -1537,30 +1562,30 @@ class TypeSystemTests: XCTestCase {
         let subSubDef = ILType.wasmTypeDef(description: subSubDesc)
         let unrelatedDef: ILType = ILType.wasmTypeDef(description: unrelatedDesc)
 
-        XCTAssertTrue(baseDef >= baseDef)
-        XCTAssertTrue(baseDef >= subDef)
-        XCTAssertTrue(baseDef >= subSubDef)
-        XCTAssertTrue(subDef >= subSubDef)
+        #expect(baseDef >= baseDef)
+        #expect(baseDef >= subDef)
+        #expect(baseDef >= subSubDef)
+        #expect(subDef >= subSubDef)
 
-        XCTAssertFalse(subDef >= baseDef)
-        XCTAssertFalse(subSubDef >= baseDef)
-        XCTAssertFalse(subSubDef >= subDef)
+        #expect(!(subDef >= baseDef))
+        #expect(!(subSubDef >= baseDef))
+        #expect(!(subSubDef >= subDef))
 
-        XCTAssertFalse(baseDef >= unrelatedDef)
-        XCTAssertFalse(unrelatedDef >= baseDef)
+        #expect(!(baseDef >= unrelatedDef))
+        #expect(!(unrelatedDef >= baseDef))
 
-        XCTAssertTrue(anyTypeDef >= baseDef)
-        XCTAssertFalse(baseDef >= anyTypeDef)
+        #expect(anyTypeDef >= baseDef)
+        #expect(!(baseDef >= anyTypeDef))
 
-        XCTAssertEqual(anyTypeDef.union(with: baseDef), anyTypeDef)
-        XCTAssertEqual(baseDef.union(with: anyTypeDef), anyTypeDef)
-        XCTAssertEqual(baseDef.union(with: subDef), baseDef)
-        XCTAssertEqual(subDef.union(with: baseDef), baseDef)
+        #expect(anyTypeDef.union(with: baseDef) == anyTypeDef)
+        #expect(baseDef.union(with: anyTypeDef) == anyTypeDef)
+        #expect(baseDef.union(with: subDef) == baseDef)
+        #expect(subDef.union(with: baseDef) == baseDef)
 
-        XCTAssertEqual(anyTypeDef.intersection(with: baseDef), baseDef)
-        XCTAssertEqual(baseDef.intersection(with: anyTypeDef), baseDef)
-        XCTAssertEqual(baseDef.intersection(with: subDef), subDef)
-        XCTAssertEqual(subDef.intersection(with: baseDef), subDef)
+        #expect(anyTypeDef.intersection(with: baseDef) == baseDef)
+        #expect(baseDef.intersection(with: anyTypeDef) == baseDef)
+        #expect(baseDef.intersection(with: subDef) == subDef)
+        #expect(subDef.intersection(with: baseDef) == subDef)
 
         let baseRefNullable = ILType.wasmIndexRef(baseDesc, nullability: true)
         let subRefNullable = ILType.wasmIndexRef(subDesc, nullability: true)
@@ -1570,49 +1595,50 @@ class TypeSystemTests: XCTestCase {
         let subRefNonNull = ILType.wasmIndexRef(subDesc, nullability: false)
         let subSubRefNonNull = ILType.wasmIndexRef(subSubDesc, nullability: false)
 
-        XCTAssertTrue(baseRefNullable >= baseRefNullable)
-        XCTAssertTrue(baseRefNullable >= subRefNullable)
-        XCTAssertTrue(baseRefNullable >= subSubRefNullable)
-        XCTAssertTrue(subRefNullable >= subSubRefNullable)
+        #expect(baseRefNullable >= baseRefNullable)
+        #expect(baseRefNullable >= subRefNullable)
+        #expect(baseRefNullable >= subSubRefNullable)
+        #expect(subRefNullable >= subSubRefNullable)
 
-        XCTAssertFalse(subRefNullable >= baseRefNullable)
-        XCTAssertFalse(subSubRefNullable >= baseRefNullable)
-        XCTAssertFalse(subSubRefNullable >= subRefNullable)
+        #expect(!(subRefNullable >= baseRefNullable))
+        #expect(!(subSubRefNullable >= baseRefNullable))
+        #expect(!(subSubRefNullable >= subRefNullable))
 
-        XCTAssertFalse(baseRefNullable >= unrelatedRefNullable)
-        XCTAssertFalse(unrelatedRefNullable >= baseRefNullable)
+        #expect(!(baseRefNullable >= unrelatedRefNullable))
+        #expect(!(unrelatedRefNullable >= baseRefNullable))
 
-        XCTAssertTrue(subRefNonNull >= subSubRefNonNull)
-        XCTAssertFalse(subSubRefNonNull >= subRefNonNull)
-        XCTAssertTrue(baseRefNullable >= subSubRefNonNull)
-        XCTAssertFalse(subRefNonNull >= subSubRefNullable)
-        XCTAssertTrue(subRefNullable >= subSubRefNullable)
+        #expect(subRefNonNull >= subSubRefNonNull)
+        #expect(!(subSubRefNonNull >= subRefNonNull))
+        #expect(baseRefNullable >= subSubRefNonNull)
+        #expect(!(subRefNonNull >= subSubRefNullable))
+        #expect(subRefNullable >= subSubRefNullable)
 
-        XCTAssertEqual(baseRefNullable.union(with: subRefNullable), baseRefNullable)
-        XCTAssertEqual(subRefNullable.union(with: baseRefNullable), baseRefNullable)
-        XCTAssertEqual(subRefNullable.union(with: subSubRefNullable), subRefNullable)
-        XCTAssertEqual(subSubRefNullable.union(with: subRefNullable), subRefNullable)
-        XCTAssertEqual(baseRefNullable.union(with: subSubRefNullable), baseRefNullable)
-        XCTAssertEqual(subSubRefNullable.union(with: baseRefNullable), baseRefNullable)
-        XCTAssertEqual(subRefNullable.union(with: subRefNullable), subRefNullable)
+        #expect(baseRefNullable.union(with: subRefNullable) == baseRefNullable)
+        #expect(subRefNullable.union(with: baseRefNullable) == baseRefNullable)
+        #expect(subRefNullable.union(with: subSubRefNullable) == subRefNullable)
+        #expect(subSubRefNullable.union(with: subRefNullable) == subRefNullable)
+        #expect(baseRefNullable.union(with: subSubRefNullable) == baseRefNullable)
+        #expect(subSubRefNullable.union(with: baseRefNullable) == baseRefNullable)
+        #expect(subRefNullable.union(with: subRefNullable) == subRefNullable)
 
-        XCTAssertEqual(subRefNonNull.union(with: subSubRefNonNull), subRefNonNull)
-        XCTAssertEqual(subRefNullable.union(with: subRefNonNull), subRefNullable)
-        XCTAssertEqual(subRefNonNull.union(with: subSubRefNullable), subRefNullable)
+        #expect(subRefNonNull.union(with: subSubRefNonNull) == subRefNonNull)
+        #expect(subRefNullable.union(with: subRefNonNull) == subRefNullable)
+        #expect(subRefNonNull.union(with: subSubRefNullable) == subRefNullable)
 
-        XCTAssertEqual(baseRefNullable.intersection(with: subRefNullable), subRefNullable)
-        XCTAssertEqual(subRefNullable.intersection(with: baseRefNullable), subRefNullable)
-        XCTAssertEqual(subRefNullable.intersection(with: subSubRefNullable), subSubRefNullable)
-        XCTAssertEqual(subSubRefNullable.intersection(with: subRefNullable), subSubRefNullable)
-        XCTAssertEqual(baseRefNullable.intersection(with: subSubRefNullable), subSubRefNullable)
-        XCTAssertEqual(subSubRefNullable.intersection(with: baseRefNullable), subSubRefNullable)
-        XCTAssertEqual(subRefNullable.intersection(with: subRefNullable), subRefNullable)
+        #expect(baseRefNullable.intersection(with: subRefNullable) == subRefNullable)
+        #expect(subRefNullable.intersection(with: baseRefNullable) == subRefNullable)
+        #expect(subRefNullable.intersection(with: subSubRefNullable) == subSubRefNullable)
+        #expect(subSubRefNullable.intersection(with: subRefNullable) == subSubRefNullable)
+        #expect(baseRefNullable.intersection(with: subSubRefNullable) == subSubRefNullable)
+        #expect(subSubRefNullable.intersection(with: baseRefNullable) == subSubRefNullable)
+        #expect(subRefNullable.intersection(with: subRefNullable) == subRefNullable)
 
-        XCTAssertEqual(subRefNonNull.intersection(with: subSubRefNonNull), subSubRefNonNull)
-        XCTAssertEqual(subRefNullable.intersection(with: subRefNonNull), subRefNonNull)
-        XCTAssertEqual(subRefNonNull.intersection(with: subSubRefNullable), subSubRefNonNull)
+        #expect(subRefNonNull.intersection(with: subSubRefNonNull) == subSubRefNonNull)
+        #expect(subRefNullable.intersection(with: subRefNonNull) == subRefNonNull)
+        #expect(subRefNonNull.intersection(with: subSubRefNullable) == subSubRefNonNull)
     }
 
+    @Test
     func testWasmArraySubtypingRules() {
         let anyRefType = ILType.wasmAnyRef()
         let indexDesc = WasmArrayTypeDescription(
@@ -1628,10 +1654,10 @@ class TypeSystemTests: XCTestCase {
             elementType: indexRefType, mutability: true, typeGroupIndex: 3,
             concreteHeapSupertype: superArrayDescImmutable)
 
-        XCTAssertTrue(superArrayDescImmutable.subsumes(subArrayDescImmutable))
-        XCTAssertFalse(subArrayDescImmutable.subsumes(superArrayDescImmutable))
-        XCTAssertTrue(superArrayDescImmutable.subsumes(subArrayDescMutable))
-        XCTAssertFalse(subArrayDescMutable.subsumes(superArrayDescImmutable))
+        #expect(superArrayDescImmutable.subsumes(subArrayDescImmutable))
+        #expect(!subArrayDescImmutable.subsumes(superArrayDescImmutable))
+        #expect(superArrayDescImmutable.subsumes(subArrayDescMutable))
+        #expect(!subArrayDescMutable.subsumes(superArrayDescImmutable))
 
         let superArrayDescMutable = WasmArrayTypeDescription(
             elementType: indexRefType, mutability: true, typeGroupIndex: 4)
@@ -1639,9 +1665,10 @@ class TypeSystemTests: XCTestCase {
             elementType: indexRefType, mutability: true, typeGroupIndex: 5,
             concreteHeapSupertype: superArrayDescMutable)
 
-        XCTAssertTrue(superArrayDescMutable.subsumes(subArrayDescMutable2))
+        #expect(superArrayDescMutable.subsumes(subArrayDescMutable2))
     }
 
+    @Test
     func testWasmStructSubtypingRules() {
         let anyRefType = ILType.wasmAnyRef()
         let indexDesc = WasmArrayTypeDescription(
@@ -1658,10 +1685,10 @@ class TypeSystemTests: XCTestCase {
             fields: [WasmStructTypeDescription.Field(type: indexRefType, mutability: true)],
             typeGroupIndex: 3, concreteHeapSupertype: superStructDescImmutable)
 
-        XCTAssertTrue(superStructDescImmutable.subsumes(subStructDescImmutable))
-        XCTAssertFalse(subStructDescImmutable.subsumes(superStructDescImmutable))
-        XCTAssertTrue(superStructDescImmutable.subsumes(subStructDescMutable))
-        XCTAssertFalse(subStructDescMutable.subsumes(superStructDescImmutable))
+        #expect(superStructDescImmutable.subsumes(subStructDescImmutable))
+        #expect(!subStructDescImmutable.subsumes(superStructDescImmutable))
+        #expect(superStructDescImmutable.subsumes(subStructDescMutable))
+        #expect(!subStructDescMutable.subsumes(superStructDescImmutable))
 
         let superStructDescMulti = WasmStructTypeDescription(
             fields: [
@@ -1678,39 +1705,40 @@ class TypeSystemTests: XCTestCase {
             ],
             typeGroupIndex: 5, concreteHeapSupertype: superStructDescMulti)
 
-        XCTAssertTrue(superStructDescMulti.subsumes(subStructDescMultiWidthAndDepth))
-        XCTAssertFalse(subStructDescMultiWidthAndDepth.subsumes(superStructDescMulti))
+        #expect(superStructDescMulti.subsumes(subStructDescMultiWidthAndDepth))
+        #expect(!subStructDescMultiWidthAndDepth.subsumes(superStructDescMulti))
     }
 
-    func testWasmSignatureSubtypingRules() {
+    @Test func testWasmSignatureSubtypingRules() {
         let superSigDesc = WasmSignatureTypeDescription(
             signature: [] => [], typeGroupIndex: 0)
         let subSigDesc = WasmSignatureTypeDescription(
             signature: [] => [], typeGroupIndex: 1, concreteHeapSupertype: superSigDesc)
 
-        XCTAssertTrue(superSigDesc.subsumes(subSigDesc))
-        XCTAssertFalse(subSigDesc.subsumes(superSigDesc))
+        #expect(superSigDesc.subsumes(subSigDesc))
+        #expect(!subSigDesc.subsumes(superSigDesc))
     }
 
-    func testWasmTypeExtensionUnionTypeExtensionVsWasmTypeExtension() {
+    @Test func testWasmTypeExtensionUnionTypeExtensionVsWasmTypeExtension() {
         let tagA = ILType.object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmi32]))
         let tagB = ILType.object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmi64]))
         // The union with itself doesn't modify the type.
-        XCTAssertEqual(tagA.union(with: tagA), tagA)
+        #expect(tagA.union(with: tagA) == tagA)
         // The union of two distinct wasm tags / WasmTypeExtensions leads to the removal of the wasm
         // type extension. To make the types easier to use (e.g. a catch might just want to search
         // for any wasm tag by doing `required(.object(ofGroup: "WasmTag"))` and expect to get a tag
         // with a valid type extension), if the WasmTypeExtension is removed, also any object group
         // is invalidated on the TypeExtension.
         let tagUnion = tagA.union(with: tagB)
-        XCTAssertNil(tagUnion.wasmType)
-        XCTAssertNil(tagUnion.group)
+        #expect(tagUnion.wasmType == nil)
+        #expect(tagUnion.group == nil)
         // The intersection of two unequal tags always leads to an invalid type (as tags never
         // subsume each other).
         let tagIntersection = tagA.intersection(with: tagB)
-        XCTAssertEqual(tagIntersection, .nothing)
+        #expect(tagIntersection == .nothing)
     }
 
+    @Test
     func testWasmAbstractHeapTypeSubsumptionRules() {
         let groupAny: [WasmAbstractHeapType] =
             [.WasmAny, .WasmEq, .WasmI31, .WasmStruct, .WasmArray, .WasmNone]
@@ -1720,42 +1748,42 @@ class TypeSystemTests: XCTestCase {
         let allGroups = [groupAny, groupExtern, groupFunc, groupExn]
         let allTypes = allGroups.joined()
         // If this fails, please extend the arrays above with the newly added type(s).
-        XCTAssert(WasmAbstractHeapType.allCases.allSatisfy(allTypes.contains))
+        #expect(WasmAbstractHeapType.allCases.allSatisfy(allTypes.contains))
 
         // All types in the same type group share the same bottom type.
-        XCTAssert(groupAny.allSatisfy { $0.getBottom() == .WasmNone })
-        XCTAssert(groupExtern.allSatisfy { $0.getBottom() == .WasmNoExtern })
-        XCTAssert(groupFunc.allSatisfy { $0.getBottom() == .WasmNoFunc })
-        XCTAssert(groupExn.allSatisfy { $0.getBottom() == .WasmNoExn })
+        #expect(groupAny.allSatisfy { $0.getBottom() == .WasmNone })
+        #expect(groupExtern.allSatisfy { $0.getBottom() == .WasmNoExtern })
+        #expect(groupFunc.allSatisfy { $0.getBottom() == .WasmNoFunc })
+        #expect(groupExn.allSatisfy { $0.getBottom() == .WasmNoExn })
 
         // The union and intersection of of two unrelated types are nil.
         for groupA in allGroups {
             for groupB in allGroups where groupA != groupB {
                 for typeA in groupA {
                     for typeB in groupB {
-                        XCTAssertNil(typeA.union(typeB), "a=\(typeA) b=\(typeB)")
-                        XCTAssertNil(typeA.intersection(typeB), "a=\(typeA) b=\(typeB)")
+                        #expect(typeA.union(typeB) == nil, "a=\(typeA) b=\(typeB)")
+                        #expect(typeA.intersection(typeB) == nil, "a=\(typeA) b=\(typeB)")
                     }
                 }
             }
         }
 
         for type in allTypes {
-            XCTAssertEqual(type.union(type), type)
-            XCTAssertEqual(type.union(type.getBottom()), type)
-            XCTAssertEqual(type.getBottom().union(type), type)
-            XCTAssertEqual(type.intersection(type), type)
-            XCTAssertEqual(type.intersection(type.getBottom()), type.getBottom())
+            #expect(type.union(type) == type)
+            #expect(type.union(type.getBottom()) == type)
+            #expect(type.getBottom().union(type) == type)
+            #expect(type.intersection(type) == type)
+            #expect(type.intersection(type.getBottom()) == type.getBottom())
         }
 
-        XCTAssertEqual(WasmAbstractHeapType.WasmAny.union(.WasmEq), .WasmAny)
-        XCTAssertEqual(WasmAbstractHeapType.WasmStruct.union(.WasmArray), .WasmEq)
-        XCTAssertEqual(WasmAbstractHeapType.WasmI31.union(.WasmArray), .WasmEq)
-        XCTAssertEqual(WasmAbstractHeapType.WasmArray.union(.WasmEq), .WasmEq)
-        XCTAssertEqual(WasmAbstractHeapType.WasmArray.intersection(.WasmStruct), .WasmNone)
-        XCTAssertEqual(WasmAbstractHeapType.WasmI31.intersection(.WasmStruct), .WasmNone)
-        XCTAssertEqual(WasmAbstractHeapType.WasmI31.intersection(.WasmEq), .WasmI31)
-        XCTAssertEqual(WasmAbstractHeapType.WasmAny.intersection(.WasmArray), .WasmArray)
+        #expect(WasmAbstractHeapType.WasmAny.union(.WasmEq) == .WasmAny)
+        #expect(WasmAbstractHeapType.WasmStruct.union(.WasmArray) == .WasmEq)
+        #expect(WasmAbstractHeapType.WasmI31.union(.WasmArray) == .WasmEq)
+        #expect(WasmAbstractHeapType.WasmArray.union(.WasmEq) == .WasmEq)
+        #expect(WasmAbstractHeapType.WasmArray.intersection(.WasmStruct) == .WasmNone)
+        #expect(WasmAbstractHeapType.WasmI31.intersection(.WasmStruct) == .WasmNone)
+        #expect(WasmAbstractHeapType.WasmI31.intersection(.WasmEq) == .WasmI31)
+        #expect(WasmAbstractHeapType.WasmAny.intersection(.WasmArray) == .WasmArray)
 
         // Tests on the whole ILType.
         for shared in [true, false] {
@@ -1767,30 +1795,30 @@ class TypeSystemTests: XCTestCase {
             for type in allTypes {
                 let refT = ref(type)
                 let refNullT = refNull(type)
-                XCTAssertEqual(refT.union(with: refNullT), refNullT)
-                XCTAssertEqual(refNullT.union(with: refT), refNullT)
-                XCTAssertEqual(refT.union(with: refT), refT)
-                XCTAssertEqual(refNullT.union(with: refNullT), refNullT)
-                XCTAssertEqual(refT.intersection(with: refT), refT)
-                XCTAssertEqual(refNullT.intersection(with: refNullT), refNullT)
-                XCTAssertEqual(refT.intersection(with: refNullT), refT)
-                XCTAssertEqual(refNullT.intersection(with: refT), refT)
+                #expect(refT.union(with: refNullT) == refNullT)
+                #expect(refNullT.union(with: refT) == refNullT)
+                #expect(refT.union(with: refT) == refT)
+                #expect(refNullT.union(with: refNullT) == refNullT)
+                #expect(refT.intersection(with: refT) == refT)
+                #expect(refNullT.intersection(with: refNullT) == refNullT)
+                #expect(refT.intersection(with: refNullT) == refT)
+                #expect(refNullT.intersection(with: refT) == refT)
             }
-            XCTAssertEqual(ref(.WasmAny).union(with: refNull(.WasmEq)), refNull(.WasmAny))
-            XCTAssertEqual(ref(.WasmStruct).union(with: ref(.WasmArray)), ref(.WasmEq))
+            #expect(ref(.WasmAny).union(with: refNull(.WasmEq)) == refNull(.WasmAny))
+            #expect(ref(.WasmStruct).union(with: ref(.WasmArray)) == ref(.WasmEq))
             // We should never do this for the type information of any Variable as .wasmGenericRef
             // cannot be encoded in the Wasm module and any instruction that leads to such a static type
             // is "broken". However, we will still need to allow this union type if we want to be able
             // to request a .required(.wasmGenericRef) for operations like WasmRefIsNull.
-            XCTAssertEqual(ref(.WasmI31).union(with: refNull(.WasmExn)), .wasmGenericRef)
+            #expect(ref(.WasmI31).union(with: refNull(.WasmExn)) == .wasmGenericRef)
 
-            XCTAssertEqual(ref(.WasmAny).intersection(with: refNull(.WasmEq)), ref(.WasmEq))
-            XCTAssertEqual(
-                refNull(.WasmI31).intersection(with: refNull(.WasmStruct)), refNull(.WasmNone))
+            #expect(ref(.WasmAny).intersection(with: refNull(.WasmEq)) == ref(.WasmEq))
+            #expect(
+                refNull(.WasmI31).intersection(with: refNull(.WasmStruct)) == refNull(.WasmNone))
             // Note that `ref none` is a perfectly valid type in Wasm but such a reference can never be
             // constructed.
-            XCTAssertEqual(ref(.WasmArray).intersection(with: refNull(.WasmStruct)), ref(.WasmNone))
-            XCTAssertEqual(refNull(.WasmArray).intersection(with: ref(.WasmAny)), ref(.WasmArray))
+            #expect(ref(.WasmArray).intersection(with: refNull(.WasmStruct)) == ref(.WasmNone))
+            #expect(refNull(.WasmArray).intersection(with: ref(.WasmAny)) == ref(.WasmArray))
         }
 
         let ref = { t, shared in ILType.wasmRef(t, shared: shared, nullability: false, ) }
@@ -1798,37 +1826,39 @@ class TypeSystemTests: XCTestCase {
         // Shared and unshared ref hierarchies are disjoint.
         for (lhsShared, rhsShared) in [(true, false), (false, true)] {
             for type in allTypes {
-                XCTAssertEqual(
-                    ref(type, lhsShared).union(with: ref(type, rhsShared)), .wasmGenericRef)
-                XCTAssertEqual(
-                    refNull(type, lhsShared).union(with: refNull(type, rhsShared)), .wasmGenericRef)
+                #expect(ref(type, lhsShared).union(with: ref(type, rhsShared)) == .wasmGenericRef)
+                #expect(
+                    refNull(type, lhsShared).union(with: refNull(type, rhsShared))
+                        == .wasmGenericRef)
             }
         }
     }
 
+    @Test
     func testUnboundFunctionSubsumptionRules() {
-        XCTAssertEqual(ILType.unboundFunction(), .unboundFunction())
-        XCTAssertNotEqual(ILType.unboundFunction([] => .object()), .unboundFunction())
-        XCTAssertNotEqual(ILType.unboundFunction(receiver: .object()), .unboundFunction())
-        XCTAssert(ILType.unboundFunction(receiver: .object()).Is(.unboundFunction()))
-        XCTAssertFalse(ILType.unboundFunction().Is(.unboundFunction(receiver: .object())))
-        XCTAssert(
+        #expect(ILType.unboundFunction() == .unboundFunction())
+        #expect(ILType.unboundFunction([] => .object()) != .unboundFunction())
+        #expect(ILType.unboundFunction(receiver: .object()) != .unboundFunction())
+        #expect(ILType.unboundFunction(receiver: .object()).Is(.unboundFunction()))
+        #expect(!ILType.unboundFunction().Is(.unboundFunction(receiver: .object())))
+        #expect(
             ILType.unboundFunction(receiver: .object()).Is(.unboundFunction(receiver: .jsAnything)))
-        XCTAssertFalse(
-            ILType.unboundFunction(receiver: .jsAnything).Is(.unboundFunction(receiver: .object())))
+        #expect(
+            !ILType.unboundFunction(receiver: .jsAnything).Is(.unboundFunction(receiver: .object()))
+        )
 
         let receiverNil = ILType.unboundFunction()
         let receiverObject = ILType.unboundFunction(receiver: .object())
         let receiverArray = ILType.unboundFunction(receiver: .object(ofGroup: "Array"))
 
-        XCTAssertEqual(receiverArray.union(with: receiverObject), receiverArray)
-        XCTAssertEqual(receiverObject.union(with: receiverArray), receiverArray)
-        XCTAssertEqual(receiverNil.union(with: receiverObject), receiverNil)
-        XCTAssertEqual(receiverObject.union(with: receiverNil), receiverNil)
-        XCTAssertEqual(receiverObject.intersection(with: receiverArray), receiverObject)
-        XCTAssertEqual(receiverArray.intersection(with: receiverObject), receiverObject)
-        XCTAssertEqual(receiverNil.intersection(with: receiverObject), receiverObject)
-        XCTAssertEqual(receiverObject.intersection(with: receiverNil), receiverObject)
+        #expect(receiverArray.union(with: receiverObject) == receiverArray)
+        #expect(receiverObject.union(with: receiverArray) == receiverArray)
+        #expect(receiverNil.union(with: receiverObject) == receiverNil)
+        #expect(receiverObject.union(with: receiverNil) == receiverNil)
+        #expect(receiverObject.intersection(with: receiverArray) == receiverObject)
+        #expect(receiverArray.intersection(with: receiverObject) == receiverObject)
+        #expect(receiverNil.intersection(with: receiverObject) == receiverObject)
+        #expect(receiverObject.intersection(with: receiverNil) == receiverObject)
     }
 
     private func runParameterizedIterableTests(
@@ -1842,34 +1872,35 @@ class TypeSystemTests: XCTestCase {
         let objIterable = factory(.object(withProperties: ["foo"]))
         let objIterable2 = factory(.object(withProperties: ["foo", "bar"]))
 
-        XCTAssertEqual(intIterable, factory(.integer))
-        XCTAssertNotEqual(intIterable, strIterable)
-        XCTAssertNotEqual(intIterable, baseInstance)
-        XCTAssert(baseInstance >= intIterable)
-        XCTAssert(multiIterable >= intIterable)
-        XCTAssert(multiIterable >= strIterable)
-        XCTAssertFalse(intIterable >= baseInstance)
-        XCTAssertFalse(intIterable >= strIterable)
-        XCTAssert(objIterable >= objIterable2)
-        XCTAssertFalse(objIterable2 >= objIterable)
+        #expect(intIterable == factory(.integer))
+        #expect(intIterable != strIterable)
+        #expect(intIterable != baseInstance)
+        #expect(baseInstance >= intIterable)
+        #expect(multiIterable >= intIterable)
+        #expect(multiIterable >= strIterable)
+        #expect(!(intIterable >= baseInstance))
+        #expect(!(intIterable >= strIterable))
+        #expect(objIterable >= objIterable2)
+        #expect(!(objIterable2 >= objIterable))
 
-        XCTAssertEqual(intIterable | strIterable, multiIterable)
-        XCTAssertEqual(baseInstance | strIterable, baseInstance)
+        #expect(intIterable | strIterable == multiIterable)
+        #expect(baseInstance | strIterable == baseInstance)
 
-        XCTAssertEqual(intIterable & strIterable, factory(.nothing))
-        XCTAssertEqual(baseInstance & strIterable, strIterable)
+        #expect(intIterable & strIterable == factory(.nothing))
+        #expect(baseInstance & strIterable == strIterable)
 
-        XCTAssert(intIterable.canMerge(with: intIterable))
-        XCTAssertFalse(intIterable.canMerge(with: strIterable))
-        XCTAssert(baseInstance.canMerge(with: intIterable))
-        XCTAssertEqual(intIterable.merging(with: intIterable), intIterable)
-        XCTAssertEqual(baseInstance.merging(with: intIterable), intIterable)
-        XCTAssertEqual(intIterable.merging(with: baseInstance), intIterable)
+        #expect(intIterable.canMerge(with: intIterable))
+        #expect(!intIterable.canMerge(with: strIterable))
+        #expect(baseInstance.canMerge(with: intIterable))
+        #expect(intIterable.merging(with: intIterable) == intIterable)
+        #expect(baseInstance.merging(with: intIterable) == intIterable)
+        #expect(intIterable.merging(with: baseInstance) == intIterable)
 
-        XCTAssertEqual(intIterable.description, "\(descriptionPrefix)<.integer>")
-        XCTAssertEqual(multiIterable.description, "\(descriptionPrefix)<.integer | .string>")
+        #expect(intIterable.description == "\(descriptionPrefix)<.integer>")
+        #expect(multiIterable.description == "\(descriptionPrefix)<.integer | .string>")
     }
 
+    @Test
     func testParameterizedIterables() {
         runParameterizedIterableTests(
             factory: { ILType.iterable(ofElementType: $0) },
@@ -1878,6 +1909,7 @@ class TypeSystemTests: XCTestCase {
         )
     }
 
+    @Test
     func testParameterizedAsyncIterables() {
         runParameterizedIterableTests(
             factory: { ILType.asyncIterable(ofElementType: $0) },
@@ -1888,48 +1920,49 @@ class TypeSystemTests: XCTestCase {
         // Subtyping with regular iterables
         let intAsyncIterable = ILType.asyncIterable(ofElementType: .integer)
         let intIterable = ILType.iterable(ofElementType: .integer)
-        XCTAssertFalse(intAsyncIterable.Is(intIterable))
-        XCTAssert(intIterable.Is(intAsyncIterable))
-        XCTAssertFalse(ILType.asyncIterable().Is(.iterable()))
-        XCTAssert(ILType.iterable().Is(.asyncIterable()))
+        #expect(!intAsyncIterable.Is(intIterable))
+        #expect(intIterable.Is(intAsyncIterable))
+        #expect(!ILType.asyncIterable().Is(.iterable()))
+        #expect(ILType.iterable().Is(.asyncIterable()))
 
         // Object group subtyping
-        XCTAssertFalse(ILType.jsAsyncGenerator.Is(.iterable()))
-        XCTAssert(ILType.jsGenerator.Is(.asyncIterable()))
+        #expect(!ILType.jsAsyncGenerator.Is(.iterable()))
+        #expect(ILType.jsGenerator.Is(.asyncIterable()))
     }
 
+    @Test
     func testEnumerationTypeOperations() {
         let enumA = ILType.enumeration(ofName: "EnumA", withValues: ["A", "B"])
         let enumB = ILType.intEnumeration(ofName: "EnumB", withValues: [1, 2])
         let genericString = ILType.string
         let genericInt = ILType.integer
 
-        XCTAssertTrue(enumA.isEnumeration)
-        XCTAssertTrue(enumB.isEnumeration)
-        XCTAssertFalse(genericString.isEnumeration)
-        XCTAssertFalse(genericInt.isEnumeration)
+        #expect(enumA.isEnumeration)
+        #expect(enumB.isEnumeration)
+        #expect(!genericString.isEnumeration)
+        #expect(!genericInt.isEnumeration)
 
         // Union: enumA | genericString should be genericString, so not an enumeration.
-        XCTAssertFalse((enumA | genericString).isEnumeration)
+        #expect(!(enumA | genericString).isEnumeration)
         // Union: enumB | genericInt should be genericInt, so not an enumeration.
-        XCTAssertFalse((enumB | genericInt).isEnumeration)
+        #expect(!(enumB | genericInt).isEnumeration)
         // Union: enumA (string) | enumB (int) should be number | string, so not an enumeration.
-        XCTAssertFalse((enumA | enumB).isEnumeration)
+        #expect(!(enumA | enumB).isEnumeration)
 
         // Intersection: enumA & genericString should be enumA, so it should be an enumeration.
-        XCTAssertTrue((enumA & genericString).isEnumeration)
+        #expect((enumA & genericString).isEnumeration)
         // Intersection: enumB & genericInt should be enumB, so it should be an enumeration.
-        XCTAssertTrue((enumB & genericInt).isEnumeration)
+        #expect((enumB & genericInt).isEnumeration)
 
         // Intersection of string enum and int enum should be .nothing, which is not an enumeration.
-        XCTAssertEqual(enumA & enumB, .nothing)
-        XCTAssertFalse((enumA & enumB).isEnumeration)
+        #expect(enumA & enumB == .nothing)
+        #expect(!(enumA & enumB).isEnumeration)
 
         // Merging: enumA + object should maintain the isEnumeration flag.
         let obj = ILType.object(withProperties: ["foo"])
-        XCTAssertFalse(obj.isEnumeration)
-        XCTAssertTrue((enumA + obj).isEnumeration)
-        XCTAssertTrue((enumB + obj).isEnumeration)
+        #expect(!obj.isEnumeration)
+        #expect((enumA + obj).isEnumeration)
+        #expect((enumB + obj).isEnumeration)
     }
 
     let primitiveTypes: [ILType] = [
@@ -1938,10 +1971,10 @@ class TypeSystemTests: XCTestCase {
 
     static let wasmSigI32I64 = ILType.wasmTypeDef(
         description: WasmSignatureTypeDescription(
-            signature: [.wasmi32] => [.wasmi64], typeGroupIndex: 0))
+            signature: ([.wasmi32] => [.wasmi64]), typeGroupIndex: 0))
     static let wasmSigExternRefExternRef = ILType.wasmTypeDef(
         description: WasmSignatureTypeDescription(
-            signature: [.wasmExternRef()] => [.wasmExternRef()], typeGroupIndex: 0))
+            signature: ([.wasmExternRef()] => [.wasmExternRef()]), typeGroupIndex: 0))
 
     // A set of different types used by various tests.
     // TODO(cffsmith): Test and adjust types with a WasmTypeExtension.
