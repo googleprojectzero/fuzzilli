@@ -1205,6 +1205,10 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         args.append("--wasm-caching-threshold=\(Int.random(in: 1...1000))")
     }
 
+    if probability(0.2) {
+        args.append("--wasm-random-rescheduling")
+    }
+
     // Disabling batching allows the fuzzer to reach higher JIT tiers faster; sometimes test the
     // production configuration too.
     if probability(0.8) {
