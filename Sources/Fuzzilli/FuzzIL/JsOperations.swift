@@ -2823,15 +2823,12 @@ class WasmDefineArrayType: WasmTypeOperation {
     override var opcode: Opcode { .wasmDefineArrayType(self) }
     let elementType: ILType
     let mutability: Bool
-    let hasSuperType: Bool
 
-    init(elementType: ILType, mutability: Bool, hasSuperType: Bool = false) {
+    init(elementType: ILType, mutability: Bool) {
         self.elementType = elementType
         self.mutability = mutability
-        self.hasSuperType = hasSuperType
-        let numInputs = (hasSuperType ? 1 : 0) + elementType.requiredInputCount()
         super.init(
-            numInputs: numInputs, numOutputs: 1,
+            numInputs: elementType.requiredInputCount(), numOutputs: 1,
             requiredContext: [.wasmTypeGroup])
     }
 }
@@ -2842,14 +2839,10 @@ class WasmDefineStructType: WasmTypeOperation {
     typealias Field = WasmStructTypeDescription.Field
 
     let fields: [Field]
-    let hasSuperType: Bool
 
-    init(fields: [Field], hasSuperType: Bool = false) {
+    init(fields: [Field]) {
         self.fields = fields
-        self.hasSuperType = hasSuperType
-        let numInputs =
-            (hasSuperType ? 1 : 0)
-            + fields.map { $0.type.requiredInputCount() }.reduce(0) { $0 + $1 }
+        let numInputs = fields.map { $0.type.requiredInputCount() }.reduce(0) { $0 + $1 }
         super.init(numInputs: numInputs, numOutputs: 1, requiredContext: [.wasmTypeGroup])
     }
 }

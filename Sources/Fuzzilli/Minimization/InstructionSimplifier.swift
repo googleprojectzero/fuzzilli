@@ -20,7 +20,6 @@ struct InstructionSimplifier: Reducer {
         simplifyGuardedInstructions(with: helper)
         simplifySingleInstructions(with: helper)
         simplifyMultiInstructions(with: helper)
-        simplifyWasmInstructions(with: helper)
     }
 
     func simplifyFunctionDefinitions(with helper: MinimizationHelper) {
@@ -248,19 +247,6 @@ struct InstructionSimplifier: Reducer {
         let didMakeChanges = numCopiedInstructions != helper.code.count
         if didMakeChanges {
             helper.testAndCommit(newCode)
-        }
-    }
-
-    func simplifyWasmInstructions(with helper: MinimizationHelper) {
-        for instr in helper.code {
-            if let op = instr.op as? WasmDefineArrayType, op.hasSuperType {
-                let newOp = WasmDefineArrayType(
-                    elementType: op.elementType, mutability: op.mutability, hasSuperType: false)
-                let newInouts = instr.inputs.dropFirst() + instr.outputs
-                helper.tryReplacing(
-                    instructionAt: instr.index,
-                    with: Instruction(newOp, inouts: Array(newInouts)))
-            }
         }
     }
 }

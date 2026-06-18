@@ -1496,7 +1496,6 @@ message WasmDefineAdHocModuleSignatureType {
 message WasmDefineArrayType {
     WasmILType elementType = 1;
     bool mutability = 2;
-    bool hasSuperType = 3;
 }
 
 message WasmStructField {
@@ -1506,7 +1505,6 @@ message WasmStructField {
 
 message WasmDefineStructType {
     repeated WasmStructField fields = 1;
-    bool hasSuperType = 2;
 }
 
 message WasmDefineForwardOrSelfReference {

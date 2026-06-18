@@ -48,7 +48,7 @@ public final class Program: CustomStringConvertible {
 
     /// The current version of the FuzzIL/Protobuf schema.
     /// This version should be bumped whenever a breaking change is made to the protobuf format.
-    public static let protobufVersion: UInt32 = 3
+    public static let protobufVersion: UInt32 = 4
 
     /// Constructs an empty program.
     public init(isBundle: Bool) {

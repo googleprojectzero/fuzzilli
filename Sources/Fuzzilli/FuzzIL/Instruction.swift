@@ -1737,7 +1737,6 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmDefineArrayType = Fuzzilli_Protobuf_WasmDefineArrayType.with {
                     $0.elementType = ILTypeToWasmTypeEnum(op.elementType)
                     $0.mutability = op.mutability
-                    $0.hasSuperType_p = op.hasSuperType
                 }
             case .wasmDefineStructType(let op):
                 $0.wasmDefineStructType = Fuzzilli_Protobuf_WasmDefineStructType.with {
@@ -1747,7 +1746,6 @@ extension Instruction: ProtobufConvertible {
                             $0.mutability = field.mutability
                         }
                     }
-                    $0.hasSuperType_p = op.hasSuperType
                 }
             case .wasmDefineForwardOrSelfReference(_):
                 $0.wasmDefineForwardOrSelfReference =
@@ -2901,8 +2899,7 @@ extension Instruction: ProtobufConvertible {
             op = WasmEndTypeGroup(typesCount: inouts.count / 2)
         case .wasmDefineArrayType(let p):
             op = WasmDefineArrayType(
-                elementType: WasmTypeEnumToILType(p.elementType), mutability: p.mutability,
-                hasSuperType: p.hasSuperType_p)
+                elementType: WasmTypeEnumToILType(p.elementType), mutability: p.mutability)
         case .wasmDefineSignatureType(let p):
             op = WasmDefineSignatureType(
                 signature: p.parameterTypes.map(WasmTypeEnumToILType)
@@ -2920,8 +2917,7 @@ extension Instruction: ProtobufConvertible {
                 fields: p.fields.map { field in
                     return WasmDefineStructType.Field(
                         type: WasmTypeEnumToILType(field.type), mutability: field.mutability)
-                },
-                hasSuperType: p.hasSuperType_p)
+                })
         case .wasmDefineForwardOrSelfReference(_):
             op = WasmDefineForwardOrSelfReference()
         case .wasmResolveForwardReference(_):

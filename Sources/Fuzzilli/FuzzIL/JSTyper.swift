@@ -576,8 +576,7 @@ public struct JSTyper: Analyzer {
     }
 
     mutating func addArrayType(
-        def: Variable, elementType: ILType, mutability: Bool, elementRef: Variable? = nil,
-        concreteHeapSupertype: WasmTypeDescription? = nil
+        def: Variable, elementType: ILType, mutability: Bool, elementRef: Variable? = nil
     ) {
         assert(isWithinTypeGroup)
         let tgIndex = typeGroups.count - 1
@@ -623,14 +622,12 @@ public struct JSTyper: Analyzer {
                 description: WasmArrayTypeDescription(
                     elementType: resolvedElementType,
                     mutability: mutability,
-                    typeGroupIndex: tgIndex,
-                    concreteHeapSupertype: concreteHeapSupertype)))
+                    typeGroupIndex: tgIndex)))
         typeGroups[typeGroups.count - 1].append(def)
     }
 
     mutating func addStructType(
-        def: Variable, fieldsWithRefs: [(WasmStructTypeDescription.Field, Variable?)],
-        concreteHeapSupertype: WasmTypeDescription? = nil
+        def: Variable, fieldsWithRefs: [(WasmStructTypeDescription.Field, Variable?)]
     ) {
         let tgIndex = typeGroups.count - 1
         let resolvedFields = fieldsWithRefs.enumerated().map { (fieldIndex, fieldWithInput) in
@@ -670,8 +667,7 @@ public struct JSTyper: Analyzer {
             def,
             .wasmTypeDef(
                 description: WasmStructTypeDescription(
-                    fields: resolvedFields, typeGroupIndex: tgIndex,
-                    concreteHeapSupertype: concreteHeapSupertype)))
+                    fields: resolvedFields, typeGroupIndex: tgIndex)))
         typeGroups[typeGroups.count - 1].append(def)
     }
 
@@ -2608,17 +2604,13 @@ public struct JSTyper: Analyzer {
             addSignatureType(def: instr.output, signature: op.signature, inputs: instr.inputs)
 
         case .wasmDefineArrayType(let op):
-            let elementRef = op.elementType.requiredInputCount() == 1 ? instr.inputs.last! : nil
-            let concreteHeapSupertype =
-                op.hasSuperType ? getTypeDescription(of: instr.inputs.first!) : nil
+            let elementRef = op.elementType.requiredInputCount() == 1 ? instr.input(0) : nil
             addArrayType(
                 def: instr.output, elementType: op.elementType, mutability: op.mutability,
-                elementRef: elementRef, concreteHeapSupertype: concreteHeapSupertype)
+                elementRef: elementRef)
 
         case .wasmDefineStructType(let op):
-            let concreteHeapSupertype =
-                op.hasSuperType ? getTypeDescription(of: instr.inputs.first!) : nil
-            var inputIndex = op.hasSuperType ? 1 : 0
+            var inputIndex = 0
             let fieldsWithRefs: [(WasmStructTypeDescription.Field, Variable?)] = op.fields.map {
                 field in
                 if field.type.requiredInputCount() == 0 {
@@ -2630,9 +2622,7 @@ public struct JSTyper: Analyzer {
                 }
             }
             assert(inputIndex == instr.inputs.count)
-            addStructType(
-                def: instr.output, fieldsWithRefs: fieldsWithRefs,
-                concreteHeapSupertype: concreteHeapSupertype)
+            addStructType(def: instr.output, fieldsWithRefs: fieldsWithRefs)
 
         case .wasmDefineForwardOrSelfReference(_):
             set(instr.output, .wasmSelfReference())

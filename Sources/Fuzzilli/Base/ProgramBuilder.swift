@@ -6553,75 +6553,21 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    func wasmDefineArrayType(
-        elementType: ILType, mutability: Bool, indexType: Variable? = nil,
-        superType: Variable? = nil
-    )
+    func wasmDefineArrayType(elementType: ILType, mutability: Bool, indexType: Variable? = nil)
         -> Variable
     {
-        var inputs: [Variable] = []
-        if let superType {
-            let superTypeDesc = type(of: superType).wasmTypeDefinition?.description
-            assert(
-                superTypeDesc != .selfReference, "Supertype cannot be a forward or self-reference")
-            guard let superArrayType = superTypeDesc as? WasmArrayTypeDescription else {
-                fatalError("Supertype of an array must be an array type")
-            }
-            if superArrayType.mutability {
-                assert(mutability)
-                assert(elementType == superArrayType.elementType)
-            } else {
-                assert(!mutability)
-                assert(superArrayType.elementType.subsumes(elementType))
-            }
-
-            inputs.append(superType)
-        }
-        if let indexType {
-            inputs.append(indexType)
-        }
+        let inputs = indexType != nil ? [indexType!] : []
         return emit(
-            WasmDefineArrayType(
-                elementType: elementType, mutability: mutability, hasSuperType: superType != nil),
+            WasmDefineArrayType(elementType: elementType, mutability: mutability),
             withInputs: inputs
         ).output
     }
 
     @discardableResult
-    func wasmDefineStructType(
-        fields: [WasmStructTypeDescription.Field], indexTypes: [Variable],
-        superType: Variable? = nil
-    )
+    func wasmDefineStructType(fields: [WasmStructTypeDescription.Field], indexTypes: [Variable])
         -> Variable
     {
-        var inputs: [Variable] = []
-        if let superType {
-            let superTypeDesc = type(of: superType).wasmTypeDefinition?.description
-            assert(
-                superTypeDesc != .selfReference, "Supertype cannot be a forward or self-reference")
-            guard let superStructType = superTypeDesc as? WasmStructTypeDescription else {
-                fatalError("Supertype of a struct must be a struct type")
-            }
-
-            assert(fields.count >= superStructType.fields.count)
-            for (superField, subField) in zip(superStructType.fields, fields) {
-                if superField.mutability {
-                    assert(subField.mutability)
-                    assert(subField.type == superField.type)
-                } else {
-                    assert(!subField.mutability)
-                    assert(superField.type.subsumes(subField.type))
-                }
-            }
-
-            inputs.append(superType)
-        }
-
-        inputs += indexTypes
-
-        return emit(
-            WasmDefineStructType(fields: fields, hasSuperType: superType != nil), withInputs: inputs
-        ).output
+        return emit(WasmDefineStructType(fields: fields), withInputs: indexTypes).output
     }
 
     @discardableResult
