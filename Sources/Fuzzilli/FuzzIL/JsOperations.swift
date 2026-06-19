@@ -3223,7 +3223,7 @@ final class Destruct: JsOperation {
     init(pattern: DestructuringPattern, numInputs: Int, numOutputs: Int) {
         self.pattern = pattern
         assert(numInputs == 1 + pattern.numExtraInputs)
-        super.init(numInputs: numInputs, numOutputs: numOutputs, attributes: [.isMutable])
+        super.init(numInputs: numInputs, numOutputs: numOutputs, attributes: [])
     }
 }
 
@@ -3296,7 +3296,7 @@ final class DestructAndReassign: JsOperation {
         traverse(pattern)
         assert(currentInputIdx == numInputs)
         self.isTarget = targets
-        super.init(numInputs: numInputs, numOutputs: 0, attributes: [.isMutable])
+        super.init(numInputs: numInputs, numOutputs: 0, attributes: [])
     }
 }
 
