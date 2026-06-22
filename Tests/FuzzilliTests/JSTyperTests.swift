@@ -1538,7 +1538,7 @@ class JSTyperTests: XCTestCase {
         let outputs = b.destruct(obj, selecting: ["foo", "bar"], hasRestElement: true)
         XCTAssertEqual(b.type(of: outputs[0]), .integer)
         XCTAssertEqual(b.type(of: outputs[1]), .string)
-        XCTAssertEqual(b.type(of: outputs[2]), .object())
+        XCTAssertEqual(b.type(of: outputs[2]), .object(withProperties: ["baz"]))
     }
 
     func testDestructAndReassignTypeInference() {
@@ -1582,6 +1582,33 @@ class JSTyperTests: XCTestCase {
         XCTAssertEqual(b.type(of: v1), .integer)
         XCTAssertEqual(b.type(of: v2), .jsAnything)
         XCTAssertEqual(b.type(of: v3), .object())
+    }
+
+    func testForOfLoopDestructTypeInference() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let arr = b.createArray(with: [b.loadInt(42), b.loadString("foo")])
+
+        let pattern = DestructuringPattern.array(
+            DestructuringPattern.ArrayPattern(
+                elements: [
+                    DestructuringPattern.ArrayElement(target: .flatBinding, hasDefaultValue: false),
+                    DestructuringPattern.ArrayElement(target: .flatBinding, hasDefaultValue: false),
+                ],
+                restTarget: .none
+            )
+        )
+
+        b.buildForInOfLoop(arr, type: .forOf, isAsync: false, header: .destruct(pattern: pattern)) {
+            args, _ in
+            let v0 = args[0]
+            let v1 = args[1]
+            // We cannot infer specific types for elements of an array destructuring pattern inside a loop yet,
+            // so we expect `.jsAnything`. However, the code shouldn't crash and types should be properly initialized.
+            XCTAssertEqual(b.type(of: v0), .jsAnything)
+            XCTAssertEqual(b.type(of: v1), .jsAnything)
+        }
     }
 
     func testWasmTypeInference() {

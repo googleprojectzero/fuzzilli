@@ -3214,6 +3214,57 @@ extension DestructuringPattern {
             return arr.restTarget != .none
         }
     }
+
+    var numExtraInputs: Int {
+        switch self {
+        case .object(let obj):
+            var count = 0
+            for prop in obj.properties {
+                if case .computed = prop.key { count += 1 }
+                if prop.hasDefaultValue { count += 1 }
+                if case .pattern(let p) = prop.target { count += p.numExtraInputs }
+            }
+            return count
+        case .array(let arr):
+            var count = 0
+            for elem in arr.elements {
+                if elem.hasDefaultValue { count += 1 }
+                if case .pattern(let p) = elem.target { count += p.numExtraInputs }
+            }
+            if case .pattern(let p) = arr.restTarget { count += p.numExtraInputs }
+            return count
+        }
+    }
+
+    var numBindings: Int {
+        switch self {
+        case .object(let obj):
+            var count = 0
+            for prop in obj.properties {
+                switch prop.target {
+                case .flatBinding: count += 1
+                case .pattern(let p): count += p.numBindings
+                }
+            }
+            if obj.hasRestElement { count += 1 }
+            return count
+        case .array(let arr):
+            var count = 0
+            for elem in arr.elements {
+                switch elem.target {
+                case .elision: break
+                case .flatBinding: count += 1
+                case .pattern(let p): count += p.numBindings
+                }
+            }
+            switch arr.restTarget {
+            case .none: break
+            case .flatBinding: count += 1
+            case .pattern(let p): count += p.numBindings
+            }
+            return count
+        }
+    }
 }
 
 /// Destructs a variable using a nested pattern into n output variables.
@@ -3308,191 +3359,5 @@ final class DestructAndReassign: JsOperation {
         assert(currentInputIdx == numInputs)
         self.isTarget = targets
         super.init(numInputs: numInputs, numOutputs: 0, attributes: [])
-    }
-}
-
-extension DestructuringPattern {
-    var numExtraInputs: Int {
-        switch self {
-        case .object(let obj):
-            var count = 0
-            for prop in obj.properties {
-                if case .computed = prop.key { count += 1 }
-                if prop.hasDefaultValue { count += 1 }
-                if case .pattern(let p) = prop.target { count += p.numExtraInputs }
-            }
-            return count
-        case .array(let arr):
-            var count = 0
-            for elem in arr.elements {
-                if elem.hasDefaultValue { count += 1 }
-                if case .pattern(let p) = elem.target { count += p.numExtraInputs }
-            }
-            if case .pattern(let p) = arr.restTarget { count += p.numExtraInputs }
-            return count
-        }
-    }
-
-    var numBindings: Int {
-        switch self {
-        case .object(let obj):
-            var count = 0
-            for prop in obj.properties {
-                switch prop.target {
-                case .flatBinding: count += 1
-                case .pattern(let p): count += p.numBindings
-                }
-            }
-            if obj.hasRestElement { count += 1 }
-            return count
-        case .array(let arr):
-            var count = 0
-            for elem in arr.elements {
-                switch elem.target {
-                case .elision: break
-                case .flatBinding: count += 1
-                case .pattern(let p): count += p.numBindings
-                }
-            }
-            switch arr.restTarget {
-            case .none: break
-            case .flatBinding: count += 1
-            case .pattern(let p): count += p.numBindings
-            }
-            return count
-        }
-    }
-
-    var protobuf: Fuzzilli_Protobuf_FuzzILDestructuringPattern {
-        var proto = Fuzzilli_Protobuf_FuzzILDestructuringPattern()
-        switch self {
-        case .object(let obj):
-            var objProto = Fuzzilli_Protobuf_FuzzILDestructuringPattern.ObjectPattern()
-            for prop in obj.properties {
-                var propProto = Fuzzilli_Protobuf_FuzzILDestructuringPattern.ObjectProperty()
-                switch prop.key {
-                case .string(let s):
-                    propProto.stringKey = s
-                case .computed:
-                    propProto.hasComputedKey_p = true
-                }
-                switch prop.target {
-                case .flatBinding:
-                    propProto.isFlatBinding = true
-                case .pattern(let p):
-                    propProto.pattern = p.protobuf
-                }
-                if prop.hasDefaultValue {
-                    propProto.hasDefaultValue_p = true
-                }
-                objProto.properties.append(propProto)
-            }
-            objProto.hasRestElement_p = obj.hasRestElement
-            proto.objectPattern = objProto
-        case .array(let arr):
-            var arrProto = Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayPattern()
-            for elem in arr.elements {
-                var elemProto = Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayElement()
-                switch elem.target {
-                case .elision:
-                    elemProto.isElision = true
-                case .flatBinding:
-                    elemProto.isFlatBinding = true
-                case .pattern(let p):
-                    elemProto.pattern = p.protobuf
-                }
-                if elem.hasDefaultValue {
-                    elemProto.hasDefaultValue_p = true
-                }
-                arrProto.elements.append(elemProto)
-            }
-            switch arr.restTarget {
-            case .none: break
-            case .flatBinding:
-                arrProto.hasRestElement_p = true
-            case .pattern(let p):
-                arrProto.restPattern = p.protobuf
-            }
-            proto.arrayPattern = arrProto
-        }
-        return proto
-    }
-
-    init(from proto: Fuzzilli_Protobuf_FuzzILDestructuringPattern) throws {
-        switch proto.pattern {
-        case .objectPattern(let objProto):
-            var properties = [ObjectProperty]()
-            for propProto in objProto.properties {
-                let key: ObjectProperty.Key
-                switch propProto.key {
-                case .stringKey(let s): key = .string(s)
-                case .hasComputedKey_p(let b):
-                    if !b {
-                        throw FuzzilliError.instructionDecodingError("hasComputedKey must be true")
-                    }
-                    key = .computed
-                default:
-                    throw FuzzilliError.instructionDecodingError(
-                        "Missing or invalid key in ObjectProperty")
-                }
-                let target: ObjectProperty.Target
-                switch propProto.target {
-                case .isFlatBinding(let b):
-                    if !b {
-                        throw FuzzilliError.instructionDecodingError("isFlatBinding must be true")
-                    }
-                    target = .flatBinding
-                case .pattern(let p):
-                    target = .pattern(try DestructuringPattern(from: p))
-                default:
-                    throw FuzzilliError.instructionDecodingError(
-                        "Missing or invalid target in ObjectProperty")
-                }
-                let def = propProto.hasDefaultValue_p
-                properties.append(
-                    ObjectProperty(key: key, target: target, hasDefaultValue: def))
-            }
-            self = .object(
-                ObjectPattern(properties: properties, hasRestElement: objProto.hasRestElement_p))
-
-        case .arrayPattern(let arrProto):
-            var elements = [ArrayElement]()
-            for elemProto in arrProto.elements {
-                let target: ArrayElement.Target
-                switch elemProto.target {
-                case .isElision(let b):
-                    if !b { throw FuzzilliError.instructionDecodingError("isElision must be true") }
-                    target = .elision
-                case .isFlatBinding(let b):
-                    if !b {
-                        throw FuzzilliError.instructionDecodingError("isFlatBinding must be true")
-                    }
-                    target = .flatBinding
-                case .pattern(let p):
-                    target = .pattern(try DestructuringPattern(from: p))
-                default:
-                    throw FuzzilliError.instructionDecodingError(
-                        "Missing or invalid target in ArrayElement")
-                }
-                let def = elemProto.hasDefaultValue_p
-                elements.append(ArrayElement(target: target, hasDefaultValue: def))
-            }
-            let restTarget: ArrayPattern.RestTarget
-            switch arrProto.restTarget {
-            case .hasRestElement_p(let b):
-                if !b {
-                    throw FuzzilliError.instructionDecodingError("hasRestElement must be true")
-                }
-                restTarget = .flatBinding
-            case .restPattern(let p):
-                restTarget = .pattern(try DestructuringPattern(from: p))
-            default:
-                restTarget = .none
-            }
-            self = .array(ArrayPattern(elements: elements, restTarget: restTarget))
-
-        default:
-            throw FuzzilliError.instructionDecodingError("Missing or invalid DestructuringPattern")
-        }
     }
 }

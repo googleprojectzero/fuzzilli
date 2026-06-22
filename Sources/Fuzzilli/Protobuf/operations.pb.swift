@@ -1744,6 +1744,16 @@ public enum Fuzzilli_Protobuf_JSType: SwiftProtobuf.Enum, Swift.CaseIterable {
 
 }
 
+public struct Fuzzilli_Protobuf_Empty: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 /// Parameters used by function definitions, not an operation by itself.
 public struct Fuzzilli_Protobuf_Parameters: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
@@ -6651,24 +6661,24 @@ public struct Fuzzilli_Protobuf_FuzzILDestructuringPattern: @unchecked Sendable 
       set {key = .stringKey(newValue)}
     }
 
-    public var hasComputedKey_p: Bool {
+    public var computedKey: Fuzzilli_Protobuf_Empty {
       get {
-        if case .hasComputedKey_p(let v)? = key {return v}
-        return false
+        if case .computedKey(let v)? = key {return v}
+        return Fuzzilli_Protobuf_Empty()
       }
-      set {key = .hasComputedKey_p(newValue)}
+      set {key = .computedKey(newValue)}
     }
 
     /// The target is either a flat binding or a nested pattern
     public var target: Fuzzilli_Protobuf_FuzzILDestructuringPattern.ObjectProperty.OneOf_Target? = nil
 
     /// true if it's just a newly bound variable
-    public var isFlatBinding: Bool {
+    public var flatBinding: Fuzzilli_Protobuf_Empty {
       get {
-        if case .isFlatBinding(let v)? = target {return v}
-        return false
+        if case .flatBinding(let v)? = target {return v}
+        return Fuzzilli_Protobuf_Empty()
       }
-      set {target = .isFlatBinding(newValue)}
+      set {target = .flatBinding(newValue)}
     }
 
     public var pattern: Fuzzilli_Protobuf_FuzzILDestructuringPattern {
@@ -6687,14 +6697,14 @@ public struct Fuzzilli_Protobuf_FuzzILDestructuringPattern: @unchecked Sendable 
     /// The key is either a known string, or a computed key provided as an input variable
     public enum OneOf_Key: Equatable, Sendable {
       case stringKey(String)
-      case hasComputedKey_p(Bool)
+      case computedKey(Fuzzilli_Protobuf_Empty)
 
     }
 
     /// The target is either a flat binding or a nested pattern
     public enum OneOf_Target: Equatable, Sendable {
       /// true if it's just a newly bound variable
-      case isFlatBinding(Bool)
+      case flatBinding(Fuzzilli_Protobuf_Empty)
       case pattern(Fuzzilli_Protobuf_FuzzILDestructuringPattern)
 
     }
@@ -6718,12 +6728,12 @@ public struct Fuzzilli_Protobuf_FuzzILDestructuringPattern: @unchecked Sendable 
     }
 
     /// simple `...rest`
-    public var hasRestElement_p: Bool {
+    public var flatBinding: Fuzzilli_Protobuf_Empty {
       get {
-        if case .hasRestElement_p(let v)? = _storage._restTarget {return v}
-        return false
+        if case .flatBinding(let v)? = _storage._restTarget {return v}
+        return Fuzzilli_Protobuf_Empty()
       }
-      set {_uniqueStorage()._restTarget = .hasRestElement_p(newValue)}
+      set {_uniqueStorage()._restTarget = .flatBinding(newValue)}
     }
 
     /// nested `...[a]`
@@ -6739,7 +6749,7 @@ public struct Fuzzilli_Protobuf_FuzzILDestructuringPattern: @unchecked Sendable 
 
     public enum OneOf_RestTarget: Equatable, Sendable {
       /// simple `...rest`
-      case hasRestElement_p(Bool)
+      case flatBinding(Fuzzilli_Protobuf_Empty)
       /// nested `...[a]`
       case restPattern(Fuzzilli_Protobuf_FuzzILDestructuringPattern)
 
@@ -6757,20 +6767,20 @@ public struct Fuzzilli_Protobuf_FuzzILDestructuringPattern: @unchecked Sendable 
 
     public var target: Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayElement.OneOf_Target? = nil
 
-    public var isElision: Bool {
+    public var elision: Fuzzilli_Protobuf_Empty {
       get {
-        if case .isElision(let v)? = target {return v}
-        return false
+        if case .elision(let v)? = target {return v}
+        return Fuzzilli_Protobuf_Empty()
       }
-      set {target = .isElision(newValue)}
+      set {target = .elision(newValue)}
     }
 
-    public var isFlatBinding: Bool {
+    public var flatBinding: Fuzzilli_Protobuf_Empty {
       get {
-        if case .isFlatBinding(let v)? = target {return v}
-        return false
+        if case .flatBinding(let v)? = target {return v}
+        return Fuzzilli_Protobuf_Empty()
       }
-      set {target = .isFlatBinding(newValue)}
+      set {target = .flatBinding(newValue)}
     }
 
     public var pattern: Fuzzilli_Protobuf_FuzzILDestructuringPattern {
@@ -6786,8 +6796,8 @@ public struct Fuzzilli_Protobuf_FuzzILDestructuringPattern: @unchecked Sendable 
     public var unknownFields = SwiftProtobuf.UnknownStorage()
 
     public enum OneOf_Target: Equatable, Sendable {
-      case isElision(Bool)
-      case isFlatBinding(Bool)
+      case elision(Fuzzilli_Protobuf_Empty)
+      case flatBinding(Fuzzilli_Protobuf_Empty)
       case pattern(Fuzzilli_Protobuf_FuzzILDestructuringPattern)
 
     }
@@ -6960,6 +6970,25 @@ extension Fuzzilli_Protobuf_WasmAtomicCmpxchgType: SwiftProtobuf._ProtoNameProvi
 
 extension Fuzzilli_Protobuf_JSType: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0NUMBER\0\u{1}BIGINT\0\u{1}OBJECT\0\u{1}UNDEFINED\0\u{1}ANYTHING\0")
+}
+
+extension Fuzzilli_Protobuf_Empty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Empty"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_Empty, rhs: Fuzzilli_Protobuf_Empty) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
 }
 
 extension Fuzzilli_Protobuf_Parameters: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
@@ -17168,7 +17197,7 @@ extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ObjectPattern: SwiftProto
 
 extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ObjectProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = Fuzzilli_Protobuf_FuzzILDestructuringPattern.protoMessageName + ".ObjectProperty"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}stringKey\0\u{1}hasComputedKey\0\u{1}isFlatBinding\0\u{1}pattern\0\u{1}hasDefaultValue\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}stringKey\0\u{1}computedKey\0\u{1}flatBinding\0\u{1}pattern\0\u{1}hasDefaultValue\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -17185,19 +17214,29 @@ extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ObjectProperty: SwiftProt
         }
       }()
       case 2: try {
-        var v: Bool?
-        try decoder.decodeSingularBoolField(value: &v)
+        var v: Fuzzilli_Protobuf_Empty?
+        var hadOneofValue = false
+        if let current = self.key {
+          hadOneofValue = true
+          if case .computedKey(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
-          if self.key != nil {try decoder.handleConflictingOneOf()}
-          self.key = .hasComputedKey_p(v)
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.key = .computedKey(v)
         }
       }()
       case 3: try {
-        var v: Bool?
-        try decoder.decodeSingularBoolField(value: &v)
+        var v: Fuzzilli_Protobuf_Empty?
+        var hadOneofValue = false
+        if let current = self.target {
+          hadOneofValue = true
+          if case .flatBinding(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
-          if self.target != nil {try decoder.handleConflictingOneOf()}
-          self.target = .isFlatBinding(v)
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.target = .flatBinding(v)
         }
       }()
       case 4: try {
@@ -17229,16 +17268,16 @@ extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ObjectProperty: SwiftProt
       guard case .stringKey(let v)? = self.key else { preconditionFailure() }
       try visitor.visitSingularStringField(value: v, fieldNumber: 1)
     }()
-    case .hasComputedKey_p?: try {
-      guard case .hasComputedKey_p(let v)? = self.key else { preconditionFailure() }
-      try visitor.visitSingularBoolField(value: v, fieldNumber: 2)
+    case .computedKey?: try {
+      guard case .computedKey(let v)? = self.key else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
     }()
     case nil: break
     }
     switch self.target {
-    case .isFlatBinding?: try {
-      guard case .isFlatBinding(let v)? = self.target else { preconditionFailure() }
-      try visitor.visitSingularBoolField(value: v, fieldNumber: 3)
+    case .flatBinding?: try {
+      guard case .flatBinding(let v)? = self.target else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
     }()
     case .pattern?: try {
       guard case .pattern(let v)? = self.target else { preconditionFailure() }
@@ -17263,7 +17302,7 @@ extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ObjectProperty: SwiftProt
 
 extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayPattern: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = Fuzzilli_Protobuf_FuzzILDestructuringPattern.protoMessageName + ".ArrayPattern"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}elements\0\u{1}hasRestElement\0\u{1}restPattern\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}elements\0\u{1}flatBinding\0\u{1}restPattern\0")
 
   fileprivate class _StorageClass {
     var _elements: [Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayElement] = []
@@ -17300,11 +17339,16 @@ extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayPattern: SwiftProtob
         switch fieldNumber {
         case 1: try { try decoder.decodeRepeatedMessageField(value: &_storage._elements) }()
         case 2: try {
-          var v: Bool?
-          try decoder.decodeSingularBoolField(value: &v)
+          var v: Fuzzilli_Protobuf_Empty?
+          var hadOneofValue = false
+          if let current = _storage._restTarget {
+            hadOneofValue = true
+            if case .flatBinding(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
           if let v = v {
-            if _storage._restTarget != nil {try decoder.handleConflictingOneOf()}
-            _storage._restTarget = .hasRestElement_p(v)
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._restTarget = .flatBinding(v)
           }
         }()
         case 3: try {
@@ -17336,9 +17380,9 @@ extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayPattern: SwiftProtob
         try visitor.visitRepeatedMessageField(value: _storage._elements, fieldNumber: 1)
       }
       switch _storage._restTarget {
-      case .hasRestElement_p?: try {
-        guard case .hasRestElement_p(let v)? = _storage._restTarget else { preconditionFailure() }
-        try visitor.visitSingularBoolField(value: v, fieldNumber: 2)
+      case .flatBinding?: try {
+        guard case .flatBinding(let v)? = _storage._restTarget else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
       }()
       case .restPattern?: try {
         guard case .restPattern(let v)? = _storage._restTarget else { preconditionFailure() }
@@ -17368,7 +17412,7 @@ extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayPattern: SwiftProtob
 
 extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayElement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = Fuzzilli_Protobuf_FuzzILDestructuringPattern.protoMessageName + ".ArrayElement"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}isElision\0\u{1}isFlatBinding\0\u{1}pattern\0\u{1}hasDefaultValue\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}elision\0\u{1}flatBinding\0\u{1}pattern\0\u{1}hasDefaultValue\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -17377,19 +17421,29 @@ extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayElement: SwiftProtob
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try {
-        var v: Bool?
-        try decoder.decodeSingularBoolField(value: &v)
+        var v: Fuzzilli_Protobuf_Empty?
+        var hadOneofValue = false
+        if let current = self.target {
+          hadOneofValue = true
+          if case .elision(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
-          if self.target != nil {try decoder.handleConflictingOneOf()}
-          self.target = .isElision(v)
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.target = .elision(v)
         }
       }()
       case 2: try {
-        var v: Bool?
-        try decoder.decodeSingularBoolField(value: &v)
+        var v: Fuzzilli_Protobuf_Empty?
+        var hadOneofValue = false
+        if let current = self.target {
+          hadOneofValue = true
+          if case .flatBinding(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
-          if self.target != nil {try decoder.handleConflictingOneOf()}
-          self.target = .isFlatBinding(v)
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.target = .flatBinding(v)
         }
       }()
       case 3: try {
@@ -17417,13 +17471,13 @@ extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayElement: SwiftProtob
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
     switch self.target {
-    case .isElision?: try {
-      guard case .isElision(let v)? = self.target else { preconditionFailure() }
-      try visitor.visitSingularBoolField(value: v, fieldNumber: 1)
+    case .elision?: try {
+      guard case .elision(let v)? = self.target else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     }()
-    case .isFlatBinding?: try {
-      guard case .isFlatBinding(let v)? = self.target else { preconditionFailure() }
-      try visitor.visitSingularBoolField(value: v, fieldNumber: 2)
+    case .flatBinding?: try {
+      guard case .flatBinding(let v)? = self.target else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
     }()
     case .pattern?: try {
       guard case .pattern(let v)? = self.target else { preconditionFailure() }

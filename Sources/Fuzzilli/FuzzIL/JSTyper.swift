@@ -2285,92 +2285,23 @@ public struct JSTyper: Analyzer {
 
         case .destruct(let op):
             var outputIterator = instr.outputs.makeIterator()
-            func inferTypes(_ pattern: DestructuringPattern, isRoot: Bool = false) {
-                switch pattern {
-                case .object(let obj):
-                    for prop in obj.properties {
-                        var propType = ILType.jsAnything
-                        if isRoot, case .string(let property) = prop.key {
-                            propType = inferPropertyType(of: property, on: instr.input(0))
-                        }
-                        switch prop.target {
-                        case .flatBinding:
-                            set(outputIterator.next()!, propType)
-                        case .pattern(let p):
-                            inferTypes(p)
-                        }
-                    }
-                    if obj.hasRestElement {
-                        // TODO: Add the subset of object properties and methods captured by the rest element
-                        set(outputIterator.next()!, .object())
-                    }
-                case .array(let arr):
-                    for elem in arr.elements {
-                        switch elem.target {
-                        case .elision: break
-                        case .flatBinding:
-                            set(outputIterator.next()!, .jsAnything)
-                        case .pattern(let p):
-                            inferTypes(p)
-                        }
-                    }
-                    switch arr.restTarget {
-                    case .none: break
-                    case .flatBinding:
-                        set(outputIterator.next()!, .jsArray)
-                    case .pattern(let p):
-                        inferTypes(p)
-                    }
-                }
-            }
-            inferTypes(op.pattern, isRoot: true)
+            processDestructuring(
+                op.pattern,
+                on: instr.input(0),
+                isRoot: true,
+                iterator: &outputIterator,
+                isReassignment: false
+            )
 
         case .destructAndReassign(let op):
             var inputIterator = instr.inputs.dropFirst().makeIterator()  // skip the source object
-            func inferTypes(_ pattern: DestructuringPattern, isRoot: Bool = false) {
-                switch pattern {
-                case .object(let obj):
-                    for prop in obj.properties {
-                        if case .computed = prop.key { _ = inputIterator.next() }
-
-                        var propType = ILType.jsAnything
-                        if isRoot, case .string(let property) = prop.key {
-                            propType = inferPropertyType(of: property, on: instr.input(0))
-                        }
-
-                        switch prop.target {
-                        case .flatBinding:
-                            set(inputIterator.next()!, propType)
-                        case .pattern(let p):
-                            inferTypes(p)
-                        }
-                        if prop.hasDefaultValue { _ = inputIterator.next() }
-                    }
-                    if obj.hasRestElement {
-                        // TODO: Add the subset of object properties and methods captured by the rest element
-                        set(inputIterator.next()!, .object())
-                    }
-                case .array(let arr):
-                    for elem in arr.elements {
-                        switch elem.target {
-                        case .elision: break
-                        case .flatBinding:
-                            set(inputIterator.next()!, .jsAnything)
-                        case .pattern(let p):
-                            inferTypes(p)
-                        }
-                        if elem.hasDefaultValue { _ = inputIterator.next() }
-                    }
-                    switch arr.restTarget {
-                    case .none: break
-                    case .flatBinding:
-                        set(inputIterator.next()!, .jsArray)
-                    case .pattern(let p):
-                        inferTypes(p)
-                    }
-                }
-            }
-            inferTypes(op.pattern, isRoot: true)
+            processDestructuring(
+                op.pattern,
+                on: instr.input(0),
+                isRoot: true,
+                iterator: &inputIterator,
+                isReassignment: true
+            )
 
         case .compare:
             set(instr.output, .boolean)
@@ -2464,45 +2395,14 @@ public struct JSTyper: Analyzer {
                 case .simple:
                     set(outputs[0], .jsAnything)
                 case .destruct(let pattern):
-                    func inferTypes(_ pattern: DestructuringPattern, outputIdx: inout Int) {
-                        switch pattern {
-                        case .object(let obj):
-                            for prop in obj.properties {
-                                switch prop.target {
-                                case .flatBinding:
-                                    set(outputs[outputIdx], .jsAnything)
-                                    outputIdx += 1
-                                case .pattern(let p):
-                                    inferTypes(p, outputIdx: &outputIdx)
-                                }
-                            }
-                            if obj.hasRestElement {
-                                set(outputs[outputIdx], .object())
-                                outputIdx += 1
-                            }
-                        case .array(let arr):
-                            for elem in arr.elements {
-                                switch elem.target {
-                                case .elision: break
-                                case .flatBinding:
-                                    set(outputs[outputIdx], .jsAnything)
-                                    outputIdx += 1
-                                case .pattern(let p):
-                                    inferTypes(p, outputIdx: &outputIdx)
-                                }
-                            }
-                            switch arr.restTarget {
-                            case .none: break
-                            case .flatBinding:
-                                set(outputs[outputIdx], .jsArray)
-                                outputIdx += 1
-                            case .pattern(let p):
-                                inferTypes(p, outputIdx: &outputIdx)
-                            }
-                        }
-                    }
-                    var outputIdx = 0
-                    inferTypes(pattern, outputIdx: &outputIdx)
+                    var outputIterator = outputs.makeIterator()
+                    processDestructuring(
+                        pattern,
+                        on: nil,
+                        isRoot: true,
+                        iterator: &outputIterator,
+                        isReassignment: false
+                    )
                 }
             }
             set(label, .jsLoopLabel)
@@ -2705,6 +2605,89 @@ public struct JSTyper: Analyzer {
             }
         }
         return types
+    }
+
+    private mutating func processDestructuring<Iter: IteratorProtocol>(
+        _ pattern: DestructuringPattern,
+        on sourceVar: Variable?,
+        isRoot: Bool,
+        iterator: inout Iter,
+        isReassignment: Bool
+    ) where Iter.Element == Variable {
+        switch pattern {
+        case .object(let obj):
+            var extractedKeys: Set<String> = Set()
+            var hasComputedKeys: Bool = false
+            for prop in obj.properties {
+                if case .computed = prop.key {
+                    hasComputedKeys = true
+                    if isReassignment { _ = iterator.next() }
+                }
+
+                var propType = ILType.jsAnything
+                if isRoot, case .string(let property) = prop.key, let sourceVar {
+                    propType = inferPropertyType(of: property, on: sourceVar)
+                    extractedKeys.insert(property)
+                }
+
+                switch prop.target {
+                case .flatBinding:
+                    set(iterator.next()!, propType)
+                case .pattern(let p):
+                    processDestructuring(
+                        p, on: sourceVar, isRoot: false, iterator: &iterator,
+                        isReassignment: isReassignment)
+                }
+
+                if prop.hasDefaultValue, isReassignment { _ = iterator.next() }
+            }
+            if obj.hasRestElement {
+                var restType: ILType = .object()
+
+                if isRoot, let source = sourceVar {
+                    let sourceType = type(of: source)
+
+                    // If we only have literal strings in the destructuring pattern at current level, then:
+                    // RestType = SourceType - ExtractedKeys
+                    // If there are any computed keys, we cannot know what remains.
+                    if hasComputedKeys {
+                        restType = .object()
+                    } else {
+                        restType = .object(
+                            withProperties: Array(sourceType.properties.subtracting(extractedKeys)),
+                            withMethods: Array(sourceType.methods.subtracting(extractedKeys)),
+                            // We cannot destruct by a symbol other than with computed properties,
+                            // and those are not tracked in extractedKeys.
+                            withSymbolMethods: Array(sourceType.symbolMethods)
+                        )
+                    }
+                }
+
+                set(iterator.next()!, restType)
+            }
+        case .array(let arr):
+            for elem in arr.elements {
+                switch elem.target {
+                case .elision: break
+                case .flatBinding:
+                    set(iterator.next()!, .jsAnything)
+                case .pattern(let p):
+                    processDestructuring(
+                        p, on: sourceVar, isRoot: false, iterator: &iterator,
+                        isReassignment: isReassignment)
+                }
+                if elem.hasDefaultValue, isReassignment { _ = iterator.next() }
+            }
+            switch arr.restTarget {
+            case .none: break
+            case .flatBinding:
+                set(iterator.next()!, .jsArray)
+            case .pattern(let p):
+                processDestructuring(
+                    p, on: sourceVar, isRoot: false, iterator: &iterator,
+                    isReassignment: isReassignment)
+            }
+        }
     }
 
     private struct AnalyzerState {

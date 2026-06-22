@@ -15,6 +15,8 @@
 syntax = "proto3";
 package fuzzilli.protobuf;
 
+message Empty {}
+
 // Parameters used by function definitions, not an operation by itself.
 message Parameters {
     uint32 count = 1;
@@ -1815,12 +1817,12 @@ message FuzzILDestructuringPattern {
         // The key is either a known string, or a computed key provided as an input variable
         oneof key {
             string stringKey = 1;
-            bool hasComputedKey = 2;
+            Empty computedKey = 2;
         }
 
         // The target is either a flat binding or a nested pattern
         oneof target {
-            bool isFlatBinding = 3; // true if it's just a newly bound variable
+            Empty flatBinding = 3; // true if it's just a newly bound variable
             FuzzILDestructuringPattern pattern = 4;
         }
 
@@ -1832,15 +1834,15 @@ message FuzzILDestructuringPattern {
         repeated ArrayElement elements = 1;
 
         oneof restTarget {
-            bool hasRestElement = 2; // simple `...rest`
+            Empty flatBinding = 2; // simple `...rest`
             FuzzILDestructuringPattern restPattern = 3; // nested `...[a]`
         }
     }
 
     message ArrayElement {
         oneof target {
-            bool isElision = 1;
-            bool isFlatBinding = 2;
+            Empty elision = 1;
+            Empty flatBinding = 2;
             FuzzILDestructuringPattern pattern = 3;
         }
         bool hasDefaultValue = 4;
