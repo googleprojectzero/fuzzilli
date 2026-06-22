@@ -108,8 +108,11 @@ class CompilerTests: XCTestCase {
             XCTAssertTrue(message.contains("SyntaxError") || message.contains("Assertion failed"))
         }
 
-        // 2. Array destructuring with using: for (using [x] of y)
-        let script2 = "for (using [x] of [[]]) {}"
+        // 2. Destructuring with using is forbidden in ECMAScript: { using {x} = {}; }
+        // Note: `for (using [x] of [[]])` is structurally valid JavaScript because using is not e reserved keyword!
+        // Hence, `using [x]` is simply parsed as the index 'x' of the array 'using'.
+        // (reassignment of using[x]) but `using {x}` inside a block is a true SyntaxError
+        let script2 = "{ using {x} = {}; }"
         XCTAssertThrowsError(try compile(script: script2)) {
             error in
             guard let parserError = error as? JavaScriptParser.ParserError else {
@@ -118,8 +121,9 @@ class CompilerTests: XCTestCase {
             guard case .parsingFailed(let message) = parserError else {
                 return XCTFail("Expected parsingFailed, got \(parserError)")
             }
-            XCTAssertTrue(message.contains("SyntaxError") || message.contains("Assertion failed"))
+            XCTAssertTrue(message.contains("SyntaxError"))
         }
+
     }
 
     private func compile(script: String) throws -> Program {

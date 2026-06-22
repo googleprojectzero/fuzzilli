@@ -206,7 +206,10 @@ message ForLoop {
 }
 
 message ForInLoop {
-    SimpleVariableDeclarator left = 1;
+    oneof left {
+        SimpleVariableDeclarator declaration = 1;
+        LValue lvalue = 4;
+    }
     Expression right = 2;
     Statement body = 3;
 }
@@ -217,7 +220,10 @@ message ForOfLoop {
         USING = 1;
         AWAIT_USING = 2;
     }
-    VariableDeclarator left = 1;
+    oneof left {
+        VariableDeclarator declaration = 1;
+        LValue lvalue = 8;
+    }
     Expression right = 2;
     Statement body = 3;
     bool isAsync = 6;
@@ -339,9 +345,18 @@ message NullLiteral {
 message ThisExpression {
 }
 
+message LValue {
+    oneof value {
+        Identifier identifier = 1;
+        MemberExpression memberExpression = 2;
+        SuperMemberExpression superMemberExpression = 3;
+        DestructuringPattern destructuringPattern = 4;
+    }
+}
+
 message AssignmentExpression {
     string operator = 1;
-    Expression lhs = 2;
+    LValue lvalue = 4;
     Expression rhs = 3;
 }
 

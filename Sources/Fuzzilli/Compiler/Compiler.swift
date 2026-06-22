@@ -388,7 +388,7 @@ public class JavaScriptCompiler {
                         $0.objectPattern = objectPattern
                     }
                     let pattern = try compileDestructuringPattern(
-                        patternProto, inputs: &inputs, outputs: &outputs)
+                        patternProto, inputs: &inputs, outputs: &outputs, isReassignment: false)
                     let destOp = Destruct(
                         pattern: pattern, numInputs: inputs.count, numOutputs: pattern.numBindings)
                     let outVars = emit(destOp, withInputs: inputs).outputs
@@ -403,7 +403,7 @@ public class JavaScriptCompiler {
                         $0.arrayPattern = arrayPattern
                     }
                     let pattern = try compileDestructuringPattern(
-                        patternProto, inputs: &inputs, outputs: &outputs)
+                        patternProto, inputs: &inputs, outputs: &outputs, isReassignment: false)
                     let destOp = Destruct(
                         pattern: pattern, numInputs: inputs.count, numOutputs: pattern.numBindings)
                     let outVars = emit(destOp, withInputs: inputs).outputs
@@ -615,12 +615,6 @@ public class JavaScriptCompiler {
             emit(EndForLoop())
 
         case .forInLoop(let forInLoop):
-            let initializer = forInLoop.left
-            guard !initializer.hasValue else {
-                throw CompilerError.invalidNodeError(
-                    "Expected no initial value for the variable declared in a for-in loop")
-            }
-
             let obj = try compileExpression(forInLoop.right)
 
             let instr = emit(ForLoop(type: .forIn), withInputs: [obj])
@@ -629,49 +623,149 @@ public class JavaScriptCompiler {
             try enterNewScope(
                 labelToRegister: pendingLabel, labelVariable: loopLabelVariable, isLoop: true
             ) {
-                map(initializer.name, to: loopVar)
+                switch forInLoop.left {
+                case .declaration(let decl):
+                    guard !decl.hasValue else {
+                        throw CompilerError.invalidNodeError(
+                            "Expected no initial value for the variable declared in a for-in loop")
+                    }
+                    map(decl.name, to: loopVar)
+                case .lvalue(let lvalueWrapper):
+                    guard let value = lvalueWrapper.value else {
+                        throw CompilerError.invalidNodeError("Missing lvalue in for-in loop")
+                    }
+                    try emitReassignment(lvalue: value, rhs: loopVar, assignmentOperator: nil)
+                case nil:
+                    throw CompilerError.invalidNodeError("Missing left side of for-in loop")
+                }
                 try compileBody(forInLoop.body)
             }
 
             emit(EndForLoop())
 
         case .forOfLoop(let forOfLoop):
-            let initializer = forOfLoop.left
-
             let obj = try compileExpression(forOfLoop.right)
 
-            if forOfLoop.usingType != .none {
-                guard case .name = initializer.id else {
-                    throw CompilerError.invalidNodeError(
-                        "using declarations cannot be destructured")
-                }
-            }
-
-            guard !initializer.hasValue else {
-                throw CompilerError.invalidNodeError(
-                    "Expected no initial value for the variable declared in a for-of loop")
-            }
-
-            guard let id = initializer.id else {
-                throw CompilerError.invalidNodeError(
-                    "Variable declarator missing id in for-of loop")
-            }
-
-            switch id {
-            case .name(let name):
-                let usingType: UsingType =
-                    switch forOfLoop.usingType {
-                    case .using: .using
-                    case .awaitUsing: .awaitUsing
-                    case .none: .none
-                    case .UNRECOGNIZED(let type):
-                        throw CompilerError.invalidNodeError("Unrecognized using type \(type)")
+            switch forOfLoop.left {
+            case .declaration(let initializer):
+                if forOfLoop.usingType != .none {
+                    guard case .name = initializer.id else {
+                        throw CompilerError.invalidNodeError(
+                            "using declarations cannot be destructured")
                     }
+                }
+
+                guard !initializer.hasValue else {
+                    throw CompilerError.invalidNodeError(
+                        "Expected no initial value for the variable declared in a for-of loop")
+                }
+
+                guard let id = initializer.id else {
+                    throw CompilerError.invalidNodeError(
+                        "Variable declarator missing id in for-of loop")
+                }
+
+                switch id {
+                case .name(let name):
+                    let usingType: UsingType =
+                        switch forOfLoop.usingType {
+                        case .using: .using
+                        case .awaitUsing: .awaitUsing
+                        case .none: .none
+                        case .UNRECOGNIZED(let type):
+                            throw CompilerError.invalidNodeError("Unrecognized using type \(type)")
+                        }
+
+                    let instr = emit(
+                        ForLoop(
+                            type: .forOf, isAsync: forOfLoop.isAsync,
+                            usingType: usingType,
+                            header: .simple),
+                        withInputs: [obj])
+                    let loopVar = instr.innerOutput(0)
+                    let loopLabelVariable = instr.innerOutput(1)
+                    try enterNewScope(
+                        labelToRegister: pendingLabel, labelVariable: loopLabelVariable,
+                        isLoop: true
+                    ) {
+                        map(name, to: loopVar)
+                        try compileBody(forOfLoop.body)
+                    }
+
+                case .objectPattern(let pattern):
+                    try assertNoUsing(
+                        forOfLoop.usingType, message: "using declarations cannot be destructured")
+                    var inputs = [Variable]()
+                    var outputs = [String]()
+                    let patternProto = Compiler_Protobuf_DestructuringPattern.with {
+                        $0.objectPattern = pattern
+                    }
+                    let destPattern = try compileDestructuringPattern(
+                        patternProto, inputs: &inputs, outputs: &outputs, isReassignment: false)
+                    let instr = emit(
+                        ForLoop(
+                            type: .forOf, isAsync: forOfLoop.isAsync,
+                            usingType: .none,
+                            header: .destruct(pattern: destPattern),
+                            patternInputs: inputs.count),
+                        withInputs: [obj] + inputs)
+
+                    let loopLabelVariable = instr.innerOutputs.last!
+                    let vars = Array(instr.innerOutputs.dropLast())
+
+                    try enterNewScope(
+                        labelToRegister: pendingLabel, labelVariable: loopLabelVariable,
+                        isLoop: true
+                    ) {
+                        for (i, name) in outputs.enumerated() {
+                            map(name, to: vars[i])
+                        }
+                        try compileBody(forOfLoop.body)
+                    }
+
+                case .arrayPattern(let pattern):
+                    try assertNoUsing(
+                        forOfLoop.usingType, message: "using declarations cannot be destructured")
+                    var inputs = [Variable]()
+                    var outputs = [String]()
+                    let patternProto = Compiler_Protobuf_DestructuringPattern.with {
+                        $0.arrayPattern = pattern
+                    }
+                    let destPattern = try compileDestructuringPattern(
+                        patternProto, inputs: &inputs, outputs: &outputs, isReassignment: false)
+                    let instr = emit(
+                        ForLoop(
+                            type: .forOf, isAsync: forOfLoop.isAsync,
+                            usingType: .none,
+                            header: .destruct(pattern: destPattern),
+                            patternInputs: inputs.count),
+                        withInputs: [obj] + inputs)
+
+                    let loopLabelVariable = instr.innerOutputs.last!
+                    let vars = Array(instr.innerOutputs.dropLast())
+
+                    try enterNewScope(
+                        labelToRegister: pendingLabel, labelVariable: loopLabelVariable,
+                        isLoop: true
+                    ) {
+                        for (i, name) in outputs.enumerated() {
+                            map(name, to: vars[i])
+                        }
+                        try compileBody(forOfLoop.body)
+                    }
+                }
+
+            case .lvalue(let lvalueWrapper):
+                guard let value = lvalueWrapper.value else {
+                    throw CompilerError.invalidNodeError("Missing lvalue in for-of loop")
+                }
+                try assertNoUsing(
+                    forOfLoop.usingType, message: "Reassignment loops cannot have a using modifier")
 
                 let instr = emit(
                     ForLoop(
                         type: .forOf, isAsync: forOfLoop.isAsync,
-                        usingType: usingType,
+                        usingType: .none,
                         header: .simple),
                     withInputs: [obj])
                 let loopVar = instr.innerOutput(0)
@@ -679,65 +773,12 @@ public class JavaScriptCompiler {
                 try enterNewScope(
                     labelToRegister: pendingLabel, labelVariable: loopLabelVariable, isLoop: true
                 ) {
-                    map(name, to: loopVar)
+                    try emitReassignment(lvalue: value, rhs: loopVar, assignmentOperator: nil)
                     try compileBody(forOfLoop.body)
                 }
 
-            case .objectPattern(let pattern):
-                var inputs = [Variable]()
-                var outputs = [String]()
-                let patternProto = Compiler_Protobuf_DestructuringPattern.with {
-                    $0.objectPattern = pattern
-                }
-                let destPattern = try compileDestructuringPattern(
-                    patternProto, inputs: &inputs, outputs: &outputs)
-                let instr = emit(
-                    ForLoop(
-                        type: .forOf, isAsync: forOfLoop.isAsync,
-                        usingType: .none,
-                        header: .destruct(pattern: destPattern),
-                        patternInputs: inputs.count),
-                    withInputs: [obj] + inputs)
-
-                let loopLabelVariable = instr.innerOutputs.last!
-                let vars = Array(instr.innerOutputs.dropLast())
-
-                try enterNewScope(
-                    labelToRegister: pendingLabel, labelVariable: loopLabelVariable, isLoop: true
-                ) {
-                    for (i, name) in outputs.enumerated() {
-                        map(name, to: vars[i])
-                    }
-                    try compileBody(forOfLoop.body)
-                }
-
-            case .arrayPattern(let pattern):
-                var inputs = [Variable]()
-                var outputs = [String]()
-                let patternProto = Compiler_Protobuf_DestructuringPattern.with {
-                    $0.arrayPattern = pattern
-                }
-                let destPattern = try compileDestructuringPattern(
-                    patternProto, inputs: &inputs, outputs: &outputs)
-                let instr = emit(
-                    ForLoop(
-                        type: .forOf, isAsync: forOfLoop.isAsync,
-                        usingType: .none,
-                        header: .destruct(pattern: destPattern),
-                        patternInputs: inputs.count),
-                    withInputs: [obj] + inputs)
-
-                let loopLabelVariable = instr.innerOutputs.last!
-                let vars = Array(instr.innerOutputs.dropLast())
-
-                try enterNewScope(
-                    labelToRegister: pendingLabel, labelVariable: loopLabelVariable, isLoop: true
-                ) {
-                    for (i, name) in outputs.enumerated() {
-                        map(name, to: vars[i])
-                    }
-                    try compileBody(forOfLoop.body)
-                }
+            case nil:
+                throw CompilerError.invalidNodeError("Missing left side of for-of loop")
             }
 
             emit(EndForLoop())
@@ -875,6 +916,132 @@ public class JavaScriptCompiler {
         }
     }
 
+    private func findOrCreateVariable(_ name: String) -> Variable {
+        // If we can't find the variable in the current scopes, we assume it is an access to a
+        // global variable/builtin or a hoisted variable access. In that case, create a named variable.
+        return lookupIdentifier(name)
+            ?? emit(CreateNamedVariable(name, declarationMode: .none)).output
+    }
+
+    private func assertNoUsing(
+        _ usingType: Compiler_Protobuf_ForOfLoop.UsingType, message: String
+    )
+        throws
+    {
+        guard usingType == .none else {
+            throw CompilerError.invalidNodeError(message)
+        }
+    }
+
+    private func emitReassignment(
+        lvalue: Compiler_Protobuf_LValue.OneOf_Value, rhs: Variable,
+        assignmentOperator: BinaryOperator?
+    ) throws {
+        switch lvalue {
+        case .memberExpression(let memberExpression):
+            // Compile to a Set- or Update{Property/Element/ComputedProperty} operation
+            let object = try compileExpression(memberExpression.object)
+            guard let property = memberExpression.property else {
+                throw CompilerError.invalidNodeError(
+                    "missing property in member expression")
+            }
+            switch property {
+            case .name(let name):
+                if let op = assignmentOperator {
+                    emit(
+                        UpdateProperty(propertyName: name, operator: op),
+                        withInputs: [object, rhs])
+                } else {
+                    emit(
+                        SetProperty(
+                            propertyName: name, isGuarded: memberExpression.isOptional),
+                        withInputs: [object, rhs])
+                }
+            case .expression(let expr):
+                // SetElement requires an Int64
+                // so if `Int64(exactly:)` returns nil, we fall back to SetComputedProperty.
+                if case .numberLiteral(let literal) = expr.expression,
+                    let index = Int64(exactly: literal.value)
+                {
+                    if let op = assignmentOperator {
+                        emit(
+                            UpdateElement(index: index, operator: op),
+                            withInputs: [object, rhs])
+                    } else {
+                        emit(SetElement(index: index), withInputs: [object, rhs])
+                    }
+                } else {
+                    let property = try compileExpression(expr)
+                    if let op = assignmentOperator {
+                        emit(
+                            UpdateComputedProperty(operator: op),
+                            withInputs: [object, property, rhs])
+                    } else {
+                        emit(SetComputedProperty(), withInputs: [object, property, rhs])
+                    }
+                }
+            }
+
+        case .superMemberExpression(let superMemberExpression):
+            guard superMemberExpression.isOptional == false else {
+                throw CompilerError.unsupportedFeatureError(
+                    "Optional chaining is not supported in super member expressions")
+            }
+
+            guard let property = superMemberExpression.property else {
+                throw CompilerError.invalidNodeError(
+                    "Missing property in super member expression")
+            }
+
+            switch property {
+            case .name(let name):
+                if let op = assignmentOperator {
+                    // Example: super.foo += 1
+                    emit(
+                        UpdateSuperProperty(propertyName: name, operator: op),
+                        withInputs: [rhs]
+                    )
+                } else {
+                    // Example: super.foo = 1
+                    emit(SetSuperProperty(propertyName: name), withInputs: [rhs])
+                }
+
+            case .expression(let expr):
+                let property = try compileExpression(expr)
+                // Example: super[expr] = 1
+                emit(SetComputedSuperProperty(), withInputs: [property, rhs])
+            }
+
+        case .identifier(let identifier):
+            // Lookup the variable. If not found, it's likely a global or implicit
+            // declaration, so we synthesize a new FuzzIL Variable to represent it.
+            let lhs =
+                findOrCreateVariable(identifier.name)
+
+            // Compile to a Reassign or Update operation
+            if let op = assignmentOperator {
+                emit(Update(op), withInputs: [lhs, rhs])
+            } else {
+                // TODO(saelo): if we're assigning to a named variable, we could also generate a declaration
+                // of a global variable here instead. Probably it doeesn't matter in practice though.
+                emit(Reassign(), withInputs: [lhs, rhs])
+            }
+
+        case .destructuringPattern(let pattern):
+            guard assignmentOperator == nil else {
+                throw CompilerError.invalidNodeError(
+                    "Compound assignment is not allowed with destructuring patterns")
+            }
+            var inputs = [Variable]()
+            var outputs = [String]()
+            let destPattern = try compileDestructuringPattern(
+                pattern, inputs: &inputs, outputs: &outputs, isReassignment: true)
+            emit(
+                DestructAndReassign(pattern: destPattern, numInputs: inputs.count + 1),
+                withInputs: [rhs] + inputs)
+        }
+    }
+
     @discardableResult
     private func compileExpression(_ node: ExpressionNode) throws -> Variable {
         guard let expr = node.expression else {
@@ -984,8 +1151,8 @@ public class JavaScriptCompiler {
             return emit(LoadThis()).output
 
         case .assignmentExpression(let assignmentExpression):
-            guard let lhs = assignmentExpression.lhs.expression else {
-                throw CompilerError.invalidNodeError("Missing lhs in assignment expression")
+            guard let value = assignmentExpression.lvalue.value else {
+                throw CompilerError.invalidNodeError("Missing lvalue in assignment expression")
             }
             let rhs = try compileExpression(assignmentExpression.rhs)
 
@@ -1003,103 +1170,7 @@ public class JavaScriptCompiler {
                 assignmentOperator = op
             }
 
-            switch lhs {
-            case .memberExpression(let memberExpression):
-                // Compile to a Set- or Update{Property/Element/ComputedProperty} operation
-                let object = try compileExpression(memberExpression.object)
-                guard let property = memberExpression.property else {
-                    throw CompilerError.invalidNodeError("missing property in member expression")
-                }
-                switch property {
-                case .name(let name):
-                    if let op = assignmentOperator {
-                        emit(
-                            UpdateProperty(propertyName: name, operator: op),
-                            withInputs: [object, rhs])
-                    } else {
-                        emit(
-                            SetProperty(propertyName: name, isGuarded: memberExpression.isOptional),
-                            withInputs: [object, rhs])
-                    }
-                case .expression(let expr):
-                    if case .numberLiteral(let literal) = expr.expression,
-                        let index = Int64(exactly: literal.value)
-                    {
-                        if let op = assignmentOperator {
-                            emit(
-                                UpdateElement(index: index, operator: op),
-                                withInputs: [object, rhs])
-                        } else {
-                            emit(SetElement(index: index), withInputs: [object, rhs])
-                        }
-                    } else {
-                        let property = try compileExpression(expr)
-                        if let op = assignmentOperator {
-                            emit(
-                                UpdateComputedProperty(operator: op),
-                                withInputs: [object, property, rhs])
-                        } else {
-                            emit(SetComputedProperty(), withInputs: [object, property, rhs])
-                        }
-                    }
-                }
-
-            case .superMemberExpression(let superMemberExpression):
-                guard superMemberExpression.isOptional == false else {
-                    throw CompilerError.unsupportedFeatureError(
-                        "Optional chaining is not supported in super member expressions")
-                }
-
-                guard let property = superMemberExpression.property else {
-                    throw CompilerError.invalidNodeError(
-                        "Missing property in super member expression")
-                }
-
-                switch property {
-                case .name(let name):
-                    if let op = assignmentOperator {
-                        // Example: super.foo += 1
-                        emit(
-                            UpdateSuperProperty(propertyName: name, operator: op), withInputs: [rhs]
-                        )
-                    } else {
-                        // Example: super.foo = 1
-                        emit(SetSuperProperty(propertyName: name), withInputs: [rhs])
-                    }
-
-                case .expression(let expr):
-                    let property = try compileExpression(expr)
-                    // Example: super[expr] = 1
-                    emit(SetComputedSuperProperty(), withInputs: [property, rhs])
-                }
-
-            case .identifier(let identifier):
-                // Try to lookup the variable belonging to the identifier. If there is none, we're (probably) dealing with
-                // an access to a global variable/builtin or a hoisted variable access. In the case, create a named variable.
-                let lhs =
-                    lookupIdentifier(identifier.name)
-                    ?? emit(CreateNamedVariable(identifier.name, declarationMode: .none)).output
-
-                // Compile to a Reassign or Update operation
-                switch assignmentExpression.operator {
-                case "=":
-                    // TODO(saelo): if we're assigning to a named variable, we could also generate a declaration
-                    // of a global variable here instead. Probably it doeesn't matter in practice though.
-                    emit(Reassign(), withInputs: [lhs, rhs])
-                default:
-                    // It's something like "+=", "-=", etc.
-                    let binaryOperator = String(assignmentExpression.operator.dropLast())
-                    guard let op = BinaryOperator(rawValue: binaryOperator) else {
-                        throw CompilerError.invalidNodeError(
-                            "Unknown assignment operator \(assignmentExpression.operator)")
-                    }
-                    emit(Update(op), withInputs: [lhs, rhs])
-                }
-
-            default:
-                throw CompilerError.unsupportedFeatureError(
-                    "Compiler only supports assignments to object members or identifiers")
-            }
+            try emitReassignment(lvalue: value, rhs: rhs, assignmentOperator: assignmentOperator)
 
             return rhs
 
@@ -1786,13 +1857,17 @@ public class JavaScriptCompiler {
 
     private func compileDestructuringPattern(
         _ pattern: Compiler_Protobuf_DestructuringPattern, inputs: inout [Variable],
-        outputs: inout [String]
+        outputs: inout [String], isReassignment: Bool
     ) throws -> DestructuringPattern {
         switch pattern.pattern {
         case .objectPattern(let objProto):
-            return .object(try compileObjectPattern(objProto, inputs: &inputs, outputs: &outputs))
+            return .object(
+                try compileObjectPattern(
+                    objProto, inputs: &inputs, outputs: &outputs, isReassignment: isReassignment))
         case .arrayPattern(let arrProto):
-            return .array(try compileArrayPattern(arrProto, inputs: &inputs, outputs: &outputs))
+            return .array(
+                try compileArrayPattern(
+                    arrProto, inputs: &inputs, outputs: &outputs, isReassignment: isReassignment))
         case .none:
             throw CompilerError.invalidASTError("Missing pattern in DestructuringPattern")
         }
@@ -1800,7 +1875,7 @@ public class JavaScriptCompiler {
 
     private func compileObjectPattern(
         _ objProto: Compiler_Protobuf_ObjectPattern, inputs: inout [Variable],
-        outputs: inout [String]
+        outputs: inout [String], isReassignment: Bool
     ) throws -> DestructuringPattern.ObjectPattern {
         var properties = [DestructuringPattern.ObjectProperty]()
         for propProto in objProto.properties {
@@ -1822,15 +1897,24 @@ public class JavaScriptCompiler {
             switch propProto.target {
             case .name(let s):
                 target = .flatBinding
-                outputs.append(s)
+                if isReassignment {
+                    inputs.append(findOrCreateVariable(s))
+                } else {
+                    outputs.append(s)
+                }
             case .pattern(let p):
                 target = .pattern(
-                    try compileDestructuringPattern(p, inputs: &inputs, outputs: &outputs))
+                    try compileDestructuringPattern(
+                        p, inputs: &inputs, outputs: &outputs, isReassignment: isReassignment))
             case .none:
                 // Implicit shorthand (e.g. {x}) means key is a string and target is the same string
                 if case .string(let s) = key {
                     target = .flatBinding
-                    outputs.append(s)
+                    if isReassignment {
+                        inputs.append(findOrCreateVariable(s))
+                    } else {
+                        outputs.append(s)
+                    }
                 } else {
                     throw CompilerError.invalidASTError(
                         "Missing target in ObjectPatternProperty without string key")
@@ -1850,7 +1934,11 @@ public class JavaScriptCompiler {
         }
 
         if objProto.hasRestBinding {
-            outputs.append(objProto.restBinding)
+            if isReassignment {
+                inputs.append(findOrCreateVariable(objProto.restBinding))
+            } else {
+                outputs.append(objProto.restBinding)
+            }
         }
         return DestructuringPattern.ObjectPattern(
             properties: properties, hasRestElement: objProto.hasRestBinding)
@@ -1858,7 +1946,7 @@ public class JavaScriptCompiler {
 
     private func compileArrayPattern(
         _ arrProto: Compiler_Protobuf_ArrayPattern, inputs: inout [Variable],
-        outputs: inout [String]
+        outputs: inout [String], isReassignment: Bool
     ) throws -> DestructuringPattern.ArrayPattern {
         var elements = [DestructuringPattern.ArrayElement]()
         for elemProto in arrProto.elements {
@@ -1866,10 +1954,15 @@ public class JavaScriptCompiler {
             switch elemProto.target {
             case .name(let s):
                 target = .flatBinding
-                outputs.append(s)
+                if isReassignment {
+                    inputs.append(findOrCreateVariable(s))
+                } else {
+                    outputs.append(s)
+                }
             case .pattern(let p):
                 target = .pattern(
-                    try compileDestructuringPattern(p, inputs: &inputs, outputs: &outputs))
+                    try compileDestructuringPattern(
+                        p, inputs: &inputs, outputs: &outputs, isReassignment: isReassignment))
             case .none:
                 target = .elision
             }
@@ -1890,10 +1983,15 @@ public class JavaScriptCompiler {
         switch arrProto.restTarget {
         case .restBinding(let s):
             restTarget = .flatBinding
-            outputs.append(s)
+            if isReassignment {
+                inputs.append(findOrCreateVariable(s))
+            } else {
+                outputs.append(s)
+            }
         case .restPattern(let p):
             restTarget = .pattern(
-                try compileDestructuringPattern(p, inputs: &inputs, outputs: &outputs))
+                try compileDestructuringPattern(
+                    p, inputs: &inputs, outputs: &outputs, isReassignment: isReassignment))
         case .none:
             restTarget = .none
         }
