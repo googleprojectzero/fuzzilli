@@ -28,6 +28,17 @@ public class OperationMutator: BaseInstructionMutator {
     public override func mutate(_ instr: Instruction, _ b: ProgramBuilder) {
         b.trace("Mutating next operation")
 
+        // Adopt inputs first to avoid mixing in variables from the current ProgramBuilder
+        // context via randomJsVariable() (e.g., from extendVariadicOperation()) for which
+        // adopt() would be incorrect.
+        // We must not adopt the outputs yet, because extending/mutating the operation might
+        // generate new instructions (and thus allocate new variables). If we adopt the outputs
+        // beforehand, their variable indices would be lower than the generated variables, which
+        // violates the variable numbering convention.
+        let adoptedInputs = b.adopt(instr.inputs)
+        let instr = Instruction(
+            instr.op, inouts: adoptedInputs + instr.outputs + instr.innerOutputs)
+
         let newInstr: Instruction
         if instr.isOperationMutable && instr.isVariadic {
             newInstr =
@@ -39,7 +50,12 @@ public class OperationMutator: BaseInstructionMutator {
             newInstr = extendVariadicOperation(instr, b)
         }
 
-        b.adopt(newInstr)
+        let adoptedOutputs = b.adopt(newInstr.outputs)
+        let adoptedInnerOutputs = b.adopt(newInstr.innerOutputs)
+        let finalInstr = Instruction(
+            newInstr.op, inouts: newInstr.inputs + adoptedOutputs + adoptedInnerOutputs)
+
+        b.append(finalInstr)
     }
 
     private func mutateOperation(_ instr: Instruction, _ b: ProgramBuilder) -> Instruction {
