@@ -2742,13 +2742,17 @@ class WasmArrayTypeDescription: WasmTypeDescription {
     var elementType: ILType
     let mutability: Bool
 
-    init(elementType: ILType, mutability: Bool, typeGroupIndex: Int) {
+    init(
+        elementType: ILType, mutability: Bool, typeGroupIndex: Int,
+        concreteHeapSupertype: WasmTypeDescription? = nil
+    ) {
         self.elementType = elementType
         self.mutability = mutability
         // TODO(pawkra): support shared variant.
         super.init(
             typeGroupIndex: typeGroupIndex,
-            abstractHeapSupertype: HeapTypeInfo.init(.WasmArray, shared: false))
+            abstractHeapSupertype: HeapTypeInfo.init(.WasmArray, shared: false),
+            concreteHeapSupertype: concreteHeapSupertype)
     }
 
     override func format(abbreviate: Bool) -> String {

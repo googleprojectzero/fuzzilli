@@ -1613,6 +1613,35 @@ class TypeSystemTests: XCTestCase {
         XCTAssertEqual(subRefNonNull.intersection(with: subSubRefNullable), subSubRefNonNull)
     }
 
+    func testWasmArraySubtypingRules() {
+        let anyRefType = ILType.wasmAnyRef()
+        let indexDesc = WasmArrayTypeDescription(
+            elementType: .wasmi32, mutability: true, typeGroupIndex: 0)
+        let indexRefType = ILType.wasmIndexRef(indexDesc, nullability: true)
+
+        let superArrayDescImmutable = WasmArrayTypeDescription(
+            elementType: anyRefType, mutability: false, typeGroupIndex: 1)
+        let subArrayDescImmutable = WasmArrayTypeDescription(
+            elementType: indexRefType, mutability: false, typeGroupIndex: 2,
+            concreteHeapSupertype: superArrayDescImmutable)
+        let subArrayDescMutable = WasmArrayTypeDescription(
+            elementType: indexRefType, mutability: true, typeGroupIndex: 3,
+            concreteHeapSupertype: superArrayDescImmutable)
+
+        XCTAssertTrue(superArrayDescImmutable.subsumes(subArrayDescImmutable))
+        XCTAssertFalse(subArrayDescImmutable.subsumes(superArrayDescImmutable))
+        XCTAssertTrue(superArrayDescImmutable.subsumes(subArrayDescMutable))
+        XCTAssertFalse(subArrayDescMutable.subsumes(superArrayDescImmutable))
+
+        let superArrayDescMutable = WasmArrayTypeDescription(
+            elementType: indexRefType, mutability: true, typeGroupIndex: 4)
+        let subArrayDescMutable2 = WasmArrayTypeDescription(
+            elementType: indexRefType, mutability: true, typeGroupIndex: 5,
+            concreteHeapSupertype: superArrayDescMutable)
+
+        XCTAssertTrue(superArrayDescMutable.subsumes(subArrayDescMutable2))
+    }
+
     func testWasmTypeExtensionUnionTypeExtensionVsWasmTypeExtension() {
         let tagA = ILType.object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmi32]))
         let tagB = ILType.object(ofGroup: "WasmTag", withWasmType: WasmTagType([.wasmi64]))

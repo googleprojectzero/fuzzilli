@@ -2823,12 +2823,15 @@ class WasmDefineArrayType: WasmTypeOperation {
     override var opcode: Opcode { .wasmDefineArrayType(self) }
     let elementType: ILType
     let mutability: Bool
+    let hasSuperType: Bool
 
-    init(elementType: ILType, mutability: Bool) {
+    init(elementType: ILType, mutability: Bool, hasSuperType: Bool = false) {
         self.elementType = elementType
         self.mutability = mutability
+        self.hasSuperType = hasSuperType
+        let numInputs = (hasSuperType ? 1 : 0) + elementType.requiredInputCount()
         super.init(
-            numInputs: elementType.requiredInputCount(), numOutputs: 1,
+            numInputs: numInputs, numOutputs: 1,
             requiredContext: [.wasmTypeGroup])
     }
 }

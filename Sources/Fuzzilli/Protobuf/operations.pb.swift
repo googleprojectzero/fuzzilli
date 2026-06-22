@@ -5843,6 +5843,8 @@ public struct Fuzzilli_Protobuf_WasmDefineArrayType: Sendable {
 
   public var mutability: Bool = false
 
+  public var hasSuperType_p: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -15485,7 +15487,7 @@ extension Fuzzilli_Protobuf_WasmDefineAdHocModuleSignatureType: SwiftProtobuf.Me
 
 extension Fuzzilli_Protobuf_WasmDefineArrayType: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmDefineArrayType"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}elementType\0\u{1}mutability\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}elementType\0\u{1}mutability\0\u{1}hasSuperType\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -15495,6 +15497,7 @@ extension Fuzzilli_Protobuf_WasmDefineArrayType: SwiftProtobuf.Message, SwiftPro
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._elementType) }()
       case 2: try { try decoder.decodeSingularBoolField(value: &self.mutability) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.hasSuperType_p) }()
       default: break
       }
     }
@@ -15511,12 +15514,16 @@ extension Fuzzilli_Protobuf_WasmDefineArrayType: SwiftProtobuf.Message, SwiftPro
     if self.mutability != false {
       try visitor.visitSingularBoolField(value: self.mutability, fieldNumber: 2)
     }
+    if self.hasSuperType_p != false {
+      try visitor.visitSingularBoolField(value: self.hasSuperType_p, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_WasmDefineArrayType, rhs: Fuzzilli_Protobuf_WasmDefineArrayType) -> Bool {
     if lhs._elementType != rhs._elementType {return false}
     if lhs.mutability != rhs.mutability {return false}
+    if lhs.hasSuperType_p != rhs.hasSuperType_p {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

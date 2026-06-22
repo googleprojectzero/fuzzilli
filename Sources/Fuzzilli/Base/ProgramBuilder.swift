@@ -6553,12 +6553,36 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    func wasmDefineArrayType(elementType: ILType, mutability: Bool, indexType: Variable? = nil)
+    func wasmDefineArrayType(
+        elementType: ILType, mutability: Bool, indexType: Variable? = nil,
+        superType: Variable? = nil
+    )
         -> Variable
     {
-        let inputs = indexType != nil ? [indexType!] : []
+        var inputs: [Variable] = []
+        if let superType {
+            let superTypeDesc = type(of: superType).wasmTypeDefinition?.description
+            assert(
+                superTypeDesc != .selfReference, "Supertype cannot be a forward or self-reference")
+            guard let superArrayType = superTypeDesc as? WasmArrayTypeDescription else {
+                fatalError("Supertype of an array must be an array type")
+            }
+            if superArrayType.mutability {
+                assert(mutability)
+                assert(elementType == superArrayType.elementType)
+            } else {
+                assert(!mutability)
+                assert(superArrayType.elementType.subsumes(elementType))
+            }
+
+            inputs.append(superType)
+        }
+        if let indexType {
+            inputs.append(indexType)
+        }
         return emit(
-            WasmDefineArrayType(elementType: elementType, mutability: mutability),
+            WasmDefineArrayType(
+                elementType: elementType, mutability: mutability, hasSuperType: superType != nil),
             withInputs: inputs
         ).output
     }
