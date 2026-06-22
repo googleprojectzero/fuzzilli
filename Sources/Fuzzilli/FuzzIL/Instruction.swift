@@ -1732,6 +1732,7 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmDefineSignatureType = Fuzzilli_Protobuf_WasmDefineSignatureType.with {
                     $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
                     $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
+                    $0.hasSuperType_p = op.hasSuperType
                 }
             case .wasmDefineArrayType(let op):
                 $0.wasmDefineArrayType = Fuzzilli_Protobuf_WasmDefineArrayType.with {
@@ -2906,7 +2907,8 @@ extension Instruction: ProtobufConvertible {
         case .wasmDefineSignatureType(let p):
             op = WasmDefineSignatureType(
                 signature: p.parameterTypes.map(WasmTypeEnumToILType)
-                    => p.outputTypes.map(WasmTypeEnumToILType))
+                    => p.outputTypes.map(WasmTypeEnumToILType),
+                hasSuperType: p.hasSuperType_p)
         case .wasmDefineAdHocSignatureType(let p):
             op = WasmDefineAdHocSignatureType(
                 signature: p.parameterTypes.map(WasmTypeEnumToILType)

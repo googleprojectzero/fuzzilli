@@ -6513,8 +6513,44 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    func wasmDefineSignatureType(signature: WasmSignature, indexTypes: [Variable]) -> Variable {
-        return emit(WasmDefineSignatureType(signature: signature), withInputs: indexTypes).output
+    func wasmDefineSignatureType(
+        signature: WasmSignature, indexTypes: [Variable], superType: Variable? = nil
+    ) -> Variable {
+        var inputs: [Variable] = []
+        if let superType {
+            let superTypeDesc = type(of: superType).wasmTypeDefinition?.description
+            assert(
+                superTypeDesc != .selfReference, "Supertype cannot be a forward or self-reference")
+            guard let superSigType = superTypeDesc as? WasmSignatureTypeDescription else {
+                fatalError("Supertype of a signature must be a signature type")
+            }
+
+            assert(signature.parameterTypes.count == superSigType.signature.parameterTypes.count)
+            assert(signature.outputTypes.count == superSigType.signature.outputTypes.count)
+
+            // Contravariant parameters
+            for (superParam, subParam) in zip(
+                superSigType.signature.parameterTypes, signature.parameterTypes)
+            {
+                assert(subParam.subsumes(superParam))
+            }
+
+            // Covariant outputs
+            for (superOutput, subOutput) in zip(
+                superSigType.signature.outputTypes, signature.outputTypes)
+            {
+                assert(superOutput.subsumes(subOutput))
+            }
+
+            inputs.append(superType)
+        }
+
+        inputs += indexTypes
+
+        return emit(
+            WasmDefineSignatureType(signature: signature, hasSuperType: superType != nil),
+            withInputs: inputs
+        ).output
     }
 
     /// Like wasmDefineSignatureType but instead of within a type group this defines a signature
