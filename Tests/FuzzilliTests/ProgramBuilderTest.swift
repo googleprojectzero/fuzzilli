@@ -3535,6 +3535,48 @@ struct ProgramBuilderTests {
         test("WasmAnyConvertExternGenerator", expectAny: WasmAnyConvertExtern.self)
     }
 
+    @Test func testWasmHasUnresolvedSelfReferences() throws {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            let typeGroup = b.wasmDefineTypeGroup {
+                let v0 = b.wasmDefineForwardOrSelfReference()
+                let v1 = b.wasmDefineArrayType(
+                    elementType: .wasmRef(.Index(), nullability: true), mutability: true,
+                    indexType: v0)
+                #expect(
+                    b.type(of: v1).wasmTypeDefinition!.description!.hasUnresolvedSelfReferences())
+
+                let v2 = b.wasmDefineForwardOrSelfReference()
+                let v3 = b.wasmDefineArrayType(
+                    elementType: .wasmRef(.Index(), nullability: true), mutability: true,
+                    indexType: v2)
+                let v4 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
+                b.wasmResolveForwardReference(v2, to: v4)
+                #expect(
+                    !b.type(of: v3).wasmTypeDefinition!.description!.hasUnresolvedSelfReferences())
+
+                let v5 = b.wasmDefineForwardOrSelfReference()
+                let v6 = b.wasmDefineArrayType(
+                    elementType: .wasmRef(.Index(), nullability: true), mutability: true,
+                    indexType: v5)
+                b.wasmResolveForwardReference(v5, to: v6)
+                #expect(
+                    !b.type(of: v6).wasmTypeDefinition!.description!.hasUnresolvedSelfReferences())
+
+                return [v1, v3, v6]
+            }
+
+            // Once a typegroup is finished, it doesn't have any unresolved self references.
+            for typeDefinition in typeGroup {
+                #expect(
+                    !b.type(of: typeDefinition).wasmTypeDefinition!.description!
+                        .hasUnresolvedSelfReferences(), "\(typeDefinition)")
+            }
+        }
+    }
+
     @Test func testRandomWasmTypeDef() {
         let fuzzer = makeMockFuzzer()
         fuzzer.sync {

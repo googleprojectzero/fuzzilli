@@ -2712,6 +2712,10 @@ class WasmTypeDescription: Hashable, CustomStringConvertible {
     public var description: String {
         return format(abbreviate: false)
     }
+
+    func hasUnresolvedSelfReferences() -> Bool {
+        fatalError("missing override in subtype")
+    }
 }
 
 class WasmSignatureTypeDescription: WasmTypeDescription {
@@ -2740,6 +2744,12 @@ class WasmSignatureTypeDescription: WasmTypeDescription {
         let outputTypes = signature.outputTypes.map { $0.abbreviated }.joined(separator: ", ")
         return "\(abbreviated)[[\(paramTypes)] => [\(outputTypes)]]"
     }
+
+    override func hasUnresolvedSelfReferences() -> Bool {
+        // TODO(bettscheider): implement
+        return true
+    }
+
 }
 
 class WasmArrayTypeDescription: WasmTypeDescription {
@@ -2765,6 +2775,13 @@ class WasmArrayTypeDescription: WasmTypeDescription {
             return abbreviated
         }
         return "\(abbreviated)[\(mutability ? "mutable" : "immutable") \(elementType.abbreviated)]"
+    }
+
+    override func hasUnresolvedSelfReferences() -> Bool {
+        if case .Index(let target) = elementType.wasmReferenceType?.kind {
+            return target.get() == .selfReference
+        }
+        return false
     }
 }
 
@@ -2807,5 +2824,16 @@ class WasmStructTypeDescription: WasmTypeDescription {
             return abbreviated
         }
         return "\(abbreviated)[\(fields.map {$0.description}.joined(separator: ", "))]"
+    }
+
+    override func hasUnresolvedSelfReferences() -> Bool {
+        for field in fields {
+            if case .Index(let target) = field.type.wasmReferenceType?.kind {
+                if target.get() == .selfReference {
+                    return true
+                }
+            }
+        }
+        return false
     }
 }

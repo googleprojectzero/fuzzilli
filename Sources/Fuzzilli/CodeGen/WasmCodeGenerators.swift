@@ -2474,6 +2474,50 @@ private let wasmArrayTypeGenerator = GeneratorStub(
     inContext: .single(.wasmTypeGroup),
     producesComplex: [.init(.wasmTypeDef(), .IsWasmArray)]
 ) { b in
+    // Define array type with super type (currently: super type and sub type have the same element type)
+    if probability(0.25),
+        // TODO(bettscheider): Check that the type is non-final once we support non-final types.
+
+        // We avoid using super types with self-references to ensure programs are valid.
+        // To support this in the future, we need to replace the self-reference in the
+        // sub type with a reference to the super type.
+        let superType = b.findVariable(satisfying: {
+            if let desc = b.type(of: $0).wasmTypeDefinition?.description
+                as? WasmArrayTypeDescription
+            {
+                return !desc.hasUnresolvedSelfReferences()
+            }
+            return false
+        })
+    {
+        let superTypeDesc =
+            b.type(of: superType).wasmTypeDefinition!.description
+            as! WasmArrayTypeDescription
+        let elementType = superTypeDesc.elementType
+
+        if case .Index(let targetDescWrapper) = elementType.wasmReferenceType?.kind {
+            let targetDesc = targetDescWrapper.get()!
+            let indexType = b.findVariable(satisfying: { v in
+                b.type(of: v).wasmTypeDefinition?.description === targetDesc
+            })!
+            b.wasmDefineArrayType(
+                elementType: .wasmRef(
+                    .Index(), nullability: elementType.wasmReferenceType!.nullability),
+                mutability: superTypeDesc.mutability,
+                indexType: indexType,
+                superType: superType
+            )
+        } else {
+            b.wasmDefineArrayType(
+                elementType: elementType,
+                mutability: superTypeDesc.mutability,
+                superType: superType
+            )
+        }
+        return
+    }
+
+    // Define array type without super type
     let mutability = probability(0.75)
     if let elementType = b.randomWasmTypeDef(),
         probability(0.25)

@@ -2020,7 +2020,7 @@ struct WasmFoundationTests {
         try allMemoryLoadTypesExecution(isMemory64: true)
     }
 
-    // This test doesn't check the result of the Wasm stores, just exectues them.
+    // This test doesn't check the result of the Wasm stores, just executes them.
     func allMemoryStoreTypesExecution(isMemory64: Bool) throws {
         let runner = JavaScriptExecutor()!
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
@@ -6379,6 +6379,59 @@ struct WasmGCTests {
         testForOutput(program: jsProg, runner: runner, outputString: "21\n")
     }
 
+    @Test func testArrayTypeDefWithSuperType() throws {
+        let runner = JavaScriptExecutor()!
+
+        let jsProg = buildAndLiftProgram { b in
+            let types = b.wasmDefineTypeGroup {
+                let superStruct = b.wasmDefineStructType(
+                    fields: [.init(type: .wasmi32, mutability: false)], indexTypes: [])
+                let subStruct = b.wasmDefineStructType(
+                    fields: [
+                        .init(type: .wasmi32, mutability: false),
+                        .init(type: .wasmi64, mutability: true),
+                    ], indexTypes: [], superType: superStruct)
+
+                let superArray = b.wasmDefineArrayType(
+                    elementType: .wasmRef(.Index(), nullability: true), mutability: false,
+                    indexType: superStruct)
+                let subArray = b.wasmDefineArrayType(
+                    elementType: .wasmRef(.Index(), nullability: true), mutability: false,
+                    indexType: subStruct, superType: superArray)
+
+                return [superStruct, subStruct, superArray, subArray]
+            }
+
+            let superArray = types[2]
+            let subArray = types[3]
+
+            let superArrayRefType = b.type(of: superArray).wasmTypeDefinition!
+                .getReferenceTypeTo(nullability: true)
+
+            let module = b.buildWasmModule { module in
+                let upcastFunc = module.addWasmFunction(with: [] => [superArrayRefType]) {
+                    function, label, args in
+                    let subArrayInstance = function.wasmArrayNewDefault(
+                        arrayType: subArray, size: function.consti32(42))
+                    return [subArrayInstance]
+                }
+
+                module.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                    let array = function.wasmCallDirect(function: upcastFunc, functionArgs: [])[0]
+                    return [function.wasmArrayLen(array)]
+                }
+            }
+
+            let exports = module.loadExports()
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+            let wasmOut = b.callMethod(
+                module.getExportedMethod(at: 1), on: exports, withArgs: [])
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+        }
+
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n")
+    }
+
     @Test func testStruct() throws {
         let runner = JavaScriptExecutor()!
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
@@ -7713,7 +7766,6 @@ struct WasmGCTests {
         }
         testForOutput(program: jsProg, runner: runner, outputString: "30,1\n42,100\n")
     }
-
 }
 
 @Suite(.enabled { JavaScriptExecutor() != nil })

@@ -6603,12 +6603,22 @@ public class ProgramBuilder {
             guard let superArrayType = superTypeDesc as? WasmArrayTypeDescription else {
                 fatalError("Supertype of an array must be an array type")
             }
+
+            let linkedElementType: ILType
+            if let indexType {
+                linkedElementType = type(of: indexType).wasmTypeDefinition!.getReferenceTypeTo(
+                    nullability: elementType.wasmReferenceType!.nullability)
+            } else {
+                linkedElementType = elementType
+            }
+
+            assert(!superArrayType.hasUnresolvedSelfReferences())
             if superArrayType.mutability {
                 assert(mutability)
-                assert(elementType == superArrayType.elementType)
+                assert(linkedElementType == superArrayType.elementType)
             } else {
                 assert(!mutability)
-                assert(superArrayType.elementType.subsumes(elementType))
+                assert(superArrayType.elementType.subsumes(linkedElementType))
             }
 
             inputs.append(superType)
