@@ -2781,12 +2781,15 @@ class WasmStructTypeDescription: WasmTypeDescription {
 
     let fields: [Field]
 
-    init(fields: [Field], typeGroupIndex: Int) {
+    init(
+        fields: [Field], typeGroupIndex: Int, concreteHeapSupertype: WasmTypeDescription? = nil
+    ) {
         self.fields = fields
         // TODO(pawkra): support shared variant.
         super.init(
             typeGroupIndex: typeGroupIndex,
-            abstractHeapSupertype: HeapTypeInfo.init(.WasmStruct, shared: false)
+            abstractHeapSupertype: HeapTypeInfo.init(.WasmStruct, shared: false),
+            concreteHeapSupertype: concreteHeapSupertype
         )
     }
 

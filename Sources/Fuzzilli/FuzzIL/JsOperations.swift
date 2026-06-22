@@ -2842,10 +2842,14 @@ class WasmDefineStructType: WasmTypeOperation {
     typealias Field = WasmStructTypeDescription.Field
 
     let fields: [Field]
+    let hasSuperType: Bool
 
-    init(fields: [Field]) {
+    init(fields: [Field], hasSuperType: Bool = false) {
         self.fields = fields
-        let numInputs = fields.map { $0.type.requiredInputCount() }.reduce(0) { $0 + $1 }
+        self.hasSuperType = hasSuperType
+        let numInputs =
+            (hasSuperType ? 1 : 0)
+            + fields.map { $0.type.requiredInputCount() }.reduce(0) { $0 + $1 }
         super.init(numInputs: numInputs, numOutputs: 1, requiredContext: [.wasmTypeGroup])
     }
 }

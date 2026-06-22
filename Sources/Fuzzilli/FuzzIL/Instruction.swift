@@ -1747,6 +1747,7 @@ extension Instruction: ProtobufConvertible {
                             $0.mutability = field.mutability
                         }
                     }
+                    $0.hasSuperType_p = op.hasSuperType
                 }
             case .wasmDefineForwardOrSelfReference(_):
                 $0.wasmDefineForwardOrSelfReference =
@@ -2919,7 +2920,8 @@ extension Instruction: ProtobufConvertible {
                 fields: p.fields.map { field in
                     return WasmDefineStructType.Field(
                         type: WasmTypeEnumToILType(field.type), mutability: field.mutability)
-                })
+                },
+                hasSuperType: p.hasSuperType_p)
         case .wasmDefineForwardOrSelfReference(_):
             op = WasmDefineForwardOrSelfReference()
         case .wasmResolveForwardReference(_):
