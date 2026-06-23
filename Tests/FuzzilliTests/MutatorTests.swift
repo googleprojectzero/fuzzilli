@@ -466,4 +466,48 @@ class MutatorTests: XCTestCase {
         let newOp = mutatedInstr.op as! WasmArrayNewFixed
         XCTAssertGreaterThan(newOp.size, 1)
     }
+
+    func testWasmArrayNewFixedMutationGeneratesNewVariable() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        // Dummy prefix to pass `hasVisibleJsVariables()` check in `extendVariadicOperationByOneInput()`
+        b.loadInt(1)
+
+        let arrayDef = b.wasmDefineTypeGroup {
+            return [b.wasmDefineArrayType(elementType: ILType.wasmi64, mutability: true)]
+        }[0]
+
+        b.buildWasmModule { module in
+            module.addWasmFunction(with: [] => []) { fn, label, params in
+                fn.wasmArrayNewFixed(arrayType: arrayDef, elements: [])
+                return []
+            }
+        }
+
+        let prog = b.finalize()
+        let instr = prog.code.first(where: { $0.op is WasmArrayNewFixed })!
+        let mutator = OperationMutator()
+
+        b.adopting {
+            for i in 0..<instr.index {
+                b.adopt(prog.code[i])
+            }
+            mutator.mutate(instr, b)
+            for i in (instr.index + 1)..<prog.code.count {
+                b.adopt(prog.code[i])
+            }
+        }
+
+        let mutatedProg = b.finalize()
+        let actual = FuzzILLifter().lift(mutatedProg)
+        let expectedPattern = #"""
+                    v5 <- .+
+                    v6 <- WasmArrayNewFixed \[v2(, v5)+\]
+            """#
+
+        XCTAssertNotNil(
+            actual.range(of: expectedPattern, options: .regularExpression),
+            "Lifted program did not match expected pattern. Actual:\n\(actual)")
+    }
 }
