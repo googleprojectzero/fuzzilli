@@ -6514,41 +6514,64 @@ public class ProgramBuilder {
 
     @discardableResult
     func wasmDefineSignatureType(
-        signature: WasmSignature, indexTypes: [Variable], superType: Variable? = nil
+        signature: WasmSignature, indexTypes: [Variable], superTypeDef: Variable? = nil
     ) -> Variable {
         var inputs: [Variable] = []
-        if let superType {
-            let superTypeDesc = type(of: superType).wasmTypeDefinition?.description
-            assert(
-                superTypeDesc != .selfReference, "Supertype cannot be a forward or self-reference")
-            guard let superSigType = superTypeDesc as? WasmSignatureTypeDescription else {
-                fatalError("Supertype of a signature must be a signature type")
-            }
+        if let superTypeDef {
+            #if DEBUG
+                let superTypeDesc = type(of: superTypeDef).wasmTypeDefinition?.description
+                assert(
+                    superTypeDesc != .selfReference,
+                    "Supertype cannot be a forward or self-reference")
+                guard let superSigType = superTypeDesc as? WasmSignatureTypeDescription else {
+                    fatalError("Supertype of a signature must be a signature type")
+                }
 
-            assert(signature.parameterTypes.count == superSigType.signature.parameterTypes.count)
-            assert(signature.outputTypes.count == superSigType.signature.outputTypes.count)
+                assert(
+                    signature.parameterTypes.count == superSigType.signature.parameterTypes.count)
+                assert(signature.outputTypes.count == superSigType.signature.outputTypes.count)
+                assert(!superSigType.hasUnresolvedSelfReferences())
 
-            // Contravariant parameters
-            for (superParam, subParam) in zip(
-                superSigType.signature.parameterTypes, signature.parameterTypes)
-            {
-                assert(subParam.subsumes(superParam))
-            }
+                var indexTypeIterator = indexTypes.makeIterator()
+                let linkTypes = { (types: [ILType]) -> [ILType] in
+                    return types.map { type in
+                        if case .Index = type.wasmReferenceType?.kind {
+                            let indexType = indexTypeIterator.next()!
+                            let linkedType = self.type(of: indexType).wasmTypeDefinition!
+                                .getReferenceTypeTo(
+                                    nullability: type.wasmReferenceType!.nullability)
+                            return linkedType
+                        } else {
+                            return type
+                        }
+                    }
+                }
 
-            // Covariant outputs
-            for (superOutput, subOutput) in zip(
-                superSigType.signature.outputTypes, signature.outputTypes)
-            {
-                assert(superOutput.subsumes(subOutput))
-            }
+                let linkedSignature =
+                    linkTypes(signature.parameterTypes) => linkTypes(signature.outputTypes)
 
-            inputs.append(superType)
+                // Contravariant parameters
+                for (superParam, subParam) in zip(
+                    superSigType.signature.parameterTypes, linkedSignature.parameterTypes)
+                {
+                    assert(subParam.subsumes(superParam))
+                }
+
+                // Covariant outputs
+                for (superOutput, subOutput) in zip(
+                    superSigType.signature.outputTypes, linkedSignature.outputTypes)
+                {
+                    assert(superOutput.subsumes(subOutput))
+                }
+            #endif  // DEBUG
+
+            inputs.append(superTypeDef)
         }
 
         inputs += indexTypes
 
         return emit(
-            WasmDefineSignatureType(signature: signature, hasSuperType: superType != nil),
+            WasmDefineSignatureType(signature: signature, hasSuperType: superTypeDef != nil),
             withInputs: inputs
         ).output
     }
@@ -6622,7 +6645,7 @@ public class ProgramBuilder {
                     assert(!mutability)
                     assert(superArrayType.elementType.subsumes(linkedElementType))
                 }
-            #endif
+            #endif  // DEBUG
 
             inputs.append(superTypeDef)
         }

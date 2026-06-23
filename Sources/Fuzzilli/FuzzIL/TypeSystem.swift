@@ -2754,8 +2754,14 @@ class WasmSignatureTypeDescription: WasmTypeDescription {
     }
 
     override func hasUnresolvedSelfReferences() -> Bool {
-        // TODO(bettscheider): implement
-        return true
+        for type in signature.parameterTypes + signature.outputTypes {
+            if case .Index(let target) = type.wasmReferenceType?.kind {
+                if target.get() == .selfReference {
+                    return true
+                }
+            }
+        }
+        return false
     }
 
 }

@@ -6447,6 +6447,82 @@ struct WasmGCTests {
         testForOutput(program: jsProg, runner: runner, outputString: "1337,42\n")
     }
 
+    @Test func testSignatureTypeDefWithSuperType() throws {
+        let runner = JavaScriptExecutor()!
+
+        let jsProg = buildAndLiftProgram { b in
+            let types = b.wasmDefineTypeGroup {
+                let superStructType = b.wasmDefineStructType(
+                    fields: [.init(type: .wasmi32, mutability: true)], indexTypes: [])
+                let subStructType = b.wasmDefineStructType(
+                    fields: [
+                        .init(type: .wasmi32, mutability: true),
+                        .init(type: .wasmi64, mutability: true),
+                    ], indexTypes: [], superTypeDef: superStructType)
+
+                // Parameters are contravariant, return types are covariant.
+                // Super signature: [ref subStruct] => [ref superStruct]
+                let superSignatureType = b.wasmDefineSignatureType(
+                    signature: [.wasmRef(.Index(), nullability: true)] => [
+                        .wasmRef(.Index(), nullability: true)
+                    ],
+                    indexTypes: [subStructType, superStructType])
+                // Sub signature: [ref superStruct] => [ref subStruct]
+                let subSignatureType = b.wasmDefineSignatureType(
+                    signature: [.wasmRef(.Index(), nullability: true)] => [
+                        .wasmRef(.Index(), nullability: true)
+                    ],
+                    indexTypes: [superStructType, subStructType],
+                    superTypeDef: superSignatureType)
+
+                return [superStructType, subStructType, superSignatureType, subSignatureType]
+            }
+
+            let superStructType = types[0]
+            let subStructType = types[1]
+            let superSignatureType = types[2]
+            let subSignatureType = types[3]
+
+            // This test casts a subFuncRef to a superFuncRef and calls it on a subStructInstance.
+            let module = b.buildWasmModule { module in
+                let subFunc = module.addWasmFunction(signature: subSignatureType) {
+                    function, label, args in
+                    // Downcast args[0] from superStructType to subStructType and return it.
+                    let castResult = function.wasmRefCast(
+                        args[0], refType: .wasmRef(.Index(), nullability: true),
+                        typeDef: subStructType)
+                    return [castResult]
+                }
+
+                module.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                    let subStructInstance = function.wasmStructNewDefault(structType: subStructType)
+                    function.wasmStructSet(
+                        theStruct: subStructInstance, fieldIndex: 0, value: function.consti32(42))
+
+                    let subFuncRef = function.wasmRefFunc(subFunc)
+                    let superFuncRef = function.wasmRefCast(
+                        subFuncRef, refType: .wasmRef(.Index(), nullability: true),
+                        typeDef: superSignatureType)
+                    let structInstance = function.wasmCallRef(
+                        functionRef: superFuncRef, functionArgs: [subStructInstance])[0]
+                    #expect(
+                        b.type(of: structInstance)
+                            == b.type(of: superStructType).wasmTypeDefinition!.getReferenceTypeTo(
+                                nullability: true))
+                    return [function.wasmStructGet(theStruct: structInstance, fieldIndex: 0)]
+                }
+            }
+
+            let exports = module.loadExports()
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+            let wasmOut = b.callMethod(
+                module.getExportedMethod(at: 1), on: exports, withArgs: [])
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+        }
+
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n")
+    }
+
     @Test func testStruct() throws {
         let runner = JavaScriptExecutor()!
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)

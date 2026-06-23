@@ -3615,7 +3615,16 @@ struct ProgramBuilderTests {
                 #expect(
                     !b.type(of: v8).wasmTypeDefinition!.description!.hasUnresolvedSelfReferences())
 
-                return [v1, v3, v6, v8]
+                let v9 = b.wasmDefineForwardOrSelfReference()
+                let v10 = b.wasmDefineSignatureType(
+                    signature: [.wasmRef(.Index(), nullability: true)] => [], indexTypes: [v9])
+                #expect(
+                    b.type(of: v10).wasmTypeDefinition!.description!.hasUnresolvedSelfReferences())
+                b.wasmResolveForwardReference(v9, to: v10)
+                #expect(
+                    !b.type(of: v10).wasmTypeDefinition!.description!.hasUnresolvedSelfReferences())
+
+                return [v1, v3, v6, v8, v10]
             }
 
             // Once a typegroup is finished, it doesn't have any unresolved self references.

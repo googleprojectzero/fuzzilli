@@ -2603,6 +2603,48 @@ private let wasmSignatureTypeGenerator = GeneratorStub(
     inContext: .single(.wasmTypeGroup),
     producesComplex: [.init(.wasmTypeDef(), .IsWasmFunction)]
 ) { b in
+    // Define signature type with super type (currently: super type and sub type have the same signature)
+    if probability(0.25),
+        // TODO(bettscheider): Check that the type is non-final once we support non-final types.
+
+        // We avoid using super types with self-references to ensure programs are valid.
+        let superType = b.findVariable(satisfying: {
+            if let desc = b.type(of: $0).wasmTypeDefinition?.description
+                as? WasmSignatureTypeDescription
+            {
+                return !desc.hasUnresolvedSelfReferences()
+            }
+            return false
+        })
+    {
+        let superTypeDesc =
+            b.type(of: superType).wasmTypeDefinition!.description
+            as! WasmSignatureTypeDescription
+        let superSignature = superTypeDesc.signature
+
+        var indexTypes: [Variable] = []
+        let unlinkTypes = { (types: [ILType]) -> [ILType] in
+            return types.map { type in
+                if case .Index(let targetDescWrapper) = type.wasmReferenceType?.kind {
+                    let indexType = b.getWasmTypeDef(for: type)
+                    indexTypes.append(indexType)
+                    return .wasmRef(.Index(), nullability: type.wasmReferenceType!.nullability)
+                } else {
+                    return type
+                }
+            }
+        }
+
+        let unlinkedSignature =
+            unlinkTypes(superSignature.parameterTypes)
+            => unlinkTypes(superSignature.outputTypes)
+
+        b.wasmDefineSignatureType(
+            signature: unlinkedSignature, indexTypes: indexTypes, superTypeDef: superType)
+        return
+    }
+
+    // Define signature type without super type
     let typeCount = Int.random(in: 0...10)
     let returnCount = Int.random(in: 0...typeCount)
     let parameterCount = typeCount - returnCount
