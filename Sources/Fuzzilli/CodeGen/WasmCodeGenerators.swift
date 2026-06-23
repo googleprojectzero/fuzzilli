@@ -2495,23 +2495,20 @@ private let wasmArrayTypeGenerator = GeneratorStub(
             as! WasmArrayTypeDescription
         let elementType = superTypeDesc.elementType
 
-        if case .Index(let targetDescWrapper) = elementType.wasmReferenceType?.kind {
-            let targetDesc = targetDescWrapper.get()!
-            let indexType = b.findVariable(satisfying: { v in
-                b.type(of: v).wasmTypeDefinition?.description === targetDesc
-            })!
+        if case .Index(let target) = elementType.wasmReferenceType?.kind {
+            let indexType = b.getWasmTypeDef(for: elementType)
             b.wasmDefineArrayType(
                 elementType: .wasmRef(
                     .Index(), nullability: elementType.wasmReferenceType!.nullability),
                 mutability: superTypeDesc.mutability,
                 indexType: indexType,
-                superType: superType
+                superTypeDef: superType
             )
         } else {
             b.wasmDefineArrayType(
                 elementType: elementType,
                 mutability: superTypeDesc.mutability,
-                superType: superType
+                superTypeDef: superType
             )
         }
         return
@@ -2548,7 +2545,54 @@ private let wasmStructTypeGenerator = GeneratorStub(
     inContext: .single(.wasmTypeGroup),
     producesComplex: [.init(.wasmTypeDef(), .IsWasmStruct)]
 ) { b in
+    // Define struct type with super type (currently: super type and sub type have the same fields)
+    if probability(0.25),
+        // TODO(bettscheider): Check that the type is non-final once we support non-final types.
 
+        // We avoid using super types with self-references to ensure programs are valid.
+        // To support this in the future, we need to replace the self-reference in the
+        // sub type with a reference to the super type.
+        // In the case of forward references, this requires more thought.
+        let superType = b.findVariable(satisfying: {
+            if let desc = b.type(of: $0).wasmTypeDefinition?.description
+                as? WasmStructTypeDescription
+            {
+                return !desc.hasUnresolvedSelfReferences()
+            }
+            return false
+        })
+    {
+        let superTypeDesc =
+            b.type(of: superType).wasmTypeDefinition!.description
+            as! WasmStructTypeDescription
+        let fields = superTypeDesc.fields
+
+        var indexTypes: [Variable] = []
+        var cleanFields: [WasmStructTypeDescription.Field] = []
+        for field in fields {
+            if case .Index(let target) = field.type.wasmReferenceType?.kind {
+                let indexType = b.getWasmTypeDef(for: field.type)
+                indexTypes.append(indexType)
+                cleanFields.append(
+                    .init(
+                        type: .wasmRef(
+                            .Index(), nullability: field.type.wasmReferenceType!.nullability),
+                        mutability: field.mutability
+                    ))
+            } else {
+                cleanFields.append(field)
+            }
+        }
+
+        b.wasmDefineStructType(
+            fields: cleanFields,
+            indexTypes: indexTypes,
+            superTypeDef: superType
+        )
+        return
+    }
+
+    // Define struct type without super type
     let (fields, indexTypes) = b.generateRandomWasmStructFields()
 
     b.wasmDefineStructType(fields: fields, indexTypes: indexTypes)

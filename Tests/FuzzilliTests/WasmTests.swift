@@ -6379,46 +6379,61 @@ struct WasmGCTests {
         testForOutput(program: jsProg, runner: runner, outputString: "21\n")
     }
 
-    @Test func testArrayTypeDefWithSuperType() throws {
+    @Test func testTypeDefWithSuperType() throws {
         let runner = JavaScriptExecutor()!
 
         let jsProg = buildAndLiftProgram { b in
             let types = b.wasmDefineTypeGroup {
                 let superStruct = b.wasmDefineStructType(
-                    fields: [.init(type: .wasmi32, mutability: false)], indexTypes: [])
+                    fields: [.init(type: .wasmi32, mutability: true)], indexTypes: [])
                 let subStruct = b.wasmDefineStructType(
                     fields: [
-                        .init(type: .wasmi32, mutability: false),
+                        .init(type: .wasmi32, mutability: true),
                         .init(type: .wasmi64, mutability: true),
-                    ], indexTypes: [], superType: superStruct)
+                    ], indexTypes: [], superTypeDef: superStruct)
 
                 let superArray = b.wasmDefineArrayType(
                     elementType: .wasmRef(.Index(), nullability: true), mutability: false,
                     indexType: superStruct)
                 let subArray = b.wasmDefineArrayType(
                     elementType: .wasmRef(.Index(), nullability: true), mutability: false,
-                    indexType: subStruct, superType: superArray)
+                    indexType: subStruct, superTypeDef: superArray)
 
                 return [superStruct, subStruct, superArray, subArray]
             }
 
-            let superArray = types[2]
-            let subArray = types[3]
+            let superStructType = types[0]
+            let subStructType = types[1]
+            let superArrayType = types[2]
+            let subArrayType = types[3]
 
-            let superArrayRefType = b.type(of: superArray).wasmTypeDefinition!
+            let superStructRefType = b.type(of: superStructType).wasmTypeDefinition!
+                .getReferenceTypeTo(nullability: true)
+            let superArrayRefType = b.type(of: superArrayType).wasmTypeDefinition!
                 .getReferenceTypeTo(nullability: true)
 
             let module = b.buildWasmModule { module in
-                let upcastFunc = module.addWasmFunction(with: [] => [superArrayRefType]) {
+                let upcastFunc = module.addWasmFunction(
+                    with: [] => [superStructRefType, superArrayRefType]
+                ) {
                     function, label, args in
+                    let subStructInstance = function.wasmStructNewDefault(
+                        structType: subStructType)
+                    function.wasmStructSet(
+                        theStruct: subStructInstance, fieldIndex: 0, value: function.consti32(1337))
                     let subArrayInstance = function.wasmArrayNewDefault(
-                        arrayType: subArray, size: function.consti32(42))
-                    return [subArrayInstance]
+                        arrayType: subArrayType, size: function.consti32(42))
+                    return [subStructInstance, subArrayInstance]
                 }
 
-                module.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
-                    let array = function.wasmCallDirect(function: upcastFunc, functionArgs: [])[0]
-                    return [function.wasmArrayLen(array)]
+                module.addWasmFunction(with: [] => [.wasmi32, .wasmi32]) { function, label, args in
+                    let instances = function.wasmCallDirect(function: upcastFunc, functionArgs: [])
+                    let structInstance = instances[0]
+                    let arrayInstance = instances[1]
+                    let structField = function.wasmStructGet(
+                        theStruct: structInstance, fieldIndex: 0)
+                    let arrayLen = function.wasmArrayLen(arrayInstance)
+                    return [structField, arrayLen]
                 }
             }
 
@@ -6426,10 +6441,10 @@ struct WasmGCTests {
             let outputFunc = b.createNamedVariable(forBuiltin: "output")
             let wasmOut = b.callMethod(
                 module.getExportedMethod(at: 1), on: exports, withArgs: [])
-            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+            b.callFunction(outputFunc, withArgs: [b.arrayToStringForTesting(wasmOut)])
         }
 
-        testForOutput(program: jsProg, runner: runner, outputString: "42\n")
+        testForOutput(program: jsProg, runner: runner, outputString: "1337,42\n")
     }
 
     @Test func testStruct() throws {

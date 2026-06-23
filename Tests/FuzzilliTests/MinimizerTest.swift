@@ -2416,7 +2416,7 @@ class MinimizerTests: XCTestCase {
             let typeGroup = b.wasmDefineTypeGroup {
                 let v0 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
                 let v1 = b.wasmDefineArrayType(
-                    elementType: .wasmi32, mutability: true, superType: v0)
+                    elementType: .wasmi32, mutability: true, superTypeDef: v0)
                 return [v0, v1]
             }
 
@@ -2477,7 +2477,7 @@ class MinimizerTests: XCTestCase {
             let typeGroup = b.wasmDefineTypeGroup {
                 let v0 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
                 let v1 = b.wasmDefineArrayType(
-                    elementType: .wasmi32, mutability: true, superType: v0)
+                    elementType: .wasmi32, mutability: true, superTypeDef: v0)
                 return [v0, v1]
             }
 

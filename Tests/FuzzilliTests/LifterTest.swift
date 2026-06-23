@@ -4167,7 +4167,7 @@ class LifterTests: XCTestCase {
                 indexType: forwardReference)
             let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
             let subtypeArray = b.wasmDefineArrayType(
-                elementType: .wasmi32, mutability: true, superType: arrayi32
+                elementType: .wasmi32, mutability: true, superTypeDef: arrayi32
             )
             b.wasmResolveForwardReference(forwardReference, to: arrayi32)
             return [arrayOfArrayi32, arrayi32, subtypeArray]

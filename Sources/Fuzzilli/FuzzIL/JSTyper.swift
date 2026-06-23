@@ -506,10 +506,19 @@ public struct JSTyper: Analyzer {
             fatalError("\(type) is not a Wasm type definition")
         }
 
-        guard let desc, let typeDef = wasmTypeDefMap[desc] else {
-            fatalError("missing type definition link for type \(type)")
+        if let desc, let typeDef = wasmTypeDefMap[desc] {
+            return typeDef
         }
-        return typeDef
+
+        if isWithinTypeGroup, let desc {
+            if let typeDef = typeGroups.last?.first(where: {
+                self.type(of: $0).wasmTypeDefinition?.description === desc
+            }) {
+                return typeDef
+            }
+        }
+
+        fatalError("missing type definition link for type \(type)")
     }
 
     mutating func addSignatureType(
