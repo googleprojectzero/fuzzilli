@@ -1417,6 +1417,14 @@ extension ILType: CustomStringConvertible {
                     params.append("withMethods: \(methods)")
                 }
             }
+            if !symbolMethods.isEmpty {
+                if abbreviate && symbolMethods.count > 5 {
+                    let selection = symbolMethods.prefix(3).map { "\"\($0)\"" }
+                    params.append("withSymbolMethods: [\(selection.joined(separator: ", ")), ...]")
+                } else {
+                    params.append("withSymbolMethods: \(symbolMethods)")
+                }
+            }
             return ".object(\(params.joined(separator: ", ")))"
         case .function:
             if let signature = functionSignature {
