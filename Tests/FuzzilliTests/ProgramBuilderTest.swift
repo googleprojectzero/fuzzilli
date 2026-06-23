@@ -3131,6 +3131,46 @@ struct ProgramBuilderTests {
         }
     }
 
+    @Test func testCodeGeneratorWithPreferredInputDependencyResolution() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            let myType = ILType.object(withProperties: ["MyProperty"])
+
+            var producingGeneratorRan = false
+            let producingGenerator = CodeGenerator("ProducingGenerator", produces: [myType]) { b in
+                producingGeneratorRan = true
+                let obj = b.createObject(with: [:])
+                b.setProperty("MyProperty", of: obj, to: b.loadInt(42))
+            }
+
+            var consumingGeneratorRan = false
+            let consumingGenerator = CodeGenerator("ConsumingGenerator", inputs: .preferred(myType))
+            { b, arg in
+                consumingGeneratorRan = true
+            }
+
+            fuzzer.setCodeGenerators(
+                WeightedList<CodeGenerator>([
+                    (producingGenerator, 1),
+                    (consumingGenerator, 1),
+                ]))
+
+            // Add some visible variables to prevent assert failures
+            b.loadInt(42)
+
+            // Schedule `consumingGenerator`. It requires myType, which is only produced by `producingGenerator`
+            // This should cause `producingGenerator` to be scheduled and run.
+            let syntheticGenerator = b.assembleSyntheticGenerator(for: consumingGenerator)!
+
+            let _ = b.complete(generator: syntheticGenerator, withBudget: 10)
+
+            #expect(producingGeneratorRan)
+            #expect(consumingGeneratorRan)
+        }
+    }
+
     @Test func testWasmTypeGroupScoping() {
         let env = JavaScriptEnvironment()
         let config = Configuration(logLevel: .error)
