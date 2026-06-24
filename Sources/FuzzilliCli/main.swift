@@ -495,6 +495,10 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
         // Include this once it does more than just remove unneeded try-catch
         // (FixupMutator()),                   1),
     ])
+
+    if wasmOptPath != nil {
+        mutators.append(BinaryenWasmMutator(), withWeight: 1)
+    }
     let mutatorsSet = Set(mutators.map { $0.name })
     if !disabledMutators.isSubset(of: mutatorsSet) {
         configError(

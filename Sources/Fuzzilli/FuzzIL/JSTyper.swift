@@ -2167,7 +2167,7 @@ public struct JSTyper: Analyzer {
             set(instr.output, .jsString)
 
         case .rawWasmModule(let op):
-            let groupName = "_fuzz_RawWasmExports_\(instr.index)"
+            let groupName = "_fuzz_RawWasmExports\(instr.index)"
 
             var properties = [String: ILType]()
             var methods = [String: [Signature]]()
@@ -2192,7 +2192,7 @@ public struct JSTyper: Analyzer {
 
             let exportsType = exportsGroup.instanceType
 
-            let moduleGroupName = "_fuzz_RawWasmModule_\(instr.index)"
+            let moduleGroupName = "_fuzz_RawWasmModule\(instr.index)"
             let moduleGroup = ObjectGroup(
                 name: moduleGroupName, instanceType: nil, properties: ["exports": exportsType],
                 overloads: [:])

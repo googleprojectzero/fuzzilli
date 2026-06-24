@@ -14,62 +14,6 @@
 
 import Foundation
 
-struct BinaryenError: Error, CustomStringConvertible {
-    let description: String
-}
-
-private func runWasmOpt(wasmOptPath: String, arguments: [String]) -> Result<String, BinaryenError> {
-    let process = Process()
-    process.executableURL = URL(fileURLWithPath: wasmOptPath)
-    process.arguments = arguments
-
-    let stdoutPipe = Pipe()
-    let stderrPipe = Pipe()
-    process.standardOutput = stdoutPipe
-    process.standardError = stderrPipe
-
-    let stdoutDataBuffer = OutputBuffer()
-    let stderrDataBuffer = OutputBuffer()
-    let readGroup = DispatchGroup()
-
-    setupConcurrentRead(from: stdoutPipe, into: stdoutDataBuffer, group: readGroup)
-    setupConcurrentRead(from: stderrPipe, into: stderrDataBuffer, group: readGroup)
-
-    let timeout: TimeInterval = 1.0
-    let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global())
-    timer.schedule(deadline: .now() + timeout)
-    timer.setEventHandler {
-        if process.isRunning {
-            kill(process.processIdentifier, SIGKILL)
-        }
-    }
-    timer.resume()
-    defer {
-        timer.cancel()
-    }
-
-    do {
-        try process.run()
-        process.waitUntilExit()
-        readGroup.wait()
-    } catch {
-        return .failure(BinaryenError(description: "Failed to run wasm-opt: \(error)"))
-    }
-
-    let stdoutStr = String(data: stdoutDataBuffer.currentData, encoding: .utf8) ?? ""
-
-    if process.terminationStatus != 0 {
-        let stderrStr = String(data: stderrDataBuffer.currentData, encoding: .utf8) ?? ""
-        return .failure(
-            BinaryenError(
-                description:
-                    "wasm-opt failed with status \(process.terminationStatus). Stderr:\n\(stderrStr)\nStdout:\n\(stdoutStr)"
-            ))
-    }
-
-    return .success(stdoutStr)
-}
-
 struct WasmBoundary: Decodable {
     struct Export: Decodable {
         let name: String
@@ -121,81 +65,16 @@ private func mapBinaryenTypeToILType(_ typeStr: String) -> ILType {
 }
 
 public func runBinaryenWasmGenerator(b: ProgramBuilder) -> WasmModuleMetadata? {
-    let fileManager = FileManager.default
-    guard let wasmOptPath = b.fuzzer.config.wasmOptPath else {
-        fatalError("wasm-opt path not configured")
-    }
-
-    let tempDir: String
-    if let storagePath = b.fuzzer.config.storagePath {
-        tempDir = storagePath + "/binaryen_temp"
-    } else {
-        tempDir = FileManager.default.temporaryDirectory.path + "/binaryen_temp"
-    }
-
-    // Ensure temp dir exists
-    try? fileManager.createDirectory(atPath: tempDir, withIntermediateDirectories: true)
-
-    let uuid = UUID().uuidString
-    let seedFile = tempDir + "/seed-\(uuid).bin"
-    let outputWasmFile = tempDir + "/output-\(uuid).wasm"
-
-    // 1. Generate random bytes for seed
-    let seedSize = Int.random(in: 128...4096)
-    let seedBytes = (0..<seedSize).map { _ in UInt8.random(in: 0...255) }
-    do {
-        try Data(seedBytes).write(to: URL(fileURLWithPath: seedFile))
-    } catch {
-        fatalError("BinaryenWasmGenerator: Failed to write seed file: \(error)")
-    }
-
-    defer {
-        // Clean up files
-        try? fileManager.removeItem(atPath: seedFile)
-        try? fileManager.removeItem(atPath: outputWasmFile)
-    }
-
-    // 2. Run wasm-opt to generate mutated module in WASM format directly
-    let arguments = [
-        "-ttf", seedFile,
-        "--print-boundary",
-        "-o", outputWasmFile,
-        "--fuzz-against-js",
-        "-g",
-        "--enable-gc",
-        "--enable-reference-types",
-        "--enable-typed-function-references",
-        "--enable-sign-ext",
-        "--enable-threads",
-        "--enable-mutable-globals",
-        "--enable-nontrapping-float-to-int",
-        "--enable-simd",
-        "--enable-bulk-memory",
-        "--enable-bulk-memory-opt",
-        "--enable-exception-handling",
-        "--enable-tail-call",
-        "--enable-multivalue",
-        "--enable-memory64",
-        "--enable-relaxed-simd",
-        "--enable-extended-const",
-        "--enable-multimemory",
-        "--enable-custom-descriptors",
-        "--enable-multibyte",
-        "--enable-relaxed-atomics",
+    let extraArguments = [
+        "--print-boundary"
     ]
 
-    let jsonOutput: String
-    switch runWasmOpt(wasmOptPath: wasmOptPath, arguments: arguments) {
-    case .success(let output):
-        jsonOutput = output
-    case .failure(let error):
-        fatalError("BinaryenWasmGenerator: wasm-opt failed: \(error)")
-    }
+    let (wasmBytes, jsonOutput) = BinaryenRunner.runWasmOptWithTempFiles(
+        fuzzer: b.fuzzer,
+        extraArguments: extraArguments
+    )
 
-    // 3. Read WASM bytes
-    let wasmBytes: Data = try! Data(contentsOf: URL(fileURLWithPath: outputWasmFile))
-
-    // 4. Parse JSON output and build WasmModuleMetadata dynamically
+    // Parse JSON output and build WasmModuleMetadata dynamically
     let boundary: WasmBoundary = try! JSONDecoder().decode(
         WasmBoundary.self, from: Data(jsonOutput.utf8))
 
