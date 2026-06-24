@@ -7857,6 +7857,48 @@ struct WasmGCTests {
         }
         testForOutput(program: jsProg, runner: runner, outputString: "30,1\n42,100\n")
     }
+
+    @Test func testSubtypeInDifferentTypeGroup() throws {
+        let runner = JavaScriptExecutor()!
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let jsProg = fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            let typeGroupA = b.wasmDefineTypeGroup {
+                let superStruct = b.wasmDefineStructType(
+                    fields: [.init(type: .wasmi32, mutability: true)], indexTypes: [])
+                return [superStruct]
+            }
+            let typeGroupB = b.wasmDefineTypeGroup {
+                let subStruct = b.wasmDefineStructType(
+                    fields: [
+                        .init(type: .wasmi32, mutability: true),
+                        .init(type: .wasmi64, mutability: true),
+                    ], indexTypes: [], superTypeDef: typeGroupA[0])
+                return [subStruct]
+            }
+
+            let module = b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                    let structObj = function.wasmStructNew(
+                        structType: typeGroupB[0],
+                        fields: [function.consti32(42), function.consti64(1337)])
+                    let result = function.wasmStructGet(theStruct: structObj, fieldIndex: 0)
+                    return [result]
+                }
+            }
+
+            let exports = module.loadExports()
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+            let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports)
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+            let prog = b.finalize()
+            return fuzzer.lifter.lift(prog)
+        }
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n")
+    }
 }
 
 @Suite(.enabled { JavaScriptExecutor() != nil })

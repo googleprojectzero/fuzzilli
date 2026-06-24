@@ -576,6 +576,11 @@ public struct JSTyper: Analyzer {
         let resolvedParameterTypes = signature.parameterTypes.enumerated().map(resolveType)
         isParameter = false  // TODO(mliedtke): Is there a nicer way to capture this?
         let resolvedOutputTypes = signature.outputTypes.enumerated().map(resolveType)
+
+        if let concreteHeapSupertype {
+            registerTypeGroupDependency(from: tgIndex, to: concreteHeapSupertype.typeGroupIndex)
+        }
+
         set(
             def,
             .wasmTypeDef(
@@ -629,6 +634,11 @@ public struct JSTyper: Analyzer {
         } else {
             resolvedElementType = elementType
         }
+
+        if let concreteHeapSupertype {
+            registerTypeGroupDependency(from: tgIndex, to: concreteHeapSupertype.typeGroupIndex)
+        }
+
         set(
             def,
             .wasmTypeDef(
@@ -676,6 +686,10 @@ public struct JSTyper: Analyzer {
             } else {
                 return field
             }
+        }
+
+        if let concreteHeapSupertype {
+            registerTypeGroupDependency(from: tgIndex, to: concreteHeapSupertype.typeGroupIndex)
         }
 
         set(
