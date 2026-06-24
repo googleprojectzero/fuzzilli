@@ -1083,7 +1083,7 @@ public class ProgramBuilder {
     /// 0.5, then 50% of the time we'll first try to find an exact match (`type(of: result).Is(requestedType)`) before trying the
     /// more general search (`type(of: result).MayBe(requestedType)`) which also includes variables of unknown type.
     /// This is writable for use in tests, but it could also be used to change how "conservative" variable selection is.
-    var probabilityOfVariableSelectionTryingToFindAnExactMatch = 0.5
+    var probabilityOfVariableSelectionTryingToFindAnExactMatch = 0.8
 
     /// Returns a random variable to be used as the given type.
     ///
