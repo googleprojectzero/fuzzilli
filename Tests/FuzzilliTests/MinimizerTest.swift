@@ -1677,6 +1677,50 @@ class MinimizerTests: XCTestCase {
         XCTAssertEqual(expectedProgram, actualProgram)
     }
 
+    func testPendingModuleMinimization() {
+        let config = Configuration(logLevel: .error, generateBundle: true)
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(config: config, evaluator: evaluator)
+
+        // Build input program to be minimized.
+        var originalProgram: Program
+        do {
+            let b = fuzzer.makeBuilder()
+
+            let v0 = b.declarePendingBundleModule(name: "module.mjs", exportNames: ["test"])
+
+            b.buildBundleModuleEntryPoint {
+                let i = b.loadInt(42)
+                evaluator.nextInstructionIsImportant(in: b)
+                b.unary(.BitwiseNot, i)
+            }
+
+            b.buildPendingBundleModule(moduleVariable: v0) {
+                let v1 = b.loadInt(1337)
+                b.exportVariables(variables: [v1], exportNames: ["test"])
+            }
+
+            originalProgram = b.finalize()
+        }
+
+        // Build expected output program.
+        var expectedProgram: Program
+        do {
+            let b = fuzzer.makeBuilder()
+
+            b.buildBundleModuleEntryPoint {
+                let i = b.loadInt(42)
+                b.unary(.BitwiseNot, i)
+            }
+
+            expectedProgram = b.finalize()
+        }
+
+        // Perform minimization and check that the two programs are equal.
+        let actualProgram = minimize(originalProgram, with: fuzzer)
+        XCTAssertEqual(expectedProgram, actualProgram)
+    }
+
     func testGuardedOperationSimplification() {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)

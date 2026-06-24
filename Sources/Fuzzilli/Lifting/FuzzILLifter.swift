@@ -831,6 +831,19 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("\(output()) <- EndBundleModule '\(op.moduleName)'")
 
+        case .declarePendingBundleModule(let op):
+            w.emit(
+                "\(output()) <- DeclarePendingBundleModule '\(op.moduleName)' exports: \(op.exportNames)"
+            )
+
+        case .beginPendingBundleModule:
+            w.emit("BeginPendingBundleModule \(input(0))")
+            w.increaseIndentionLevel()
+
+        case .endPendingBundleModule:
+            w.decreaseIndentionLevel()
+            w.emit("EndPendingBundleModule")
+
         case .beginBundleModuleEntryPoint:
             w.emit("BeginBundleModuleEntryPoint")
             w.increaseIndentionLevel()

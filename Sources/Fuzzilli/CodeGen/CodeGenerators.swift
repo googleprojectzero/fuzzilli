@@ -3640,7 +3640,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 inContext: .single(.bundle),
                 provides: [.moduleTopLevel, .javascript]
             ) { b in
-                let moduleName = "module\(b.indexOfNextInstruction()).mjs"
+                let moduleName = "module_" + String.random(ofLength: 4) + ".mjs"
                 b.beginBundleModule(name: moduleName)
                 b.buildPrefix()
             },
@@ -3651,6 +3651,36 @@ public let CodeGenerators: [CodeGenerator] = [
                 // Generate one export at the end to ensure there are at least some exports.
                 b.generateExport()
                 _ = b.endBundleModule()
+            },
+        ]),
+
+    CodeGenerator(
+        "PendingBundleModuleGenerator",
+        [
+            GeneratorStub(
+                "DeclarePendingModule",
+                inContext: .single(.bundle),
+                provides: [.bundle]
+            ) { b in
+                let name = "module_cyclic_" + String.random(ofLength: 4) + ".mjs"
+                let numExports = Int.random(in: 1...2)
+                let exports = (0..<numExports).map { "export_\($0)" }
+                b.runtimeData.push(
+                    "pendingModule", b.declarePendingBundleModule(name: name, exportNames: exports))
+            },
+            // Any arbitrary other modules can be generated here and can use the pending module.
+            GeneratorStub(
+                "DefinePendingModule",
+                inContext: .single(.bundle)
+            ) { b in
+                let moduleVariable = b.runtimeData.pop("pendingModule")
+                b.buildPendingBundleModule(moduleVariable: moduleVariable) {
+                    b.buildPrefix()
+                    // Force at least one import to increase the chance that cyclic imports are generated.
+                    b.generateImport()
+                    b.build(n: 20)
+                    b.generatePendingModuleExports(moduleVariable: moduleVariable)
+                }
             },
         ]),
 

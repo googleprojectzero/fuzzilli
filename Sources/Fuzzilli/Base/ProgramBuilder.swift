@@ -133,6 +133,19 @@ public class ProgramBuilder {
 
     private var activeJsModuleName: String? = nil
 
+    public func generatePendingModuleExports(moduleVariable: Variable) {
+        // Retrieve the exports from the type of the module variable.
+        let type = jsTyper.type(of: moduleVariable)
+
+        var exportNames: [String] = []
+        var varsToExport: [Variable] = []
+        type.exports.forEach { exportName, _ in
+            exportNames.append(exportName)
+            varsToExport.append(randomJsVariable())
+        }
+        exportVariables(variables: varsToExport, exportNames: exportNames)
+    }
+
     /// Stack of active class definitions.
     ///
     /// Similar to object literals, class definitions can be nested so this needs to be a stack.
@@ -234,6 +247,7 @@ public class ProgramBuilder {
         activeClassDefinitions.removeAll()
         activeSwitchBlocks.removeAll()
         activeWasmModule = nil
+        activeJsModuleName = nil
         argumentGenerationSignature.removeAll()
         argumentGenerationVariableBudget.removeAll()
         buildLog?.reset()
@@ -4290,6 +4304,12 @@ public class ProgramBuilder {
         endBundleModuleEntryPoint()
     }
 
+    public func buildPendingBundleModule(moduleVariable: Variable, _ body: () -> Void) {
+        beginPendingBundleModule(moduleVariable: moduleVariable)
+        body()
+        endPendingBundleModule()
+    }
+
     public func beginBundleModule(name: String) {
         activeJsModuleName = name
         emit(BeginBundleModule(moduleName: name))
@@ -4299,6 +4319,18 @@ public class ProgramBuilder {
         let endModuleInstruction = emit(EndBundleModule(moduleName: activeJsModuleName!))
         activeJsModuleName = nil
         return endModuleInstruction.output
+    }
+
+    public func declarePendingBundleModule(name: String, exportNames: [String]) -> Variable {
+        return emit(DeclarePendingBundleModule(moduleName: name, exportNames: exportNames)).output
+    }
+
+    public func beginPendingBundleModule(moduleVariable: Variable) {
+        emit(BeginPendingBundleModule(), withInputs: [moduleVariable])
+    }
+
+    public func endPendingBundleModule() {
+        emit(EndPendingBundleModule())
     }
 
     public func beginBundleModuleEntryPoint() {

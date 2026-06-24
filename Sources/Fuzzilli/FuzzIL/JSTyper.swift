@@ -44,6 +44,9 @@ public struct JSTyper: Analyzer {
     // Tracks the active function definitions and contains the instruction that started the function.
     private var activeFunctionDefinitions = Stack<Instruction>()
 
+    // Tracks the active pending bundle module (non-nil between BeginPendingBundleModule and EndPendingBundleModule).
+    private var activePendingBundleModule: Instruction? = nil
+
     /// This tracks program local object groups (WasmModules, JS Classes and Object literals).
     private var dynamicObjectGroupManager = ObjectGroupManager()
 
@@ -458,6 +461,7 @@ public struct JSTyper: Analyzer {
         isWithinTypeGroup = false
         dynamicObjectGroupManager = ObjectGroupManager()
         assert(activeFunctionDefinitions.isEmpty)
+        assert(activePendingBundleModule == nil)
         assert(dynamicObjectGroupManager.isEmpty)
         seenExports = []
     }
@@ -1290,9 +1294,21 @@ public struct JSTyper: Analyzer {
         case .endWasmModule(_):
             let instanceType = dynamicObjectGroupManager.finalizeWasmModule()
             setType(of: instr.output, to: instanceType)
+        case .beginBundleModule(_):
+            assert(seenExports.isEmpty)
         case .endBundleModule(_):
             let instanceType = finalizeJsModule()
             setType(of: instr.output, to: instanceType)
+        case .beginPendingBundleModule(_):
+            assert(activePendingBundleModule == nil)
+            activePendingBundleModule = instr
+        case .endPendingBundleModule(_):
+            let moduleVariable = activePendingBundleModule!.inputs[0]
+            let instanceType = finalizeJsModule()
+            setType(of: moduleVariable, to: instanceType)
+            activePendingBundleModule = nil
+        case .beginBundleModuleEntryPoint(_):
+            assert(seenExports.isEmpty)
         case .endBundleModuleEntryPoint(_):
             seenExports = []
         case .exportVariables(let op):
@@ -1570,7 +1586,9 @@ public struct JSTyper: Analyzer {
             .beginBundleModule,
             .endBundleModule,
             .beginBundleModuleEntryPoint,
-            .endBundleModuleEntryPoint:
+            .endBundleModuleEntryPoint,
+            .beginPendingBundleModule,
+            .endPendingBundleModule:
             // Object literals and class definitions don't create any conditional branches, only methods and accessors inside of them. These are handled further below.
             break
         case .beginIf:
@@ -2588,6 +2606,13 @@ public struct JSTyper: Analyzer {
             } else {
                 set(instr.output, .jsMap)
             }
+
+        case .declarePendingBundleModule(let op):
+            // We use .jsAnything as the type for the variables which will be exported later - it's hard to decide a better type upfront and those won't technically be true (since we might access a "var" variable before it has its final value).
+            let exportsMap = Dictionary(
+                uniqueKeysWithValues: op.exportNames.map { ($0, ILType.jsAnything) }
+            )
+            set(instr.output, .jsModule(exports: exportsMap))
 
         default:
             // Only simple instructions and block instruction with inner outputs are handled here

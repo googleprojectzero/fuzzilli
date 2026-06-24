@@ -2702,4 +2702,51 @@ struct JSTyperTests {
             }
         }
     }
+
+    @Test func testPendingBundleModuleExportTyping() {
+        let config = Configuration(logLevel: .error, generateBundle: true)
+        let fuzzer = makeMockFuzzer(config: config)
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            let vA = b.declarePendingBundleModule(name: "A.mjs", exportNames: ["export_A"])
+            let vB = b.declarePendingBundleModule(name: "B.mjs", exportNames: ["export_B"])
+
+            let oldTypeA = ILType.jsModule(exports: ["export_A": .jsAnything])
+            let oldTypeB = ILType.jsModule(exports: ["export_B": .jsAnything])
+            #expect(b.type(of: vA) == oldTypeA)
+            #expect(b.type(of: vB) == oldTypeB)
+
+            b.beginPendingBundleModule(moduleVariable: vA)
+            let i = b.loadInt(42)
+            b.generatePendingModuleExports(moduleVariable: vA)
+            b.exportVariables(variables: [i], exportNames: ["new_export_A"])
+            b.endPendingBundleModule()
+
+            b.beginPendingBundleModule(moduleVariable: vB)
+            let s = b.loadBool(true)
+            b.generatePendingModuleExports(moduleVariable: vB)
+            b.exportVariables(variables: [s], exportNames: ["new_export_B"])
+            b.endPendingBundleModule()
+
+            let vC = b.buildBundleModule(name: "C.mjs") {
+                let f = b.loadFloat(13.37)
+                b.exportVariables(variables: [f], exportNames: ["export_C"])
+            }
+
+            b.buildBundleModuleEntryPoint {
+                #expect(b.type(of: vA).Is(oldTypeA))
+                #expect(b.type(of: vB).Is(oldTypeB))
+
+                #expect(
+                    b.type(of: vA)
+                        == .jsModule(exports: ["export_A": .integer, "new_export_A": .integer]))
+                #expect(
+                    b.type(of: vB)
+                        == .jsModule(exports: ["export_B": .boolean, "new_export_B": .boolean]))
+
+                #expect(b.type(of: vC) == .jsModule(exports: ["export_C": .float]))
+            }
+        }
+    }
 }

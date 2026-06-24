@@ -224,6 +224,8 @@ extension Operation {
             return endOp is EndBundleModule
         case .beginBundleModuleEntryPoint:
             return endOp is EndBundleModuleEntryPoint
+        case .beginPendingBundleModule:
+            return endOp is EndPendingBundleModule
         case .beginWasmModule:
             return endOp is EndWasmModule
         case .beginWasmFunction:

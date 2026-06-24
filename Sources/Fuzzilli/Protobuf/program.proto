@@ -378,6 +378,9 @@ message Instruction {
         DynamicImport dynamicImport = 352;
         Destruct destruct = 353;
         DestructAndReassign destructAndReassign = 354;
+        DeclarePendingBundleModule declarePendingBundleModule = 355;
+        BeginPendingBundleModule beginPendingBundleModule = 356;
+        EndPendingBundleModule endPendingBundleModule = 357;
     }
 }
 

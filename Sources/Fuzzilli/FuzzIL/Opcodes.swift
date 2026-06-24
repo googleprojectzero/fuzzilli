@@ -383,4 +383,7 @@ enum Opcode {
     case dynamicImport(DynamicImport)
     case destruct(Destruct)
     case destructAndReassign(DestructAndReassign)
+    case declarePendingBundleModule(DeclarePendingBundleModule)
+    case beginPendingBundleModule(BeginPendingBundleModule)
+    case endPendingBundleModule(EndPendingBundleModule)
 }

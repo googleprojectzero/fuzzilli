@@ -3034,6 +3034,39 @@ final class EndBundleModule: JsOperation {
     }
 }
 
+// Pending module forward declaration
+final class DeclarePendingBundleModule: JsOperation {
+    override var opcode: Opcode { .declarePendingBundleModule(self) }
+    let moduleName: String
+    let exportNames: [String]
+
+    init(moduleName: String, exportNames: [String]) {
+        self.moduleName = moduleName
+        self.exportNames = exportNames
+        super.init(numOutputs: 1, requiredContext: [.bundle])
+    }
+}
+
+// Pending module definition. The input is the DeclarePendingBundleModule operation.
+final class BeginPendingBundleModule: JsOperation {
+    override var opcode: Opcode { .beginPendingBundleModule(self) }
+
+    init() {
+        super.init(
+            numInputs: 1,
+            attributes: .isBlockStart, requiredContext: [.bundle],
+            contextOpened: [.moduleTopLevel, .javascript, .async])
+    }
+}
+
+final class EndPendingBundleModule: JsOperation {
+    override var opcode: Opcode { .endPendingBundleModule(self) }
+
+    init() {
+        super.init(attributes: .isBlockEnd, requiredContext: .moduleTopLevel)
+    }
+}
+
 final class ExportVariables: JsOperation {
     override var opcode: Opcode { .exportVariables(self) }
     let exportNames: [String]

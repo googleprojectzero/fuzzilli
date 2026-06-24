@@ -1615,6 +1615,19 @@ public class JavaScriptLifter: Lifter {
                 w.declare(instr.output)
                 break
 
+            case .declarePendingBundleModule(let op):
+                moduleNames[instr.output] = op.moduleName
+                w.declare(instr.output)
+                break
+
+            case .beginPendingBundleModule:
+                // The 1st input is the DeclarePendingBundleModule operation.
+                let moduleName = moduleNames[instr.input(0)]!
+                w.emitRaw("// JS_BUNDLE_MODULE:\(moduleName)")
+
+            case .endPendingBundleModule:
+                break
+
             case .beginBundleModuleEntryPoint:
                 w.emitRaw("// JS_BUNDLE_MODULE_ENTRYPOINT")
 

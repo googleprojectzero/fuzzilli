@@ -513,6 +513,66 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testCyclicImports() {
+        let config = Configuration(generateBundle: true)
+        let fuzzer = makeMockFuzzer(config: config)
+        let b = fuzzer.makeBuilder()
+
+        let nameA = "module_cyclic_A.mjs"
+        let nameB = "module_cyclic_B.mjs"
+        let exportsA = ["export_A"]
+        let exportsB = ["export_B"]
+
+        let vA = b.declarePendingBundleModule(name: nameA, exportNames: exportsA)
+        let vB = b.declarePendingBundleModule(name: nameB, exportNames: exportsB)
+
+        b.beginPendingBundleModule(moduleVariable: vA)
+        _ = b.importVariables(module: vB, importNames: exportsB)
+        let c42 = b.loadInt(42)
+        b.exportVariables(variables: [c42], exportNames: exportsA)
+        b.endPendingBundleModule()
+
+        b.beginPendingBundleModule(moduleVariable: vB)
+        _ = b.importVariables(module: vA, importNames: exportsA)
+        let c43 = b.loadInt(43)
+        b.exportVariables(variables: [c43], exportNames: exportsB)
+        b.endPendingBundleModule()
+
+        b.buildBundleModuleEntryPoint {
+            _ = b.importVariables(module: vA, importNames: exportsA)
+            _ = b.importVariables(module: vB, importNames: exportsB)
+        }
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+            // JS_BUNDLE_MODULE:module_cyclic_A.mjs
+            import { export_B as v2 } from "module_cyclic_B.mjs";
+            const v3 = 42;
+            export { v3 as export_A };
+            // JS_BUNDLE_MODULE:module_cyclic_B.mjs
+            import { export_A as v4 } from "module_cyclic_A.mjs";
+            const v5 = 43;
+            export { v5 as export_B };
+            // JS_BUNDLE_MODULE_ENTRYPOINT
+            import { export_A as v6 } from "module_cyclic_A.mjs";
+            import { export_B as v7 } from "module_cyclic_B.mjs";
+
+            """
+
+        XCTAssertEqual(actual, expected)
+
+        let fuzzILLifter = FuzzILLifter()
+        let fuzzIL = fuzzILLifter.lift(program)
+        XCTAssertTrue(
+            fuzzIL.contains(
+                "DeclarePendingBundleModule 'module_cyclic_A.mjs' exports: [\"export_A\"]"))
+        XCTAssertTrue(
+            fuzzIL.contains(
+                "DeclarePendingBundleModule 'module_cyclic_B.mjs' exports: [\"export_B\"]"))
+    }
+
     func testForceVariableDefinitions() {
         let createProgram = { (config: Configuration) in
             let fuzzer = makeMockFuzzer(config: config)

@@ -1206,6 +1206,15 @@ extension Instruction: ProtobufConvertible {
                 $0.endBundleModule = Fuzzilli_Protobuf_EndBundleModule.with {
                     $0.moduleName = op.moduleName
                 }
+            case .declarePendingBundleModule(let op):
+                $0.declarePendingBundleModule = Fuzzilli_Protobuf_DeclarePendingBundleModule.with {
+                    $0.moduleName = op.moduleName
+                    $0.exportNames = op.exportNames
+                }
+            case .beginPendingBundleModule:
+                $0.beginPendingBundleModule = Fuzzilli_Protobuf_BeginPendingBundleModule()
+            case .endPendingBundleModule:
+                $0.endPendingBundleModule = Fuzzilli_Protobuf_EndPendingBundleModule()
             case .beginBundleModuleEntryPoint:
                 $0.beginBundleModuleEntryPoint = Fuzzilli_Protobuf_BeginBundleModuleEntryPoint()
             case .endBundleModuleEntryPoint:
@@ -2513,6 +2522,12 @@ extension Instruction: ProtobufConvertible {
             op = BeginBundleModule(moduleName: p.moduleName)
         case .endBundleModule(let p):
             op = EndBundleModule(moduleName: p.moduleName)
+        case .declarePendingBundleModule(let p):
+            op = DeclarePendingBundleModule(moduleName: p.moduleName, exportNames: p.exportNames)
+        case .beginPendingBundleModule:
+            op = BeginPendingBundleModule()
+        case .endPendingBundleModule:
+            op = EndPendingBundleModule()
         case .beginBundleModuleEntryPoint:
             op = BeginBundleModuleEntryPoint()
         case .endBundleModuleEntryPoint:

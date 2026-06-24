@@ -1856,3 +1856,15 @@ message Destruct {
 message DestructAndReassign {
     FuzzILDestructuringPattern pattern = 1;
 }
+
+message DeclarePendingBundleModule {
+    string moduleName = 1;
+    repeated string exportNames = 2;
+}
+
+message BeginPendingBundleModule {
+}
+
+message EndPendingBundleModule {
+}
+
