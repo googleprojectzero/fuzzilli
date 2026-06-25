@@ -136,7 +136,9 @@ struct ProgramBuilderTests {
             let b = fuzzer.makeBuilder()
             let N = 100
 
-            let simpleGenerator = CodeGenerator("SimpleGenerator", produces: [.integer]) { b in
+            let simpleGenerator = CodeGenerator(
+                "SimpleGenerator", produces: [.integer], useInPrefix: true
+            ) { b in
                 b.loadInt(Int64.random(in: 0..<100))
             }
             fuzzer.setCodeGenerators(
@@ -162,7 +164,9 @@ struct ProgramBuilderTests {
             let b = fuzzer.makeBuilder()
             let N = 100
 
-            let simpleGenerator = CodeGenerator("SimpleGenerator", produces: [.integer]) { b in
+            let simpleGenerator = CodeGenerator(
+                "SimpleGenerator", produces: [.integer], useInPrefix: true
+            ) { b in
                 b.loadInt(Int64.random(in: 0..<100))
             }
             let recursiveGenerator = CodeGenerator("RecursiveGenerator") { b in
@@ -3139,7 +3143,9 @@ struct ProgramBuilderTests {
             let myType = ILType.object(withProperties: ["MyProperty"])
 
             var producingGeneratorRan = false
-            let producingGenerator = CodeGenerator("ProducingGenerator", produces: [myType]) { b in
+            let producingGenerator = CodeGenerator(
+                "ProducingGenerator", produces: [myType], useInPrefix: true
+            ) { b in
                 producingGeneratorRan = true
                 let obj = b.createObject(with: [:])
                 b.setProperty("MyProperty", of: obj, to: b.loadInt(42))

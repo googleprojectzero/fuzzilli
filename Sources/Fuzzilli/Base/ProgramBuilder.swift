@@ -2285,11 +2285,11 @@ public class ProgramBuilder {
         build(n: budget, by: .generating)
     }
 
-    /// Run ValueGenerators until we have created at least N new variables.
+    /// Run generators marked with "useInPrefix" until we have created at least N new variables.
     /// Returns both the number of generated instructions and of newly created variables.
     @discardableResult
     public func buildValues(_ n: Int) -> (generatedInstructions: Int, generatedVariables: Int) {
-        var valueGenerators = fuzzer.codeGenerators.filter({ $0.isValueGenerator })
+        var valueGenerators = fuzzer.codeGenerators.filter({ $0.useInPrefix })
         // Filter for the current context
         valueGenerators = valueGenerators.filter { context.contains($0.requiredContext) }
 
