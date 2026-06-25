@@ -2824,11 +2824,13 @@ class WasmDefineArrayType: WasmTypeOperation {
     let elementType: ILType
     let mutability: Bool
     let hasSuperType: Bool
+    let isFinal: Bool
 
-    init(elementType: ILType, mutability: Bool, hasSuperType: Bool = false) {
+    init(elementType: ILType, mutability: Bool, hasSuperType: Bool = false, isFinal: Bool = false) {
         self.elementType = elementType
         self.mutability = mutability
         self.hasSuperType = hasSuperType
+        self.isFinal = isFinal
         let numInputs = (hasSuperType ? 1 : 0) + elementType.requiredInputCount()
         super.init(
             numInputs: numInputs, numOutputs: 1,
@@ -2843,14 +2845,20 @@ class WasmDefineStructType: WasmTypeOperation {
 
     let fields: [Field]
     let hasSuperType: Bool
+    let isFinal: Bool
 
-    init(fields: [Field], hasSuperType: Bool = false) {
+    init(fields: [Field], hasSuperType: Bool = false, isFinal: Bool = false) {
         self.fields = fields
         self.hasSuperType = hasSuperType
+        self.isFinal = isFinal
         let numInputs =
             (hasSuperType ? 1 : 0)
-            + fields.map { $0.type.requiredInputCount() }.reduce(0) { $0 + $1 }
-        super.init(numInputs: numInputs, numOutputs: 1, requiredContext: [.wasmTypeGroup])
+            + fields.map {
+                $0.type.requiredInputCount()
+            }.reduce(0) { $0 + $1 }
+        super.init(
+            numInputs: numInputs, numOutputs: 1,
+            requiredContext: [.wasmTypeGroup])
     }
 }
 
@@ -2858,16 +2866,21 @@ class WasmDefineSignatureType: WasmTypeOperation {
     override var opcode: Opcode { .wasmDefineSignatureType(self) }
     let signature: WasmSignature
     let hasSuperType: Bool
+    let isFinal: Bool
 
-    init(signature: WasmSignature, hasSuperType: Bool = false) {
+    init(signature: WasmSignature, hasSuperType: Bool = false, isFinal: Bool = false) {
         self.signature = signature
         self.hasSuperType = hasSuperType
+        self.isFinal = isFinal
         let numInputs =
             (hasSuperType ? 1 : 0)
-            + (signature.outputTypes + signature.parameterTypes).map {
+            + (signature.outputTypes + signature.parameterTypes)
+            .map {
                 $0.requiredInputCount()
             }.reduce(0) { $0 + $1 }
-        super.init(numInputs: numInputs, numOutputs: 1, requiredContext: [.wasmTypeGroup])
+        super.init(
+            numInputs: numInputs, numOutputs: 1,
+            requiredContext: [.wasmTypeGroup])
     }
 }
 

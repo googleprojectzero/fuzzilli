@@ -1543,15 +1543,19 @@ struct TypeSystemTests {
         let subDesc = WasmTypeDescription(typeGroupIndex: 1, concreteHeapSupertype: baseDesc)
         let subSubDesc = WasmTypeDescription(typeGroupIndex: 2, concreteHeapSupertype: subDesc)
         let unrelatedDesc = WasmTypeDescription(typeGroupIndex: 3)
+        let finalSubDesc = WasmTypeDescription(
+            typeGroupIndex: 4, concreteHeapSupertype: baseDesc, isFinal: true)
 
         #expect(baseDesc.subsumes(baseDesc))
         #expect(baseDesc.subsumes(subDesc))
         #expect(baseDesc.subsumes(subSubDesc))
         #expect(subDesc.subsumes(subSubDesc))
+        #expect(baseDesc.subsumes(finalSubDesc))
 
         #expect(!subDesc.subsumes(baseDesc))
         #expect(!subSubDesc.subsumes(baseDesc))
         #expect(!subSubDesc.subsumes(subDesc))
+        #expect(!finalSubDesc.subsumes(baseDesc))
 
         #expect(!baseDesc.subsumes(unrelatedDesc))
         #expect(!unrelatedDesc.subsumes(baseDesc))
@@ -1561,11 +1565,15 @@ struct TypeSystemTests {
         let subDef = ILType.wasmTypeDef(description: subDesc)
         let subSubDef = ILType.wasmTypeDef(description: subSubDesc)
         let unrelatedDef: ILType = ILType.wasmTypeDef(description: unrelatedDesc)
+        let finalSubDef = ILType.wasmTypeDef(description: finalSubDesc)
 
         #expect(baseDef >= baseDef)
         #expect(baseDef >= subDef)
         #expect(baseDef >= subSubDef)
         #expect(subDef >= subSubDef)
+
+        #expect(!(baseDef >= finalSubDef))
+        #expect(finalSubDef >= finalSubDef)
 
         #expect(!(subDef >= baseDef))
         #expect(!(subSubDef >= baseDef))
@@ -1586,11 +1594,13 @@ struct TypeSystemTests {
         #expect(baseDef.intersection(with: anyTypeDef) == baseDef)
         #expect(baseDef.intersection(with: subDef) == subDef)
         #expect(subDef.intersection(with: baseDef) == subDef)
+        #expect(baseDef.intersection(with: finalSubDef) == .nothing)
 
         let baseRefNullable = ILType.wasmIndexRef(baseDesc, nullability: true)
         let subRefNullable = ILType.wasmIndexRef(subDesc, nullability: true)
         let subSubRefNullable = ILType.wasmIndexRef(subSubDesc, nullability: true)
         let unrelatedRefNullable = ILType.wasmIndexRef(unrelatedDesc, nullability: true)
+        let finalSubRefNullable = ILType.wasmIndexRef(finalSubDesc, nullability: true)
 
         let subRefNonNull = ILType.wasmIndexRef(subDesc, nullability: false)
         let subSubRefNonNull = ILType.wasmIndexRef(subSubDesc, nullability: false)
@@ -1599,6 +1609,9 @@ struct TypeSystemTests {
         #expect(baseRefNullable >= subRefNullable)
         #expect(baseRefNullable >= subSubRefNullable)
         #expect(subRefNullable >= subSubRefNullable)
+
+        #expect(baseRefNullable >= finalSubRefNullable)
+        #expect(!(finalSubRefNullable >= baseRefNullable))
 
         #expect(!(subRefNullable >= baseRefNullable))
         #expect(!(subSubRefNullable >= baseRefNullable))
@@ -1621,6 +1634,9 @@ struct TypeSystemTests {
         #expect(subSubRefNullable.union(with: baseRefNullable) == baseRefNullable)
         #expect(subRefNullable.union(with: subRefNullable) == subRefNullable)
 
+        #expect(baseRefNullable.union(with: finalSubRefNullable) == baseRefNullable)
+        #expect(finalSubRefNullable.union(with: baseRefNullable) == baseRefNullable)
+
         #expect(subRefNonNull.union(with: subSubRefNonNull) == subRefNonNull)
         #expect(subRefNullable.union(with: subRefNonNull) == subRefNullable)
         #expect(subRefNonNull.union(with: subSubRefNullable) == subRefNullable)
@@ -1632,6 +1648,9 @@ struct TypeSystemTests {
         #expect(baseRefNullable.intersection(with: subSubRefNullable) == subSubRefNullable)
         #expect(subSubRefNullable.intersection(with: baseRefNullable) == subSubRefNullable)
         #expect(subRefNullable.intersection(with: subRefNullable) == subRefNullable)
+
+        #expect(baseRefNullable.intersection(with: finalSubRefNullable) == finalSubRefNullable)
+        #expect(finalSubRefNullable.intersection(with: baseRefNullable) == finalSubRefNullable)
 
         #expect(subRefNonNull.intersection(with: subSubRefNonNull) == subSubRefNonNull)
         #expect(subRefNullable.intersection(with: subRefNonNull) == subRefNonNull)

@@ -6546,7 +6546,8 @@ public class ProgramBuilder {
 
     @discardableResult
     func wasmDefineSignatureType(
-        signature: WasmSignature, indexTypes: [Variable], superTypeDef: Variable? = nil
+        signature: WasmSignature, indexTypes: [Variable],
+        superTypeDef: Variable? = nil, isFinal: Bool = false
     ) -> Variable {
         var inputs: [Variable] = []
         if let superTypeDef {
@@ -6558,11 +6559,11 @@ public class ProgramBuilder {
                 guard let superSigType = superTypeDesc as? WasmSignatureTypeDescription else {
                     fatalError("Supertype of a signature must be a signature type")
                 }
-
+                assert(!superSigType.isFinal)
+                assert(!superSigType.hasUnresolvedSelfReferences())
                 assert(
                     signature.parameterTypes.count == superSigType.signature.parameterTypes.count)
                 assert(signature.outputTypes.count == superSigType.signature.outputTypes.count)
-                assert(!superSigType.hasUnresolvedSelfReferences())
 
                 var indexTypeIterator = indexTypes.makeIterator()
                 let linkTypes = { (types: [ILType]) -> [ILType] in
@@ -6603,7 +6604,8 @@ public class ProgramBuilder {
         inputs += indexTypes
 
         return emit(
-            WasmDefineSignatureType(signature: signature, hasSuperType: superTypeDef != nil),
+            WasmDefineSignatureType(
+                signature: signature, hasSuperType: superTypeDef != nil, isFinal: isFinal),
             withInputs: inputs
         ).output
     }
@@ -6646,7 +6648,7 @@ public class ProgramBuilder {
     @discardableResult
     func wasmDefineArrayType(
         elementType: ILType, mutability: Bool, indexType: Variable? = nil,
-        superTypeDef: Variable? = nil
+        superTypeDef: Variable? = nil, isFinal: Bool = false
     )
         -> Variable
     {
@@ -6660,6 +6662,8 @@ public class ProgramBuilder {
                 guard let superArrayType = superTypeDesc as? WasmArrayTypeDescription else {
                     fatalError("Supertype of an array must be an array type")
                 }
+                assert(!superArrayType.isFinal)
+                assert(!superArrayType.hasUnresolvedSelfReferences())
 
                 let linkedElementType: ILType
                 if let indexType {
@@ -6669,7 +6673,6 @@ public class ProgramBuilder {
                     linkedElementType = elementType
                 }
 
-                assert(!superArrayType.hasUnresolvedSelfReferences())
                 if superArrayType.mutability {
                     assert(mutability)
                     assert(linkedElementType == superArrayType.elementType)
@@ -6686,7 +6689,8 @@ public class ProgramBuilder {
         }
         return emit(
             WasmDefineArrayType(
-                elementType: elementType, mutability: mutability, hasSuperType: superTypeDef != nil),
+                elementType: elementType, mutability: mutability, hasSuperType: superTypeDef != nil,
+                isFinal: isFinal),
             withInputs: inputs
         ).output
     }
@@ -6694,7 +6698,7 @@ public class ProgramBuilder {
     @discardableResult
     func wasmDefineStructType(
         fields: [WasmStructTypeDescription.Field], indexTypes: [Variable],
-        superTypeDef: Variable? = nil
+        superTypeDef: Variable? = nil, isFinal: Bool = false
     )
         -> Variable
     {
@@ -6708,7 +6712,7 @@ public class ProgramBuilder {
                 guard let superStructType = superTypeDesc as? WasmStructTypeDescription else {
                     fatalError("Supertype of a struct must be a struct type")
                 }
-
+                assert(!superStructType.isFinal)
                 assert(!superStructType.hasUnresolvedSelfReferences())
 
                 var indexTypeIterator = indexTypes.makeIterator()
@@ -6742,7 +6746,8 @@ public class ProgramBuilder {
         inputs += indexTypes
 
         return emit(
-            WasmDefineStructType(fields: fields, hasSuperType: superTypeDef != nil),
+            WasmDefineStructType(
+                fields: fields, hasSuperType: superTypeDef != nil, isFinal: isFinal),
             withInputs: inputs
         ).output
     }

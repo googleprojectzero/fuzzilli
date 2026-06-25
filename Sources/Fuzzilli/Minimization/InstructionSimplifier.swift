@@ -255,7 +255,8 @@ struct InstructionSimplifier: Reducer {
         for instr in helper.code {
             if let op = instr.op as? WasmDefineArrayType, op.hasSuperType {
                 let newOp = WasmDefineArrayType(
-                    elementType: op.elementType, mutability: op.mutability, hasSuperType: false)
+                    elementType: op.elementType, mutability: op.mutability, hasSuperType: false,
+                    isFinal: op.isFinal)
                 let newInouts = instr.inputs.dropFirst() + instr.outputs
                 helper.tryReplacing(
                     instructionAt: instr.index,

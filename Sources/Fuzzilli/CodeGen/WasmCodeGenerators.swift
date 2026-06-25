@@ -2474,10 +2474,9 @@ private let wasmArrayTypeGenerator = GeneratorStub(
     inContext: .single(.wasmTypeGroup),
     producesComplex: [.init(.wasmTypeDef(), .IsWasmArray)]
 ) { b in
+    let isFinal = probability(0.25)
     // Define array type with super type (currently: super type and sub type have the same element type)
     if probability(0.25),
-        // TODO(bettscheider): Check that the type is non-final once we support non-final types.
-
         // We avoid using super types with self-references to ensure programs are valid.
         // To support this in the future, we need to replace the self-reference in the
         // sub type with a reference to the super type.
@@ -2485,7 +2484,7 @@ private let wasmArrayTypeGenerator = GeneratorStub(
             if let desc = b.type(of: $0).wasmTypeDefinition?.description
                 as? WasmArrayTypeDescription
             {
-                return !desc.hasUnresolvedSelfReferences()
+                return !desc.hasUnresolvedSelfReferences() && !desc.isFinal
             }
             return false
         })
@@ -2502,13 +2501,15 @@ private let wasmArrayTypeGenerator = GeneratorStub(
                     .Index(), nullability: elementType.wasmReferenceType!.nullability),
                 mutability: superTypeDesc.mutability,
                 indexType: indexType,
-                superTypeDef: superType
+                superTypeDef: superType,
+                isFinal: isFinal
             )
         } else {
             b.wasmDefineArrayType(
                 elementType: elementType,
                 mutability: superTypeDesc.mutability,
-                superTypeDef: superType
+                superTypeDef: superType,
+                isFinal: isFinal
             )
         }
         return
@@ -2525,7 +2526,7 @@ private let wasmArrayTypeGenerator = GeneratorStub(
             == .selfReference || probability(0.5)
         b.wasmDefineArrayType(
             elementType: .wasmRef(.Index(), nullability: nullability),
-            mutability: mutability, indexType: elementType)
+            mutability: mutability, indexType: elementType, isFinal: isFinal)
     } else {
         b.wasmDefineArrayType(
             elementType: chooseUniform(
@@ -2536,7 +2537,7 @@ private let wasmArrayTypeGenerator = GeneratorStub(
                     + WasmAbstractHeapType.allCases.map {
                         ILType.wasmRef($0, nullability: Bool.random())
                     }),
-            mutability: mutability)
+            mutability: mutability, isFinal: isFinal)
     }
 }
 
@@ -2545,10 +2546,9 @@ private let wasmStructTypeGenerator = GeneratorStub(
     inContext: .single(.wasmTypeGroup),
     producesComplex: [.init(.wasmTypeDef(), .IsWasmStruct)]
 ) { b in
+    let isFinal = probability(0.25)
     // Define struct type with super type (currently: super type and sub type have the same fields)
     if probability(0.25),
-        // TODO(bettscheider): Check that the type is non-final once we support non-final types.
-
         // We avoid using super types with self-references to ensure programs are valid.
         // To support this in the future, we need to replace the self-reference in the
         // sub type with a reference to the super type.
@@ -2557,7 +2557,7 @@ private let wasmStructTypeGenerator = GeneratorStub(
             if let desc = b.type(of: $0).wasmTypeDefinition?.description
                 as? WasmStructTypeDescription
             {
-                return !desc.hasUnresolvedSelfReferences()
+                return !desc.hasUnresolvedSelfReferences() && !desc.isFinal
             }
             return false
         })
@@ -2587,7 +2587,8 @@ private let wasmStructTypeGenerator = GeneratorStub(
         b.wasmDefineStructType(
             fields: cleanFields,
             indexTypes: indexTypes,
-            superTypeDef: superType
+            superTypeDef: superType,
+            isFinal: isFinal
         )
         return
     }
@@ -2595,7 +2596,7 @@ private let wasmStructTypeGenerator = GeneratorStub(
     // Define struct type without super type
     let (fields, indexTypes) = b.generateRandomWasmStructFields()
 
-    b.wasmDefineStructType(fields: fields, indexTypes: indexTypes)
+    b.wasmDefineStructType(fields: fields, indexTypes: indexTypes, isFinal: isFinal)
 }
 
 private let wasmSignatureTypeGenerator = GeneratorStub(
@@ -2603,16 +2604,15 @@ private let wasmSignatureTypeGenerator = GeneratorStub(
     inContext: .single(.wasmTypeGroup),
     producesComplex: [.init(.wasmTypeDef(), .IsWasmFunction)]
 ) { b in
+    let isFinal = probability(0.25)
     // Define signature type with super type (currently: super type and sub type have the same signature)
     if probability(0.25),
-        // TODO(bettscheider): Check that the type is non-final once we support non-final types.
-
         // We avoid using super types with self-references to ensure programs are valid.
         let superType = b.findVariable(satisfying: {
             if let desc = b.type(of: $0).wasmTypeDefinition?.description
                 as? WasmSignatureTypeDescription
             {
-                return !desc.hasUnresolvedSelfReferences()
+                return !desc.hasUnresolvedSelfReferences() && !desc.isFinal
             }
             return false
         })
@@ -2640,7 +2640,8 @@ private let wasmSignatureTypeGenerator = GeneratorStub(
             => unlinkTypes(superSignature.outputTypes)
 
         b.wasmDefineSignatureType(
-            signature: unlinkedSignature, indexTypes: indexTypes, superTypeDef: superType)
+            signature: unlinkedSignature, indexTypes: indexTypes,
+            superTypeDef: superType, isFinal: isFinal)
         return
     }
 
@@ -2651,7 +2652,6 @@ private let wasmSignatureTypeGenerator = GeneratorStub(
 
     var indexTypes: [Variable] = []
     let chooseType = {
-        var type: ILType
         if let elementType = b.randomWasmTypeDef(),
             probability(0.25)
         {
@@ -2668,5 +2668,5 @@ private let wasmSignatureTypeGenerator = GeneratorStub(
     let signature =
         (0..<parameterCount).map { _ in chooseType() }
         => (0..<returnCount).map { _ in chooseType() }
-    b.wasmDefineSignatureType(signature: signature, indexTypes: indexTypes)
+    b.wasmDefineSignatureType(signature: signature, indexTypes: indexTypes, isFinal: isFinal)
 }

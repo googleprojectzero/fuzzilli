@@ -1742,12 +1742,14 @@ extension Instruction: ProtobufConvertible {
                     $0.parameterTypes = op.signature.parameterTypes.map(ILTypeToWasmTypeEnum)
                     $0.outputTypes = op.signature.outputTypes.map(ILTypeToWasmTypeEnum)
                     $0.hasSuperType_p = op.hasSuperType
+                    $0.isFinal = op.isFinal
                 }
             case .wasmDefineArrayType(let op):
                 $0.wasmDefineArrayType = Fuzzilli_Protobuf_WasmDefineArrayType.with {
                     $0.elementType = ILTypeToWasmTypeEnum(op.elementType)
                     $0.mutability = op.mutability
                     $0.hasSuperType_p = op.hasSuperType
+                    $0.isFinal = op.isFinal
                 }
             case .wasmDefineStructType(let op):
                 $0.wasmDefineStructType = Fuzzilli_Protobuf_WasmDefineStructType.with {
@@ -1758,6 +1760,7 @@ extension Instruction: ProtobufConvertible {
                         }
                     }
                     $0.hasSuperType_p = op.hasSuperType
+                    $0.isFinal = op.isFinal
                 }
             case .wasmDefineForwardOrSelfReference(_):
                 $0.wasmDefineForwardOrSelfReference =
@@ -2918,12 +2921,12 @@ extension Instruction: ProtobufConvertible {
         case .wasmDefineArrayType(let p):
             op = WasmDefineArrayType(
                 elementType: WasmTypeEnumToILType(p.elementType), mutability: p.mutability,
-                hasSuperType: p.hasSuperType_p)
+                hasSuperType: p.hasSuperType_p, isFinal: p.isFinal)
         case .wasmDefineSignatureType(let p):
             op = WasmDefineSignatureType(
                 signature: p.parameterTypes.map(WasmTypeEnumToILType)
                     => p.outputTypes.map(WasmTypeEnumToILType),
-                hasSuperType: p.hasSuperType_p)
+                hasSuperType: p.hasSuperType_p, isFinal: p.isFinal)
         case .wasmDefineAdHocSignatureType(let p):
             op = WasmDefineAdHocSignatureType(
                 signature: p.parameterTypes.map(WasmTypeEnumToILType)
@@ -2938,7 +2941,7 @@ extension Instruction: ProtobufConvertible {
                     return WasmDefineStructType.Field(
                         type: WasmTypeEnumToILType(field.type), mutability: field.mutability)
                 },
-                hasSuperType: p.hasSuperType_p)
+                hasSuperType: p.hasSuperType_p, isFinal: p.isFinal)
         case .wasmDefineForwardOrSelfReference(_):
             op = WasmDefineForwardOrSelfReference()
         case .wasmResolveForwardReference(_):

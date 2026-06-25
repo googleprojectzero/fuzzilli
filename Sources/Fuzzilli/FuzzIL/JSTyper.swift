@@ -528,7 +528,8 @@ public struct JSTyper: Analyzer {
     mutating func addSignatureType(
         def: Variable, signature: WasmSignature, inputs: ArraySlice<Variable>,
         isAdHoc: Bool = false,
-        concreteHeapSupertype: WasmTypeDescription? = nil
+        concreteHeapSupertype: WasmTypeDescription? = nil,
+        isFinal: Bool = false
     ) {
         assert(isWithinTypeGroup)
         var inputs = inputs.makeIterator()
@@ -592,13 +593,15 @@ public struct JSTyper: Analyzer {
                     signature: resolvedParameterTypes => resolvedOutputTypes,
                     typeGroupIndex: tgIndex,
                     isAdHoc: isAdHoc,
-                    concreteHeapSupertype: concreteHeapSupertype)))
+                    concreteHeapSupertype: concreteHeapSupertype,
+                    isFinal: isFinal)))
         typeGroups[typeGroups.count - 1].append(def)
     }
 
     mutating func addArrayType(
         def: Variable, elementType: ILType, mutability: Bool, elementRef: Variable? = nil,
-        concreteHeapSupertype: WasmTypeDescription? = nil
+        concreteHeapSupertype: WasmTypeDescription? = nil,
+        isFinal: Bool = false
     ) {
         assert(isWithinTypeGroup)
         let tgIndex = typeGroups.count - 1
@@ -650,13 +653,15 @@ public struct JSTyper: Analyzer {
                     elementType: resolvedElementType,
                     mutability: mutability,
                     typeGroupIndex: tgIndex,
-                    concreteHeapSupertype: concreteHeapSupertype)))
+                    concreteHeapSupertype: concreteHeapSupertype,
+                    isFinal: isFinal)))
         typeGroups[typeGroups.count - 1].append(def)
     }
 
     mutating func addStructType(
         def: Variable, fieldsWithRefs: [(WasmStructTypeDescription.Field, Variable?)],
-        concreteHeapSupertype: WasmTypeDescription? = nil
+        concreteHeapSupertype: WasmTypeDescription? = nil,
+        isFinal: Bool = false
     ) {
         let tgIndex = typeGroups.count - 1
         let resolvedFields = fieldsWithRefs.enumerated().map { (fieldIndex, fieldWithInput) in
@@ -700,8 +705,11 @@ public struct JSTyper: Analyzer {
             def,
             .wasmTypeDef(
                 description: WasmStructTypeDescription(
-                    fields: resolvedFields, typeGroupIndex: tgIndex,
-                    concreteHeapSupertype: concreteHeapSupertype)))
+                    fields: resolvedFields,
+                    typeGroupIndex: tgIndex,
+                    concreteHeapSupertype: concreteHeapSupertype,
+                    isFinal: isFinal)))
+
         typeGroups[typeGroups.count - 1].append(def)
     }
 
@@ -2554,7 +2562,8 @@ public struct JSTyper: Analyzer {
             let sigInputs = op.hasSuperType ? instr.inputs.dropFirst() : instr.inputs
             addSignatureType(
                 def: instr.output, signature: op.signature, inputs: sigInputs,
-                concreteHeapSupertype: concreteHeapSupertype)
+                concreteHeapSupertype: concreteHeapSupertype,
+                isFinal: op.isFinal)
 
         case .wasmDefineArrayType(let op):
             let elementRef = op.elementType.requiredInputCount() == 1 ? instr.inputs.last! : nil
@@ -2562,7 +2571,8 @@ public struct JSTyper: Analyzer {
                 op.hasSuperType ? getTypeDescription(of: instr.inputs.first!) : nil
             addArrayType(
                 def: instr.output, elementType: op.elementType, mutability: op.mutability,
-                elementRef: elementRef, concreteHeapSupertype: concreteHeapSupertype)
+                elementRef: elementRef, concreteHeapSupertype: concreteHeapSupertype,
+                isFinal: op.isFinal)
 
         case .wasmDefineStructType(let op):
             let concreteHeapSupertype =
@@ -2581,7 +2591,8 @@ public struct JSTyper: Analyzer {
             assert(inputIndex == instr.inputs.count)
             addStructType(
                 def: instr.output, fieldsWithRefs: fieldsWithRefs,
-                concreteHeapSupertype: concreteHeapSupertype)
+                concreteHeapSupertype: concreteHeapSupertype,
+                isFinal: op.isFinal)
 
         case .wasmDefineForwardOrSelfReference(_):
             set(instr.output, .wasmSelfReference())

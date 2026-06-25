@@ -1832,6 +1832,7 @@ public class WasmTypeDefinition: WasmTypeExtension {
         guard let other = other as? WasmTypeDefinition else { return false }
         guard let description else { return true }
         guard let otherDescription = other.description else { return false }
+        guard description.isFinal == otherDescription.isFinal else { return false }
         return description.subsumes(otherDescription)
     }
 
@@ -1842,11 +1843,14 @@ public class WasmTypeDefinition: WasmTypeExtension {
     override func union(_ other: WasmTypeExtension) -> WasmTypeExtension? {
         guard let other = other as? WasmTypeDefinition else { return nil }
 
-        if description == nil || other.description == nil {
+        guard let description,
+            let otherDescription = other.description
+        else {
             return WasmTypeDefinition()
         }
+        guard description.isFinal == otherDescription.isFinal else { return nil }
 
-        if let common = description!.union(other.description!) {
+        if let common = description.union(otherDescription) {
             return WasmTypeDefinition(common)
         }
 
@@ -1862,6 +1866,7 @@ public class WasmTypeDefinition: WasmTypeExtension {
         guard let otherDescription = other.description else {
             return WasmTypeDefinition(description)
         }
+        guard description.isFinal == otherDescription.isFinal else { return nil }
 
         if let common = description.intersection(otherDescription) {
             return WasmTypeDefinition(common)
@@ -2669,6 +2674,7 @@ class WasmTypeDescription: Hashable, CustomStringConvertible {
     // super type is still undecided.
     public let abstractHeapSupertype: HeapTypeInfo?
     public let concreteHeapSupertype: WasmTypeDescription?
+    public let isFinal: Bool
 
     var supertypes: UnfoldFirstSequence<WasmTypeDescription> {
         sequence(first: self, next: { $0.concreteHeapSupertype })
@@ -2677,11 +2683,12 @@ class WasmTypeDescription: Hashable, CustomStringConvertible {
     // TODO(gc): We will also need to support subtyping of struct and array types at some point.
     init(
         typeGroupIndex: Int, abstractHeapSupertype: HeapTypeInfo? = nil,
-        concreteHeapSupertype: WasmTypeDescription? = nil
+        concreteHeapSupertype: WasmTypeDescription? = nil, isFinal: Bool = false
     ) {
         self.typeGroupIndex = typeGroupIndex
         self.abstractHeapSupertype = abstractHeapSupertype
         self.concreteHeapSupertype = concreteHeapSupertype
+        self.isFinal = isFinal
     }
 
     func subsumes(_ other: WasmTypeDescription) -> Bool {
@@ -2714,7 +2721,7 @@ class WasmTypeDescription: Hashable, CustomStringConvertible {
         if self == .selfReference {
             return "selfReference"
         }
-        return "\(typeGroupIndex)"
+        return "\(isFinal ? "final " : "")\(typeGroupIndex)"
     }
 
     public var description: String {
@@ -2732,7 +2739,7 @@ class WasmSignatureTypeDescription: WasmTypeDescription {
 
     init(
         signature: WasmSignature, typeGroupIndex: Int, isAdHoc: Bool = false,
-        concreteHeapSupertype: WasmTypeDescription? = nil
+        concreteHeapSupertype: WasmTypeDescription? = nil, isFinal: Bool = false
     ) {
         self.signature = signature
         self.isAdHoc = isAdHoc
@@ -2740,7 +2747,7 @@ class WasmSignatureTypeDescription: WasmTypeDescription {
         super.init(
             typeGroupIndex: typeGroupIndex,
             abstractHeapSupertype: HeapTypeInfo.init(.WasmFunc, shared: false),
-            concreteHeapSupertype: concreteHeapSupertype)
+            concreteHeapSupertype: concreteHeapSupertype, isFinal: isFinal)
     }
 
     override func format(abbreviate: Bool) -> String {
@@ -2772,7 +2779,7 @@ class WasmArrayTypeDescription: WasmTypeDescription {
 
     init(
         elementType: ILType, mutability: Bool, typeGroupIndex: Int,
-        concreteHeapSupertype: WasmTypeDescription? = nil
+        concreteHeapSupertype: WasmTypeDescription? = nil, isFinal: Bool = false
     ) {
         self.elementType = elementType
         self.mutability = mutability
@@ -2780,7 +2787,7 @@ class WasmArrayTypeDescription: WasmTypeDescription {
         super.init(
             typeGroupIndex: typeGroupIndex,
             abstractHeapSupertype: HeapTypeInfo.init(.WasmArray, shared: false),
-            concreteHeapSupertype: concreteHeapSupertype)
+            concreteHeapSupertype: concreteHeapSupertype, isFinal: isFinal)
     }
 
     override func format(abbreviate: Bool) -> String {
@@ -2817,14 +2824,15 @@ class WasmStructTypeDescription: WasmTypeDescription {
     let fields: [Field]
 
     init(
-        fields: [Field], typeGroupIndex: Int, concreteHeapSupertype: WasmTypeDescription? = nil
+        fields: [Field], typeGroupIndex: Int, concreteHeapSupertype: WasmTypeDescription? = nil,
+        isFinal: Bool = false
     ) {
         self.fields = fields
         // TODO(pawkra): support shared variant.
         super.init(
             typeGroupIndex: typeGroupIndex,
             abstractHeapSupertype: HeapTypeInfo.init(.WasmStruct, shared: false),
-            concreteHeapSupertype: concreteHeapSupertype
+            concreteHeapSupertype: concreteHeapSupertype, isFinal: isFinal
         )
     }
 

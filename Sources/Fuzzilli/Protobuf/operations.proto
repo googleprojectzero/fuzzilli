@@ -1484,6 +1484,7 @@ message WasmDefineSignatureType {
     repeated WasmILType parameterTypes = 1;
     repeated WasmILType outputTypes = 2;
     bool hasSuperType = 3;
+    bool isFinal = 4;
 }
 
 message WasmDefineAdHocSignatureType {
@@ -1500,6 +1501,7 @@ message WasmDefineArrayType {
     WasmILType elementType = 1;
     bool mutability = 2;
     bool hasSuperType = 3;
+    bool isFinal = 4;
 }
 
 message WasmStructField {
@@ -1510,6 +1512,7 @@ message WasmStructField {
 message WasmDefineStructType {
     repeated WasmStructField fields = 1;
     bool hasSuperType = 2;
+    bool isFinal = 3;
 }
 
 message WasmDefineForwardOrSelfReference {

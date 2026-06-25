@@ -1640,7 +1640,7 @@ public class FuzzILLifter: Lifter {
             let sigInputs = (op.hasSuperType ? instr.inputs.dropFirst() : instr.inputs).map(lift)
                 .joined(separator: ", ")
             w.emit(
-                "\(output()) <- WasmDefineSignatureType(\(op.signature))\(superTypeInput) [\(sigInputs)]"
+                "\(output()) <- WasmDefineSignatureType(\(op.signature))\(superTypeInput) isFinal=\(op.isFinal) [\(sigInputs)]"
             )
 
         case .wasmDefineAdHocSignatureType(let op):
@@ -1656,7 +1656,7 @@ public class FuzzILLifter: Lifter {
             let typeInput =
                 op.elementType.requiredInputCount() == 1 ? " \(lift(instr.inputs.last!))" : ""
             w.emit(
-                "\(output()) <- WasmDefineArrayType \(op.elementType) mutability=\(op.mutability)\(superTypeInput)\(typeInput)"
+                "\(output()) <- WasmDefineArrayType \(op.elementType) mutability=\(op.mutability)\(superTypeInput) isFinal=\(op.isFinal)\(typeInput)"
             )
 
         case .wasmDefineStructType(let op):
@@ -1666,7 +1666,8 @@ public class FuzzILLifter: Lifter {
             let structInputs = (op.hasSuperType ? instr.inputs.dropFirst() : instr.inputs).map(lift)
                 .joined(separator: ", ")
             w.emit(
-                "\(output()) <- WasmDefineStructType(\(fields))\(superTypeInput) [\(structInputs)]")
+                "\(output()) <- WasmDefineStructType(\(fields))\(superTypeInput) isFinal=\(op.isFinal) [\(structInputs)]"
+            )
 
         case .wasmDefineForwardOrSelfReference(_):
             w.emit("\(output()) <- WasmDefineForwardOrSelfReference")

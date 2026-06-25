@@ -6385,19 +6385,20 @@ struct WasmGCTests {
         let jsProg = buildAndLiftProgram { b in
             let types = b.wasmDefineTypeGroup {
                 let superStruct = b.wasmDefineStructType(
-                    fields: [.init(type: .wasmi32, mutability: true)], indexTypes: [])
+                    fields: [.init(type: .wasmi32, mutability: true)], indexTypes: [],
+                    isFinal: false)
                 let subStruct = b.wasmDefineStructType(
                     fields: [
                         .init(type: .wasmi32, mutability: true),
                         .init(type: .wasmi64, mutability: true),
-                    ], indexTypes: [], superTypeDef: superStruct)
+                    ], indexTypes: [], superTypeDef: superStruct, isFinal: false)
 
                 let superArray = b.wasmDefineArrayType(
                     elementType: .wasmRef(.Index(), nullability: true), mutability: false,
-                    indexType: superStruct)
+                    indexType: superStruct, isFinal: false)
                 let subArray = b.wasmDefineArrayType(
                     elementType: .wasmRef(.Index(), nullability: true), mutability: false,
-                    indexType: subStruct, superTypeDef: superArray)
+                    indexType: subStruct, superTypeDef: superArray, isFinal: true)
 
                 return [superStruct, subStruct, superArray, subArray]
             }
@@ -6445,6 +6446,35 @@ struct WasmGCTests {
         }
 
         testForOutput(program: jsProg, runner: runner, outputString: "1337,42\n")
+    }
+
+    @Test func testFindVariableFinal() throws {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            let types = b.wasmDefineTypeGroup {
+                let superStruct = b.wasmDefineStructType(
+                    fields: [.init(type: .wasmi32, mutability: true)], indexTypes: [],
+                    isFinal: false)
+                let subStruct = b.wasmDefineStructType(
+                    fields: [
+                        .init(type: .wasmi32, mutability: true)
+                    ], indexTypes: [], superTypeDef: superStruct, isFinal: true)
+
+                return [superStruct, subStruct]
+            }
+
+            let superDef = types[0]
+            let subDef = types[1]
+
+            // Check that `findVariable()` doesn't return a final type definition
+            // when searching for a non-final type definition.
+            let superDefType = b.type(of: superDef)
+            let foundVariable = b.findVariable(satisfying: { b.type(of: $0).Is(superDefType) })
+            #expect(foundVariable == superDef)
+            #expect(foundVariable != subDef)
+        }
     }
 
     @Test func testSignatureTypeDefWithSuperType() throws {

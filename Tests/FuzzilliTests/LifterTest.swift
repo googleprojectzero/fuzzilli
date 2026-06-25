@@ -4254,14 +4254,14 @@ class LifterTests: XCTestCase {
         let expected = """
             WasmBeginTypeGroup
                 v0 <- WasmDefineForwardOrSelfReference
-                v1 <- WasmDefineArrayType .wasmRef(null Index) mutability=false v0
-                v2 <- WasmDefineArrayType .wasmi32 mutability=true
-                v3 <- WasmDefineArrayType .wasmi32 mutability=true superType=v2
+                v1 <- WasmDefineArrayType .wasmRef(null Index) mutability=false isFinal=false v0
+                v2 <- WasmDefineArrayType .wasmi32 mutability=true isFinal=false
+                v3 <- WasmDefineArrayType .wasmi32 mutability=true superType=v2 isFinal=false
                 WasmResolveForwardReference [v0 => v2]
             v4, v5, v6 <- WasmEndTypeGroup [v1, v2, v3]
             WasmBeginTypeGroup
                 v7 <- WasmDefineForwardOrSelfReference
-                v8 <- WasmDefineStructType(.wasmRef(Index) mutability=false, .wasmi32 mutability=true, .wasmRef(null Index) mutability=true) [v4, v7]
+                v8 <- WasmDefineStructType(.wasmRef(Index) mutability=false, .wasmi32 mutability=true, .wasmRef(null Index) mutability=true) isFinal=false [v4, v7]
             v9 <- WasmEndTypeGroup [v8]
 
             """

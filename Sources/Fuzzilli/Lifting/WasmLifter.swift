@@ -605,14 +605,13 @@ public class WasmLifter {
     }
 
     private func buildTypeEntry(for desc: WasmTypeDescription, data: inout Data) throws {
-        // TODO(bettscheider): Support [0x4F, 0x01], "final with super type".
         if let supertype = desc.concreteHeapSupertype {
-            data += [0x50, 0x01]  // Non-final, with super type
+            data += [desc.isFinal ? 0x4F : 0x50, 0x01]
             data += try encodeWasmGCType(supertype)
         } else if desc is WasmArrayTypeDescription || desc is WasmStructTypeDescription
             || (desc as? WasmSignatureTypeDescription)?.isAdHoc == false
         {
-            data += [0x50, 0x00]  // Non-final, no super type
+            data += [desc.isFinal ? 0x4F : 0x50, 0x00]
         }
         if let arrayDesc = desc as? WasmArrayTypeDescription {
             data += [0x5E]
