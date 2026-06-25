@@ -403,7 +403,7 @@ extension RuntimeAssistedMutator.Action {
         }
         // Helper function to fetch an input of this Action and translate it to a FuzzIL variable.
         func translateInput(_ i: Int) throws -> Variable {
-            return try getInput(0).translateToFuzzIL(withContext: context, using: b)
+            return try getInput(i).translateToFuzzIL(withContext: context, using: b)
         }
         // Helper function to translate a range of inputs of this Action into FuzzIL variables.
         func translateInputs(_ r: PartialRangeFrom<Int>) throws -> [Variable] {
