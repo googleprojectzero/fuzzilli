@@ -137,6 +137,13 @@ public class RuntimeAssistedMutator: Mutator {
     override final func mutate(_ program: Program, using b: ProgramBuilder, for fuzzer: Fuzzer)
         -> Program?
     {
+        // Ensure that the input program is statically valid.
+        // This check is also active in release builds as an invalid program here
+        // usually indicates a bug in a previous mutator or the fuzzer engine.
+        guard program.code.isStaticallyValid() else {
+            fatalError("Input program for \(name) is statically invalid:\n\(program.description)")
+        }
+
         // Build the instrumented program.
         guard let instrumentedProgram = instrument(program, for: fuzzer) else {
             return failure(.cannotInstrument)
