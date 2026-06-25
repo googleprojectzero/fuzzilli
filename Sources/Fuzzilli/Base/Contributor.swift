@@ -19,26 +19,26 @@ public class Contributor: Hashable {
     public let name: String
 
     // Number of valid programs produced (i.e. programs that run to completion)
-    private var validSamples = 0
+    public private(set) var validSamples = 0
     // Number of interesting programs produces (i.e. programs that triggered new interesting behavior). All interesting programs are also valid.
-    private var interestingSamples = 0
+    public private(set) var interestingSamples = 0
     // Number of invalid programs produced (i.e. programs that raised an exception or timed out)
-    private var invalidSamples = 0
+    public private(set) var invalidSamples = 0
     // Number of produced programs that resulted in a timeout.
-    private var timedOutSamples = 0
+    public private(set) var timedOutSamples = 0
     // Number of crashing programs produced.
-    private var crashingSamples = 0
+    public private(set) var crashingSamples = 0
     // The number of programs resulting in valid differential produced.
-    private var differentialSamples = 0
+    public private(set) var differentialSamples = 0
     // The number of times this contributor has been invoked
-    private(set) var invocationCount = 0
+    public private(set) var invocationCount = 0
     // The number of times this contributor has actually emitted more than 0 instructions
-    private var successfulGenerationCount = 0
+    public private(set) var successfulGenerationCount = 0
 
     // Number of times this instance failed to generate/mutate code.
-    private var failures = 0
+    public private(set) var failures = 0
     // Total number of instructions added to programs by this contributor.
-    private var totalInstructionProduced = 0
+    public private(set) var totalInstructionProduced = 0
 
     public init(name: String) {
         self.name = name
@@ -92,8 +92,12 @@ public class Contributor: Hashable {
         return differentialSamples
     }
 
+    public var correctSamples: Int {
+        return validSamples + interestingSamples
+    }
+
     public var totalSamples: Int {
-        return validSamples + interestingSamples + invalidSamples + timedOutSamples
+        return correctSamples + invalidSamples + timedOutSamples
             + crashingSamples + differentialSamples
     }
 
@@ -105,7 +109,7 @@ public class Contributor: Hashable {
 
     public var correctnessRate: Double? {
         guard totalSamples > 0 else { return nil }
-        return Double(validSamples + interestingSamples) / Double(totalSamples)
+        return Double(correctSamples) / Double(totalSamples)
     }
 
     public var interestingSamplesRate: Double? {

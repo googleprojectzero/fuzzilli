@@ -35,11 +35,11 @@ func measureTime<R>(_ operation: () -> R) -> (R, Double) {
 }
 
 extension String {
-    func rightPadded(toLength n: Int) -> String {
+    public func rightPadded(toLength n: Int) -> String {
         return padding(toLength: n, withPad: " ", startingAt: 0)
     }
 
-    func leftPadded(toLength n: Int) -> String {
+    public func leftPadded(toLength n: Int) -> String {
         let diff = n - count
         if diff <= 0 {
             return self

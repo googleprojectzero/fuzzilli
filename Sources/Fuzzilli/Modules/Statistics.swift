@@ -15,6 +15,9 @@
 import Foundation
 
 public class Statistics: Module {
+    /// The fuzzer instance this module belongs to.
+    private var fuzzer: Fuzzer?
+
     /// The data just for this instance.
     private var ownData = Fuzzilli_Protobuf_Statistics()
 
@@ -64,7 +67,7 @@ public class Statistics: Module {
 
     public init() {}
 
-    static func percentageOrNa(_ percentage: Double?, _ padding: Int) -> String {
+    public static func percentageOrNa(_ percentage: Double?, _ padding: Int) -> String {
         return if let percentage = percentage {
             String(format: "%.2f%%", percentage * 100).leftPadded(toLength: padding)
         } else {
@@ -76,7 +79,7 @@ public class Statistics: Module {
     public func compute() -> Fuzzilli_Protobuf_Statistics {
         assert(nodes.count - inactiveNodes.count == ownData.numChildNodes)
 
-        // Compute local statistics data
+        // Update local statistics data
         ownData.avgCorpusSize = Double(corpusSize)
         ownData.avgProgramSize = programSizeAvg.currentValue
         ownData.avgCorpusProgramSize = corpusProgramSizeAvg.currentValue
@@ -86,8 +89,40 @@ public class Statistics: Module {
         ownData.correctnessRate = correctnessRate.currentValue
         ownData.timeoutRate = timeoutRate.currentValue
 
+        if let fuzzer = fuzzer {
+            ownData.contributorStats = []
+            for generator in fuzzer.codeGenerators {
+                for stub in generator.parts {
+                    var stats = Fuzzilli_Protobuf_Statistics.ContributorStats()
+                    stats.name = stub.name
+                    stats.invocationCount = UInt64(stub.invocationCount)
+                    stats.successfulGenerationCount = UInt64(stub.successfulGenerationCount)
+                    stats.totalSamples = UInt64(stub.totalSamples)
+                    stats.correctSamples = UInt64(stub.correctSamples)
+                    stats.isCodeGenerator = true
+                    ownData.contributorStats.append(stats)
+                }
+            }
+            for template in fuzzer.programTemplates {
+                var stats = Fuzzilli_Protobuf_Statistics.ContributorStats()
+                stats.name = template.name
+                stats.invocationCount = UInt64(template.invocationCount)
+                stats.successfulGenerationCount = UInt64(template.successfulGenerationCount)
+                stats.totalSamples = UInt64(template.totalSamples)
+                stats.correctSamples = UInt64(template.correctSamples)
+                stats.isCodeGenerator = false
+                ownData.contributorStats.append(stats)
+
+            }
+        }
+
         // Compute global statistics data
         var data = ownData
+
+        var contributorStatsByName = [String: Fuzzilli_Protobuf_Statistics.ContributorStats]()
+        for stats in ownData.contributorStats {
+            contributorStatsByName[stats.name] = stats
+        }
 
         for (id, node) in nodes {
             // Add "global" fields, even from nodes that are no longer active
@@ -95,6 +130,19 @@ public class Statistics: Module {
             data.validSamples += node.validSamples
             data.timedOutSamples += node.timedOutSamples
             data.totalExecs += node.totalExecs
+
+            for stats in node.contributorStats {
+                if var existing = contributorStatsByName[stats.name] {
+                    assert(existing.isCodeGenerator == stats.isCodeGenerator)
+                    existing.invocationCount += stats.invocationCount
+                    existing.successfulGenerationCount += stats.successfulGenerationCount
+                    existing.totalSamples += stats.totalSamples
+                    existing.correctSamples += stats.correctSamples
+                    contributorStatsByName[stats.name] = existing
+                } else {
+                    contributorStatsByName[stats.name] = stats
+                }
+            }
 
             if !inactiveNodes.contains(id) {
                 // Add fields that only have meaning for active nodes
@@ -118,6 +166,8 @@ public class Statistics: Module {
             // All other fields are already indirectly synchronized (e.g. number of interesting samples founds)
         }
 
+        data.contributorStats = Array(contributorStatsByName.values)
+
         // Divide each average by the toal number of nodes. See above.
         let totalNumberOfNodes = Double(data.numChildNodes + 1)
         data.avgCorpusSize /= totalNumberOfNodes
@@ -133,6 +183,7 @@ public class Statistics: Module {
     }
 
     public func initialize(with fuzzer: Fuzzer) {
+        self.fuzzer = fuzzer
         fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { _ in
             self.ownData.crashingSamples += 1
         }

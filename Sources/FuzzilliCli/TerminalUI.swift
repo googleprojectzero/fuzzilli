@@ -30,11 +30,13 @@ class TerminalUI {
     // Timestamp when the last interesting program was found
     var lastInterestingProgramFound = Date()
 
+    // Counter for statistics updates to control warning frequency
+    private var statsUpdateCounter = 0
+
     init(for fuzzer: Fuzzer) {
         // Event listeners etc. have to be registered on the fuzzer's queue
         fuzzer.sync {
             self.initOnFuzzerQueue(fuzzer)
-
         }
     }
 
@@ -93,12 +95,20 @@ class TerminalUI {
             if let stats = Statistics.instance(for: fuzzer) {
                 fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { _ in
                     print("\n++++++++++ Fuzzer Finished ++++++++++\n")
-                    self.printStats(stats.compute(), of: fuzzer)
+                    let data = stats.compute()
+                    self.printStats(data, of: fuzzer)
+                    self.printWarnings(for: data)
+                    print()
                 }
 
                 // We could also run our own timer on the main queue instead if we want to
                 fuzzer.timers.scheduleTask(every: 60 * Seconds) {
-                    self.printStats(stats.compute(), of: fuzzer)
+                    let data = stats.compute()
+                    self.printStats(data, of: fuzzer)
+                    self.statsUpdateCounter += 1
+                    if self.statsUpdateCounter % 5 == 0 {
+                        self.printWarnings(for: data)
+                    }
                     print()
                 }
 
@@ -167,6 +177,64 @@ class TerminalUI {
             Minimization Overhead:        \(String(format: "%.2f", stats.minimizationOverhead * 100))%
             Total Execs:                  \(stats.totalExecs)
             """)
+    }
+
+    func printWarnings(for stats: Fuzzilli_Protobuf_Statistics) {
+        var restrictiveContributors: [(name: String, rate: String, count: String)] = []
+        var brokenContributors: [(name: String, rate: String, count: String)] = []
+
+        let nameMaxLength = stats.contributorStats.map({ $0.name.count }).max() ?? 0
+
+        for stats in stats.contributorStats {
+            if stats.isCodeGenerator && stats.invocationCount > 100 {
+                let invocationSuccessRate =
+                    Double(stats.successfulGenerationCount) / Double(stats.invocationCount)
+                if invocationSuccessRate < 0.2 {
+                    restrictiveContributors.append(
+                        (
+                            name: stats.name.rightPadded(toLength: nameMaxLength),
+                            rate: Statistics.percentageOrNa(invocationSuccessRate, 7),
+                            count: String(format: "%10d", stats.invocationCount)
+                        ))
+                }
+            }
+
+            if stats.totalSamples >= 100 {
+                let correctnessRate = Double(stats.correctSamples) / Double(stats.totalSamples)
+                if correctnessRate < 0.05 {
+                    brokenContributors.append(
+                        (
+                            name: stats.name.rightPadded(toLength: nameMaxLength),
+                            rate: Statistics.percentageOrNa(correctnessRate, 11),
+                            count: String(format: "%6d", stats.totalSamples)
+                        ))
+                }
+            }
+        }
+
+        if !restrictiveContributors.isEmpty || !brokenContributors.isEmpty {
+            print("-----------------")
+            if !restrictiveContributors.isEmpty {
+                print("Code generators with too restrictive dynamic requirements:")
+                print(
+                    "Name" + String(repeating: " ", count: max(0, nameMaxLength - 4))
+                        + " | Success | Invocations")
+                for c in restrictiveContributors {
+                    print("\(c.name) | \(c.rate) | \(c.count)")
+                }
+            }
+            if !brokenContributors.isEmpty {
+                if !restrictiveContributors.isEmpty { print() }
+                print("Code generators/templates that might be broken:")
+                print(
+                    "Name" + String(repeating: " ", count: max(0, nameMaxLength - 4))
+                        + " | Correctness | Samples")
+                for c in brokenContributors {
+                    print("\(c.name) | \(c.rate) | \(c.count)")
+                }
+            }
+        }
+
     }
 
     private func formatTimeInterval(_ interval: TimeInterval) -> String {

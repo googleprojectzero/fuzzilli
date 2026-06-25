@@ -86,4 +86,14 @@ message Statistics {
 
         /// The number of programs resulting in valid differential produced.
         uint64 differentialSamples = 18;
+
+        message ContributorStats {
+            string name = 1;
+            uint64 invocationCount = 2;
+            uint64 successfulGenerationCount = 3;
+            uint64 totalSamples = 4;
+            uint64 correctSamples = 5;
+            bool isCodeGenerator = 6;
+        }
+        repeated ContributorStats contributorStats = 19;
 }

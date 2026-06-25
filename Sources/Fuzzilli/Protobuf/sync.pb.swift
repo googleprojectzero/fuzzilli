@@ -185,7 +185,34 @@ public struct Fuzzilli_Protobuf_Statistics: @unchecked Sendable {
     set {_uniqueStorage()._differentialSamples = newValue}
   }
 
+  public var contributorStats: [Fuzzilli_Protobuf_Statistics.ContributorStats] {
+    get {_storage._contributorStats}
+    set {_uniqueStorage()._contributorStats = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public struct ContributorStats: Sendable {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    public var name: String = String()
+
+    public var invocationCount: UInt64 = 0
+
+    public var successfulGenerationCount: UInt64 = 0
+
+    public var totalSamples: UInt64 = 0
+
+    public var correctSamples: UInt64 = 0
+
+    public var isCodeGenerator: Bool = false
+
+    public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    public init() {}
+  }
 
   public init() {}
 
@@ -288,7 +315,7 @@ extension Fuzzilli_Protobuf_FuzzerState: SwiftProtobuf.Message, SwiftProtobuf._M
 
 extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Statistics"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}totalSamples\0\u{1}validSamples\0\u{1}interestingSamples\0\u{1}timedOutSamples\0\u{1}crashingSamples\0\u{1}totalExecs\0\u{1}avgCorpusSize\0\u{1}avgProgramSize\0\u{1}avgCorpusProgramSize\0\u{1}avgExecutionTime\0\u{1}execsPerSecond\0\u{1}fuzzerOverhead\0\u{1}minimizationOverhead\0\u{1}numChildNodes\0\u{1}coverage\0\u{1}correctnessRate\0\u{1}timeoutRate\0\u{1}differentialSamples\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}totalSamples\0\u{1}validSamples\0\u{1}interestingSamples\0\u{1}timedOutSamples\0\u{1}crashingSamples\0\u{1}totalExecs\0\u{1}avgCorpusSize\0\u{1}avgProgramSize\0\u{1}avgCorpusProgramSize\0\u{1}avgExecutionTime\0\u{1}execsPerSecond\0\u{1}fuzzerOverhead\0\u{1}minimizationOverhead\0\u{1}numChildNodes\0\u{1}coverage\0\u{1}correctnessRate\0\u{1}timeoutRate\0\u{1}differentialSamples\0\u{1}contributorStats\0")
 
   fileprivate class _StorageClass {
     var _totalSamples: UInt64 = 0
@@ -309,6 +336,7 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
     var _correctnessRate: Double = 0
     var _timeoutRate: Double = 0
     var _differentialSamples: UInt64 = 0
+    var _contributorStats: [Fuzzilli_Protobuf_Statistics.ContributorStats] = []
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -337,6 +365,7 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
       _correctnessRate = source._correctnessRate
       _timeoutRate = source._timeoutRate
       _differentialSamples = source._differentialSamples
+      _contributorStats = source._contributorStats
     }
   }
 
@@ -373,6 +402,7 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
         case 16: try { try decoder.decodeSingularDoubleField(value: &_storage._correctnessRate) }()
         case 17: try { try decoder.decodeSingularDoubleField(value: &_storage._timeoutRate) }()
         case 18: try { try decoder.decodeSingularUInt64Field(value: &_storage._differentialSamples) }()
+        case 19: try { try decoder.decodeRepeatedMessageField(value: &_storage._contributorStats) }()
         default: break
         }
       }
@@ -435,6 +465,9 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
       if _storage._differentialSamples != 0 {
         try visitor.visitSingularUInt64Field(value: _storage._differentialSamples, fieldNumber: 18)
       }
+      if !_storage._contributorStats.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._contributorStats, fieldNumber: 19)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -462,10 +495,66 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
         if _storage._correctnessRate != rhs_storage._correctnessRate {return false}
         if _storage._timeoutRate != rhs_storage._timeoutRate {return false}
         if _storage._differentialSamples != rhs_storage._differentialSamples {return false}
+        if _storage._contributorStats != rhs_storage._contributorStats {return false}
         return true
       }
       if !storagesAreEqual {return false}
     }
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Fuzzilli_Protobuf_Statistics.ContributorStats: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = Fuzzilli_Protobuf_Statistics.protoMessageName + ".ContributorStats"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}invocationCount\0\u{1}successfulGenerationCount\0\u{1}totalSamples\0\u{1}correctSamples\0\u{1}isCodeGenerator\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.invocationCount) }()
+      case 3: try { try decoder.decodeSingularUInt64Field(value: &self.successfulGenerationCount) }()
+      case 4: try { try decoder.decodeSingularUInt64Field(value: &self.totalSamples) }()
+      case 5: try { try decoder.decodeSingularUInt64Field(value: &self.correctSamples) }()
+      case 6: try { try decoder.decodeSingularBoolField(value: &self.isCodeGenerator) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
+    }
+    if self.invocationCount != 0 {
+      try visitor.visitSingularUInt64Field(value: self.invocationCount, fieldNumber: 2)
+    }
+    if self.successfulGenerationCount != 0 {
+      try visitor.visitSingularUInt64Field(value: self.successfulGenerationCount, fieldNumber: 3)
+    }
+    if self.totalSamples != 0 {
+      try visitor.visitSingularUInt64Field(value: self.totalSamples, fieldNumber: 4)
+    }
+    if self.correctSamples != 0 {
+      try visitor.visitSingularUInt64Field(value: self.correctSamples, fieldNumber: 5)
+    }
+    if self.isCodeGenerator != false {
+      try visitor.visitSingularBoolField(value: self.isCodeGenerator, fieldNumber: 6)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_Statistics.ContributorStats, rhs: Fuzzilli_Protobuf_Statistics.ContributorStats) -> Bool {
+    if lhs.name != rhs.name {return false}
+    if lhs.invocationCount != rhs.invocationCount {return false}
+    if lhs.successfulGenerationCount != rhs.successfulGenerationCount {return false}
+    if lhs.totalSamples != rhs.totalSamples {return false}
+    if lhs.correctSamples != rhs.correctSamples {return false}
+    if lhs.isCodeGenerator != rhs.isCodeGenerator {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

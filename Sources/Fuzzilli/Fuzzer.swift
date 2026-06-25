@@ -326,41 +326,6 @@ public class Fuzzer {
             }
         }
 
-        // Install a timer to monitor for faulty code generators and program templates.
-        timers.scheduleTask(every: 5 * Minutes) {
-            let nameMaxLength = self.codeGenerators.map({ $0.name.count }).max()!
-
-            for generator in self.codeGenerators {
-                for stub in generator.parts {
-                    if stub.invocationCount > 100 && stub.invocationSuccessRate! < 0.2 {
-                        let percentage = Statistics.percentageOrNa(stub.invocationSuccessRate, 7)
-                        let name = stub.name.rightPadded(toLength: nameMaxLength)
-                        let invocations = String(format: "%12d", stub.invocationCount)
-                        self.logger.warning(
-                            "Code generator \(name) might have too restrictive dynamic requirements. Its successful invocation rate is only \(percentage)% after \(invocations) invocations"
-                        )
-                    }
-                    if stub.totalSamples >= 100 && stub.correctnessRate! < 0.05 {
-                        let name = stub.name.rightPadded(toLength: nameMaxLength)
-                        let percentage = Statistics.percentageOrNa(stub.correctnessRate, 7)
-                        let totalSamples = String(format: "%10d", stub.totalSamples)
-                        self.logger.warning(
-                            "Code generator \(name) might be broken. Correctness rate is only \(percentage)% after \(totalSamples) generated samples"
-                        )
-                    }
-                }
-            }
-            for template in self.programTemplates {
-                if template.totalSamples >= 100 && template.correctnessRate! < 0.05 {
-                    let percentage = Statistics.percentageOrNa(template.correctnessRate, 7)
-                    let totalSamples = String(format: "%10d", template.totalSamples)
-                    self.logger.warning(
-                        "Program template \(template.name) might be broken. Correctness rate is only \(percentage)% after \(totalSamples) generated samples"
-                    )
-                }
-            }
-        }
-
         // Determine our initial state if necessary.
         assert(state == .uninitialized || state == .corpusImport)
         if state == .uninitialized {
