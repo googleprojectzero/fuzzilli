@@ -12,578 +12,639 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import XCTest
+import Testing
 
 @testable import Fuzzilli
 
-class LifterTests: XCTestCase {
-    func testDeterministicLifting() {
+@Suite
+struct LifterTests {
+    @Test func testDeterministicLifting() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        for _ in 0..<10 {
-            b.buildPrefix()
-            b.build(n: 100, by: .generating)
-            let program = b.finalize()
+            let b = fuzzer.makeBuilder()
 
-            let code1 = fuzzer.lifter.lift(program)
-            let code2 = fuzzer.lifter.lift(program)
+            for _ in 0..<10 {
+                b.buildPrefix()
+                b.build(n: 100, by: .generating)
+                let program = b.finalize()
 
-            XCTAssertEqual(code1, code2)
+                let code1 = fuzzer.lifter.lift(program)
+                let code2 = fuzzer.lifter.lift(program)
+
+                #expect(code1 == code2)
+            }
+
         }
     }
 
-    func testFuzzILLifter() {
+    @Test func testFuzzILLifter() {
         // Mostly this just ensures that the FuzzILLifter supports all operations
 
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-        let lifter = FuzzILLifter()
+        fuzzer.sync {
 
-        for _ in 0..<100 {
-            b.buildPrefix()
-            b.build(n: 100, by: .generating)
-            let program = b.finalize()
+            let b = fuzzer.makeBuilder()
+            let lifter = FuzzILLifter()
 
-            _ = lifter.lift(program)
-        }
-    }
+            for _ in 0..<100 {
+                b.buildPrefix()
+                b.build(n: 100, by: .generating)
+                let program = b.finalize()
 
-    func testLiftingWithLineNumbers() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        for _ in 0..<10 {
-            b.buildPrefix()
-            b.build(n: 100, by: .generating)
-            let program = b.finalize()
-
-            let codeWithLinenumbers = fuzzer.lifter.lift(program, withOptions: .includeLineNumbers)
-
-            for (i, line) in codeWithLinenumbers.split(separator: "\n").enumerated() {
-                XCTAssert(line.trimmingCharacters(in: .whitespaces).starts(with: "\(i+1)"))
+                _ = lifter.lift(program)
             }
         }
     }
 
-    func testExpressionInlining1() {
+    @Test func testLiftingWithLineNumbers() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        let Object = b.createNamedVariable(forBuiltin: "Object")
-        let obj = b.construct(Object)
-        let o = b.createNamedVariable(forBuiltin: "SomeObj")
-        let foo = b.getProperty("foo", of: o)
-        let bar = b.getProperty("bar", of: foo)
-        let i = b.loadInt(42)
-        let r = b.callMethod("baz", on: bar, withArgs: [i, i])
-        b.setProperty("r", of: obj, to: r)
-        let Math = b.createNamedVariable(forBuiltin: "Math")
-        let lhs = b.callMethod("random", on: Math)
-        let rhs = b.loadFloat(13.37)
-        let s = b.binary(lhs, rhs, with: .Add)
-        b.setProperty("s", of: obj, to: s)
-        b.getProperty("s", of: obj)
+            let b = fuzzer.makeBuilder()
 
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
+            for _ in 0..<10 {
+                b.buildPrefix()
+                b.build(n: 100, by: .generating)
+                let program = b.finalize()
 
-        let expected = """
-            const v1 = new Object();
-            v1.r = SomeObj.foo.bar.baz(42, 42);
-            v1.s = Math.random() + 13.37;
-            v1.s;
+                let codeWithLinenumbers = fuzzer.lifter.lift(
+                    program, withOptions: .includeLineNumbers)
 
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testExpressionInlining2() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let Object = b.createNamedVariable(forBuiltin: "Object")
-        let obj = b.construct(Object)
-        let i = b.loadInt(42)
-        let o = b.createNamedVariable(forBuiltin: "SomeObj")
-        let foo = b.getProperty("foo", of: o)
-        let bar = b.getProperty("bar", of: foo)
-        let baz = b.getProperty("baz", of: bar)
-        let r = b.callFunction(baz, withArgs: [i, i])
-        b.setProperty("r", of: obj, to: r)
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v1 = new Object();
-            const t1 = SomeObj.foo.bar.baz;
-            v1.r = t1(42, 42);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testExpressionInlining3() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        // Test that effectful operations aren't reordered in any sematic-changing way.
-        let Object = b.createNamedVariable(forBuiltin: "Object")
-        let obj = b.construct(Object)
-        let effectful = b.createNamedVariable(forBuiltin: "effectful")
-
-        var lhs = b.callMethod("func1", on: effectful)
-        var rhs = b.callMethod("func2", on: effectful)
-        var res = b.binary(lhs, rhs, with: .Add)
-        b.setProperty("res1", of: obj, to: res)
-
-        lhs = b.callMethod("func3", on: effectful)
-        b.callMethod("func4", on: effectful)
-        rhs = b.loadFloat(13.37)
-        res = b.binary(lhs, rhs, with: .Add)
-        b.setProperty("res2", of: obj, to: res)
-
-        b.callMethod("func5", on: effectful)
-        let val1 = b.callMethod("func6", on: effectful)
-        b.callMethod("func7", on: effectful)
-        let val2 = b.loadFloat(13.37)
-        res = b.unary(.Minus, val1)
-        b.setProperty("res3", of: obj, to: res)
-        b.setProperty("res4", of: obj, to: val2)
-
-        let arg = b.callMethod("func8", on: effectful)
-        let res1 = b.callMethod("func9", on: effectful)
-        let res2 = b.callMethod("func10", on: effectful, withArgs: [arg])
-        b.setProperty("res5", of: obj, to: res1)
-        b.setProperty("res6", of: obj, to: res2)
-
-        b.callMethod("func11", on: effectful)
-        let tmp1 = b.callMethod("func12", on: effectful)
-        let tmp2 = b.callMethod("func13", on: effectful)
-        lhs = b.callMethod("func14", on: effectful)
-        rhs = b.callMethod("func15", on: effectful)
-        rhs = b.binary(lhs, rhs, with: .Mul)
-        lhs = b.binary(tmp2, rhs, with: .Add)
-        res = b.binary(lhs, tmp1, with: .Div)
-        b.setProperty("res7", of: obj, to: res)
-
-        var x = b.callMethod("func16", on: effectful)
-        var y = b.callMethod("func17", on: effectful)
-        var z = b.callMethod("func18", on: effectful)
-        res = b.callMethod("func19", on: effectful, withArgs: [x, y, z])
-        b.setProperty("res8", of: obj, to: res)
-
-        x = b.callMethod("func20", on: effectful)
-        y = b.callMethod("func21", on: effectful)
-        z = b.callMethod("func22", on: effectful)
-        res = b.callMethod("func23", on: effectful, withArgs: [y, z, x])
-        b.setProperty("res9", of: obj, to: res)
-
-        x = b.callMethod("func24", on: effectful)
-        y = b.callMethod("func25", on: effectful)
-        z = b.callMethod("func26", on: effectful)
-        res = b.callMethod("func27", on: effectful, withArgs: [x, z, y])
-        b.setProperty("res10", of: obj, to: res)
-
-        x = b.callMethod("func28", on: effectful)
-        y = b.callMethod("func29", on: effectful)
-        z = b.callMethod("func30", on: effectful)
-        res = b.callMethod("func31", on: effectful, withArgs: [z, x, y])
-        b.setProperty("res11", of: obj, to: res)
-
-        x = b.callMethod("func32", on: effectful)
-        y = b.callMethod("func33", on: effectful)
-        z = b.callMethod("func34", on: effectful)
-        let tmp = b.callMethod("func35", on: effectful, withArgs: [y])
-        res = b.callMethod("func36", on: effectful, withArgs: [x, z, tmp])
-        b.setProperty("res12", of: obj, to: res)
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v1 = new Object();
-            v1.res1 = effectful.func1() + effectful.func2();
-            const v6 = effectful.func3();
-            effectful.func4();
-            v1.res2 = v6 + 13.37;
-            effectful.func5();
-            const v11 = effectful.func6();
-            effectful.func7();
-            v1.res3 = -v11;
-            v1.res4 = 13.37;
-            const v15 = effectful.func8();
-            const v16 = effectful.func9();
-            const v17 = effectful.func10(v15);
-            v1.res5 = v16;
-            v1.res6 = v17;
-            effectful.func11();
-            const v19 = effectful.func12();
-            v1.res7 = (effectful.func13() + (effectful.func14() * effectful.func15())) / v19;
-            v1.res8 = effectful.func19(effectful.func16(), effectful.func17(), effectful.func18());
-            const v30 = effectful.func20();
-            v1.res9 = effectful.func23(effectful.func21(), effectful.func22(), v30);
-            const v34 = effectful.func24();
-            const v35 = effectful.func25();
-            v1.res10 = effectful.func27(v34, effectful.func26(), v35);
-            const v38 = effectful.func28();
-            const v39 = effectful.func29();
-            v1.res11 = effectful.func31(effectful.func30(), v38, v39);
-            const v42 = effectful.func32();
-            const v43 = effectful.func33();
-            const v44 = effectful.func34();
-            v1.res12 = effectful.func36(v42, v44, effectful.func35(v43));
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testExpressionInlining4() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let someValue = b.createNamedVariable(forBuiltin: "someValue")
-        let computeThreshold = b.createNamedVariable(forBuiltin: "computeThreshold")
-        let threshold = b.callFunction(computeThreshold)
-        let cond = b.compare(someValue, with: threshold, using: .lessThan)
-        // The comparison and the function call can be inlined into the header of the if-statement.
-        b.buildIf(cond) {
-            let doSomething = b.createNamedVariable(forBuiltin: "doSomething")
-            b.callFunction(doSomething)
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            if (someValue < computeThreshold()) {
-                doSomething();
+                for (i, line) in codeWithLinenumbers.split(separator: "\n").enumerated() {
+                    #expect(line.trimmingCharacters(in: .whitespaces).starts(with: "\(i+1)"))
+                }
             }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testExpressionInlining5() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v0 = b.loadInt(0)
-        let f = b.createNamedVariable(forBuiltin: "computeNumIterations")
-        let numIterations = b.callFunction(f)
-        // The function call should not be inlined into the loop header as that would change the programs behavior.
-        b.buildWhileLoop({ b.compare(v0, with: numIterations, using: .lessThan) }) {
-            b.unary(.PostInc, v0)
         }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            let v0 = 0;
-            const v2 = computeNumIterations();
-            while (v0 < v2) {
-                v0++;
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
     }
 
-    func testExpressionInlining6() {
+    @Test func testExpressionInlining1() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        // Test that (potentially) effectful operations are only executed once.
-        let Object = b.createNamedVariable(forBuiltin: "Object")
-        let o = b.construct(Object)
-        let v0 = b.loadInt(1337)
-        let f1 = b.createNamedVariable(forBuiltin: "func1")
-        let r1 = b.callFunction(f1, withArgs: [v0])
-        let f2 = b.createNamedVariable(forBuiltin: "func2")
-        let r2 = b.callFunction(f2, withArgs: [r1])
-        b.setProperty("x", of: o, to: r2)
-        b.setProperty("y", of: o, to: r2)
+            let b = fuzzer.makeBuilder()
 
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v1 = new Object();
-            const v6 = func2(func1(1337));
-            v1.x = v6;
-            v1.y = v6;
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testExpressionInlining7() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        // The identifier for NaN should be inlined into its uses...
-        let n1 = b.loadFloat(Double.nan)
-        b.createArray(with: [n1, n1, n1])
-        // ... but when it's reassigned, the identifier needs to be stored to a local variable.
-        let n2 = b.loadFloat(Double.nan)
-        b.reassign(variable: n2, value: b.loadFloat(13.37))
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            [NaN,NaN,NaN];
-            let v2 = NaN;
-            v2 = 13.37;
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testExpressionInlining8() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildPlainFunction(with: .parameters(n: 1)) { args in
-            let o = args[0]
-            let x = b.getProperty("x", of: o)
-            let y = b.getProperty("y", of: o)
-            let z = b.getProperty("z", of: o)
-            // Cannot inline the property load of .x as that would change the
-            // evaluation order at runtime (.x would now be loaded after .y).
-            let r = b.ternary(y, x, z)
-            b.doReturn(r)
-        }
-
-        // Note that this example also demonstrates that we currently allow expressions
-        // to be inlined into lazily-evaluated expressions, which may cause them to not
-        // be executed at runtime (in the example here, the a1.z load may never execute).
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            function f0(a1) {
-                const v2 = a1.x;
-                return a1.y ? v2 : a1.z;
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testExpressionInlining9() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildPlainFunction(with: .parameters(n: 1)) { args in
-            let p = args[0]
-            let two = b.loadInt(2)
+            let Object = b.createNamedVariable(forBuiltin: "Object")
+            let obj = b.construct(Object)
+            let o = b.createNamedVariable(forBuiltin: "SomeObj")
+            let foo = b.getProperty("foo", of: o)
+            let bar = b.getProperty("bar", of: foo)
+            let i = b.loadInt(42)
+            let r = b.callMethod("baz", on: bar, withArgs: [i, i])
+            b.setProperty("r", of: obj, to: r)
             let Math = b.createNamedVariable(forBuiltin: "Math")
-            let x = b.getProperty("x", of: p)
-            let xSquared = b.binary(x, two, with: .Exp)
-            let y = b.getProperty("y", of: p)
-            let ySquared = b.binary(y, two, with: .Exp)
-            let sum = b.binary(xSquared, ySquared, with: .Add)
-            let result = b.callMethod("sqrt", on: Math, withArgs: [sum])
-            b.doReturn(result)
+            let lhs = b.callMethod("random", on: Math)
+            let rhs = b.loadFloat(13.37)
+            let s = b.binary(lhs, rhs, with: .Add)
+            b.setProperty("s", of: obj, to: s)
+            b.getProperty("s", of: obj)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v1 = new Object();
+                v1.r = SomeObj.foo.bar.baz(42, 42);
+                v1.s = Math.random() + 13.37;
+                v1.s;
+
+                """
+
+            #expect(actual == expected)
+
         }
+    }
 
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
+    @Test func testExpressionInlining2() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
 
-        let expected = """
-            function f0(a1) {
-                return Math.sqrt((a1.x ** 2) + (a1.y ** 2));
+            let b = fuzzer.makeBuilder()
+
+            let Object = b.createNamedVariable(forBuiltin: "Object")
+            let obj = b.construct(Object)
+            let i = b.loadInt(42)
+            let o = b.createNamedVariable(forBuiltin: "SomeObj")
+            let foo = b.getProperty("foo", of: o)
+            let bar = b.getProperty("bar", of: foo)
+            let baz = b.getProperty("baz", of: bar)
+            let r = b.callFunction(baz, withArgs: [i, i])
+            b.setProperty("r", of: obj, to: r)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v1 = new Object();
+                const t1 = SomeObj.foo.bar.baz;
+                v1.r = t1(42, 42);
+
+                """
+
+            #expect(actual == expected)
+
+        }
+    }
+
+    @Test func testExpressionInlining3() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            // Test that effectful operations aren't reordered in any sematic-changing way.
+            let Object = b.createNamedVariable(forBuiltin: "Object")
+            let obj = b.construct(Object)
+            let effectful = b.createNamedVariable(forBuiltin: "effectful")
+
+            var lhs = b.callMethod("func1", on: effectful)
+            var rhs = b.callMethod("func2", on: effectful)
+            var res = b.binary(lhs, rhs, with: .Add)
+            b.setProperty("res1", of: obj, to: res)
+
+            lhs = b.callMethod("func3", on: effectful)
+            b.callMethod("func4", on: effectful)
+            rhs = b.loadFloat(13.37)
+            res = b.binary(lhs, rhs, with: .Add)
+            b.setProperty("res2", of: obj, to: res)
+
+            b.callMethod("func5", on: effectful)
+            let val1 = b.callMethod("func6", on: effectful)
+            b.callMethod("func7", on: effectful)
+            let val2 = b.loadFloat(13.37)
+            res = b.unary(.Minus, val1)
+            b.setProperty("res3", of: obj, to: res)
+            b.setProperty("res4", of: obj, to: val2)
+
+            let arg = b.callMethod("func8", on: effectful)
+            let res1 = b.callMethod("func9", on: effectful)
+            let res2 = b.callMethod("func10", on: effectful, withArgs: [arg])
+            b.setProperty("res5", of: obj, to: res1)
+            b.setProperty("res6", of: obj, to: res2)
+
+            b.callMethod("func11", on: effectful)
+            let tmp1 = b.callMethod("func12", on: effectful)
+            let tmp2 = b.callMethod("func13", on: effectful)
+            lhs = b.callMethod("func14", on: effectful)
+            rhs = b.callMethod("func15", on: effectful)
+            rhs = b.binary(lhs, rhs, with: .Mul)
+            lhs = b.binary(tmp2, rhs, with: .Add)
+            res = b.binary(lhs, tmp1, with: .Div)
+            b.setProperty("res7", of: obj, to: res)
+
+            var x = b.callMethod("func16", on: effectful)
+            var y = b.callMethod("func17", on: effectful)
+            var z = b.callMethod("func18", on: effectful)
+            res = b.callMethod("func19", on: effectful, withArgs: [x, y, z])
+            b.setProperty("res8", of: obj, to: res)
+
+            x = b.callMethod("func20", on: effectful)
+            y = b.callMethod("func21", on: effectful)
+            z = b.callMethod("func22", on: effectful)
+            res = b.callMethod("func23", on: effectful, withArgs: [y, z, x])
+            b.setProperty("res9", of: obj, to: res)
+
+            x = b.callMethod("func24", on: effectful)
+            y = b.callMethod("func25", on: effectful)
+            z = b.callMethod("func26", on: effectful)
+            res = b.callMethod("func27", on: effectful, withArgs: [x, z, y])
+            b.setProperty("res10", of: obj, to: res)
+
+            x = b.callMethod("func28", on: effectful)
+            y = b.callMethod("func29", on: effectful)
+            z = b.callMethod("func30", on: effectful)
+            res = b.callMethod("func31", on: effectful, withArgs: [z, x, y])
+            b.setProperty("res11", of: obj, to: res)
+
+            x = b.callMethod("func32", on: effectful)
+            y = b.callMethod("func33", on: effectful)
+            z = b.callMethod("func34", on: effectful)
+            let tmp = b.callMethod("func35", on: effectful, withArgs: [y])
+            res = b.callMethod("func36", on: effectful, withArgs: [x, z, tmp])
+            b.setProperty("res12", of: obj, to: res)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v1 = new Object();
+                v1.res1 = effectful.func1() + effectful.func2();
+                const v6 = effectful.func3();
+                effectful.func4();
+                v1.res2 = v6 + 13.37;
+                effectful.func5();
+                const v11 = effectful.func6();
+                effectful.func7();
+                v1.res3 = -v11;
+                v1.res4 = 13.37;
+                const v15 = effectful.func8();
+                const v16 = effectful.func9();
+                const v17 = effectful.func10(v15);
+                v1.res5 = v16;
+                v1.res6 = v17;
+                effectful.func11();
+                const v19 = effectful.func12();
+                v1.res7 = (effectful.func13() + (effectful.func14() * effectful.func15())) / v19;
+                v1.res8 = effectful.func19(effectful.func16(), effectful.func17(), effectful.func18());
+                const v30 = effectful.func20();
+                v1.res9 = effectful.func23(effectful.func21(), effectful.func22(), v30);
+                const v34 = effectful.func24();
+                const v35 = effectful.func25();
+                v1.res10 = effectful.func27(v34, effectful.func26(), v35);
+                const v38 = effectful.func28();
+                const v39 = effectful.func29();
+                v1.res11 = effectful.func31(effectful.func30(), v38, v39);
+                const v42 = effectful.func32();
+                const v43 = effectful.func33();
+                const v44 = effectful.func34();
+                v1.res12 = effectful.func36(v42, v44, effectful.func35(v43));
+
+                """
+
+            #expect(actual == expected)
+
+        }
+    }
+
+    @Test func testExpressionInlining4() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let someValue = b.createNamedVariable(forBuiltin: "someValue")
+            let computeThreshold = b.createNamedVariable(forBuiltin: "computeThreshold")
+            let threshold = b.callFunction(computeThreshold)
+            let cond = b.compare(someValue, with: threshold, using: .lessThan)
+            // The comparison and the function call can be inlined into the header of the if-statement.
+            b.buildIf(cond) {
+                let doSomething = b.createNamedVariable(forBuiltin: "doSomething")
+                b.callFunction(doSomething)
             }
 
-            """
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
 
-        XCTAssertEqual(actual, expected)
+            let expected = """
+                if (someValue < computeThreshold()) {
+                    doSomething();
+                }
+
+                """
+
+            #expect(actual == expected)
+
+        }
     }
 
-    func testExponentiationWithNegativeNumberLHS() {
+    @Test func testExpressionInlining5() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        let v0 = b.loadInt(-4)
-        let v1 = b.loadFloat(4.3)
-        let _ = b.binary(v0, v1, with: .Exp)
+            let b = fuzzer.makeBuilder()
 
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
+            let v0 = b.loadInt(0)
+            let f = b.createNamedVariable(forBuiltin: "computeNumIterations")
+            let numIterations = b.callFunction(f)
+            // The function call should not be inlined into the loop header as that would change the programs behavior.
+            b.buildWhileLoop({ b.compare(v0, with: numIterations, using: .lessThan) }) {
+                b.unary(.PostInc, v0)
+            }
 
-        // We expect the negative number to be wrapped in parentheses.
-        let expected = """
-            (-4) ** 4.3;
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
 
-            """
+            let expected = """
+                let v0 = 0;
+                const v2 = computeNumIterations();
+                while (v0 < v2) {
+                    v0++;
+                }
 
-        XCTAssertEqual(actual, expected)
+                """
+
+            #expect(actual == expected)
+        }
     }
 
-    func testExponentiationWithUnaryOperatorLHS() {
+    @Test func testExpressionInlining6() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        let v0 = b.loadInt(4)
-        let v1 = b.unary(.Minus, v0)
-        let v2 = b.loadFloat(4.3)
-        let _ = b.binary(v1, v2, with: .Exp)
+            let b = fuzzer.makeBuilder()
 
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
+            // Test that (potentially) effectful operations are only executed once.
+            let Object = b.createNamedVariable(forBuiltin: "Object")
+            let o = b.construct(Object)
+            let v0 = b.loadInt(1337)
+            let f1 = b.createNamedVariable(forBuiltin: "func1")
+            let r1 = b.callFunction(f1, withArgs: [v0])
+            let f2 = b.createNamedVariable(forBuiltin: "func2")
+            let r2 = b.callFunction(f2, withArgs: [r1])
+            b.setProperty("x", of: o, to: r2)
+            b.setProperty("y", of: o, to: r2)
 
-        // We expect the unary expression to be wrapped in parentheses.
-        let expected = """
-            (-4) ** 4.3;
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
 
-            """
+            let expected = """
+                const v1 = new Object();
+                const v6 = func2(func1(1337));
+                v1.x = v6;
+                v1.y = v6;
 
-        XCTAssertEqual(actual, expected)
+                """
+
+            #expect(actual == expected)
+        }
     }
 
-    func testExpressionUninlining() {
+    @Test func testExpressionInlining7() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        // This test ensures that expression inlining works corretly even when
-        // expressions are explicitly "un-inlined", for example by a SetElement
-        // operation where we force the object to be a variable.
-        let i1 = b.loadInt(0)
-        let i2 = b.loadInt(10)
-        b.buildDoWhileLoop(
-            do: {
-                // The SetElement will "un-inline" i2, but for the do-while loop we'll still need the inlined expression (`10`).
-                b.setElement(0, of: i2, to: i1)
-                b.setElement(1, of: i2, to: i1)
-                b.unary(.PostInc, i1)
-            }, while: { b.compare(i1, with: i2, using: .lessThan) })
+            let b = fuzzer.makeBuilder()
 
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
+            // The identifier for NaN should be inlined into its uses...
+            let n1 = b.loadFloat(Double.nan)
+            b.createArray(with: [n1, n1, n1])
+            // ... but when it's reassigned, the identifier needs to be stored to a local variable.
+            let n2 = b.loadFloat(Double.nan)
+            b.reassign(variable: n2, value: b.loadFloat(13.37))
 
-        let expected = """
-            let v0 = 0;
-            do {
-                const t2 = 10;
-                t2[0] = v0;
-                const t4 = 10;
-                t4[1] = v0;
-                v0++;
-            } while (v0 < 10)
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
 
-            """
+            let expected = """
+                [NaN,NaN,NaN];
+                let v2 = NaN;
+                v2 = 13.37;
 
-        XCTAssertEqual(actual, expected)
+                """
+
+            #expect(actual == expected)
+        }
     }
 
-    func testExportBuiltinInlining() {
+    @Test func testExpressionInlining8() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            b.buildPlainFunction(with: .parameters(n: 1)) { args in
+                let o = args[0]
+                let x = b.getProperty("x", of: o)
+                let y = b.getProperty("y", of: o)
+                let z = b.getProperty("z", of: o)
+                // Cannot inline the property load of .x as that would change the
+                // evaluation order at runtime (.x would now be loaded after .y).
+                let r = b.ternary(y, x, z)
+                b.doReturn(r)
+            }
+
+            // Note that this example also demonstrates that we currently allow expressions
+            // to be inlined into lazily-evaluated expressions, which may cause them to not
+            // be executed at runtime (in the example here, the a1.z load may never execute).
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                function f0(a1) {
+                    const v2 = a1.x;
+                    return a1.y ? v2 : a1.z;
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testExpressionInlining9() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            b.buildPlainFunction(with: .parameters(n: 1)) { args in
+                let p = args[0]
+                let two = b.loadInt(2)
+                let Math = b.createNamedVariable(forBuiltin: "Math")
+                let x = b.getProperty("x", of: p)
+                let xSquared = b.binary(x, two, with: .Exp)
+                let y = b.getProperty("y", of: p)
+                let ySquared = b.binary(y, two, with: .Exp)
+                let sum = b.binary(xSquared, ySquared, with: .Add)
+                let result = b.callMethod("sqrt", on: Math, withArgs: [sum])
+                b.doReturn(result)
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                function f0(a1) {
+                    return Math.sqrt((a1.x ** 2) + (a1.y ** 2));
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testExponentiationWithNegativeNumberLHS() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let v0 = b.loadInt(-4)
+            let v1 = b.loadFloat(4.3)
+            let _ = b.binary(v0, v1, with: .Exp)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            // We expect the negative number to be wrapped in parentheses.
+            let expected = """
+                (-4) ** 4.3;
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testExponentiationWithUnaryOperatorLHS() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let v0 = b.loadInt(4)
+            let v1 = b.unary(.Minus, v0)
+            let v2 = b.loadFloat(4.3)
+            let _ = b.binary(v1, v2, with: .Exp)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            // We expect the unary expression to be wrapped in parentheses.
+            let expected = """
+                (-4) ** 4.3;
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testExpressionUninlining() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            // This test ensures that expression inlining works corretly even when
+            // expressions are explicitly "un-inlined", for example by a SetElement
+            // operation where we force the object to be a variable.
+            let i1 = b.loadInt(0)
+            let i2 = b.loadInt(10)
+            b.buildDoWhileLoop(
+                do: {
+                    // The SetElement will "un-inline" i2, but for the do-while loop we'll still need the inlined expression (`10`).
+                    b.setElement(0, of: i2, to: i1)
+                    b.setElement(1, of: i2, to: i1)
+                    b.unary(.PostInc, i1)
+                }, while: { b.compare(i1, with: i2, using: .lessThan) })
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                let v0 = 0;
+                do {
+                    const t2 = 10;
+                    t2[0] = v0;
+                    const t4 = 10;
+                    t4[1] = v0;
+                    v0++;
+                } while (v0 < 10)
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testExportBuiltinInlining() {
         let config = Configuration(logLevel: .error, generateBundle: true)
         let fuzzer = makeMockFuzzer(config: config)
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        let module = b.buildBundleModule(name: "module.mjs") {
-            let date = b.createNamedVariable(forBuiltin: "Date")
-            b.exportVariables(variables: [date], exportNames: ["foo"])
-        }
-        XCTAssertTrue(
-            b.type(of: module).Is(.jsModule(exports: ["foo": .object(ofGroup: "DateConstructor")])))
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            // JS_BUNDLE_MODULE:module.mjs
-            const v0 = Date;
-            export { v0 as foo };
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testCyclicImports() {
-        let config = Configuration(generateBundle: true)
-        let fuzzer = makeMockFuzzer(config: config)
-        let b = fuzzer.makeBuilder()
-
-        let nameA = "module_cyclic_A.mjs"
-        let nameB = "module_cyclic_B.mjs"
-        let exportsA = ["export_A"]
-        let exportsB = ["export_B"]
-
-        let vA = b.declarePendingBundleModule(name: nameA, exportNames: exportsA)
-        let vB = b.declarePendingBundleModule(name: nameB, exportNames: exportsB)
-
-        b.beginPendingBundleModule(moduleVariable: vA)
-        _ = b.importVariables(module: vB, importNames: exportsB)
-        let c42 = b.loadInt(42)
-        b.exportVariables(variables: [c42], exportNames: exportsA)
-        b.endPendingBundleModule()
-
-        b.beginPendingBundleModule(moduleVariable: vB)
-        _ = b.importVariables(module: vA, importNames: exportsA)
-        let c43 = b.loadInt(43)
-        b.exportVariables(variables: [c43], exportNames: exportsB)
-        b.endPendingBundleModule()
-
-        b.buildBundleModuleEntryPoint {
-            _ = b.importVariables(module: vA, importNames: exportsA)
-            _ = b.importVariables(module: vB, importNames: exportsB)
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            // JS_BUNDLE_MODULE:module_cyclic_A.mjs
-            import { export_B as v2 } from "module_cyclic_B.mjs";
-            const v3 = 42;
-            export { v3 as export_A };
-            // JS_BUNDLE_MODULE:module_cyclic_B.mjs
-            import { export_A as v4 } from "module_cyclic_A.mjs";
-            const v5 = 43;
-            export { v5 as export_B };
-            // JS_BUNDLE_MODULE_ENTRYPOINT
-            import { export_A as v6 } from "module_cyclic_A.mjs";
-            import { export_B as v7 } from "module_cyclic_B.mjs";
-
-            """
-
-        XCTAssertEqual(actual, expected)
-
-        let fuzzILLifter = FuzzILLifter()
-        let fuzzIL = fuzzILLifter.lift(program)
-        XCTAssertTrue(
-            fuzzIL.contains(
-                "DeclarePendingBundleModule 'module_cyclic_A.mjs' exports: [\"export_A\"]"))
-        XCTAssertTrue(
-            fuzzIL.contains(
-                "DeclarePendingBundleModule 'module_cyclic_B.mjs' exports: [\"export_B\"]"))
-    }
-
-    func testForceVariableDefinitions() {
-        let createProgram = { (config: Configuration) in
-            let fuzzer = makeMockFuzzer(config: config)
             let b = fuzzer.makeBuilder()
-            let dateBuiltin = b.createNamedVariable(forBuiltin: "Date")
-            b.getProperty("prototype", of: dateBuiltin)
-            let array = b.createNamedVariable(forBuiltin: "Array")
-            let _ = b.construct(array)
+
+            let module = b.buildBundleModule(name: "module.mjs") {
+                let date = b.createNamedVariable(forBuiltin: "Date")
+                b.exportVariables(variables: [date], exportNames: ["foo"])
+            }
+            #expect(
+                b.type(of: module).Is(
+                    .jsModule(exports: ["foo": .object(ofGroup: "DateConstructor")])))
 
             let program = b.finalize()
-            return fuzzer.lifter.lift(program)
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                // JS_BUNDLE_MODULE:module.mjs
+                const v0 = Date;
+                export { v0 as foo };
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testCyclicImports() {
+        let config = Configuration(logLevel: .error, generateBundle: true)
+        let fuzzer = makeMockFuzzer(config: config)
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let nameA = "module_cyclic_A.mjs"
+            let nameB = "module_cyclic_B.mjs"
+            let exportsA = ["export_A"]
+            let exportsB = ["export_B"]
+
+            let vA = b.declarePendingBundleModule(name: nameA, exportNames: exportsA)
+            let vB = b.declarePendingBundleModule(name: nameB, exportNames: exportsB)
+
+            b.beginPendingBundleModule(moduleVariable: vA)
+            _ = b.importVariables(module: vB, importNames: exportsB)
+            let c42 = b.loadInt(42)
+            b.exportVariables(variables: [c42], exportNames: exportsA)
+            b.endPendingBundleModule()
+
+            b.beginPendingBundleModule(moduleVariable: vB)
+            _ = b.importVariables(module: vA, importNames: exportsA)
+            let c43 = b.loadInt(43)
+            b.exportVariables(variables: [c43], exportNames: exportsB)
+            b.endPendingBundleModule()
+
+            b.buildBundleModuleEntryPoint {
+                _ = b.importVariables(module: vA, importNames: exportsA)
+                _ = b.importVariables(module: vB, importNames: exportsB)
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                // JS_BUNDLE_MODULE:module_cyclic_A.mjs
+                import { export_B as v2 } from "module_cyclic_B.mjs";
+                const v3 = 42;
+                export { v3 as export_A };
+                // JS_BUNDLE_MODULE:module_cyclic_B.mjs
+                import { export_A as v4 } from "module_cyclic_A.mjs";
+                const v5 = 43;
+                export { v5 as export_B };
+                // JS_BUNDLE_MODULE_ENTRYPOINT
+                import { export_A as v6 } from "module_cyclic_A.mjs";
+                import { export_B as v7 } from "module_cyclic_B.mjs";
+
+                """
+
+            #expect(actual == expected)
+
+            let fuzzILLifter = FuzzILLifter()
+            let fuzzIL = fuzzILLifter.lift(program)
+            #expect(
+                fuzzIL.contains(
+                    "DeclarePendingBundleModule 'module_cyclic_A.mjs' exports: [\"export_A\"]"))
+            #expect(
+                fuzzIL.contains(
+                    "DeclarePendingBundleModule 'module_cyclic_B.mjs' exports: [\"export_B\"]"))
+        }
+    }
+
+    @Test func testForceVariableDefinitions() {
+        let createProgram = { (config: Configuration) in
+            let fuzzer = makeMockFuzzer(config: config)
+            return fuzzer.sync {
+                let b = fuzzer.makeBuilder()
+                let dateBuiltin = b.createNamedVariable(forBuiltin: "Date")
+                b.getProperty("prototype", of: dateBuiltin)
+                let array = b.createNamedVariable(forBuiltin: "Array")
+                let _ = b.construct(array)
+
+                let program = b.finalize()
+                return fuzzer.lifter.lift(program)
+            }
         }
         do {
             let config = Configuration(logLevel: .warning)
@@ -593,7 +654,7 @@ class LifterTests: XCTestCase {
                 new Array();
 
                 """
-            XCTAssertEqual(actual, expected)
+            #expect(actual == expected)
         }
         do {
             let config = Configuration(logLevel: .warning, forDifferentialFuzzing: true)
@@ -603,3404 +664,3686 @@ class LifterTests: XCTestCase {
                 const v3 = new Array();
 
                 """
-            XCTAssertEqual(actual, expected)
+            #expect(actual == expected)
         }
     }
 
-    func testIdentifierLifting() {
+    @Test func testIdentifierLifting() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        // This tests checks that identifiers and other pure expressions
-        // are completely omitted from the lifted code if they are not used.
-        // This is important in some cases, for example if a non-existant
-        // named variable is (only) accessed via `typeof`. In that case, the
-        // `typeof` will make the access valid (no exception is raised), and so
-        // the construct can currently only be minimized if an (unused) named
-        // variable access also does not raise an exception.
-        b.loadInt(42)
-        b.loadString("foobar")
-        b.createNamedVariable("nonexistant", declarationMode: .none)
-        let v = b.createNamedVariable(
-            "alsoNonexistantButSafeToAccessViaTypeOf", declarationMode: .none)
-        b.typeof(v)
+            let b = fuzzer.makeBuilder()
 
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
+            // This tests checks that identifiers and other pure expressions
+            // are completely omitted from the lifted code if they are not used.
+            // This is important in some cases, for example if a non-existant
+            // named variable is (only) accessed via `typeof`. In that case, the
+            // `typeof` will make the access valid (no exception is raised), and so
+            // the construct can currently only be minimized if an (unused) named
+            // variable access also does not raise an exception.
+            b.loadInt(42)
+            b.loadString("foobar")
+            b.createNamedVariable("nonexistant", declarationMode: .none)
+            let v = b.createNamedVariable(
+                "alsoNonexistantButSafeToAccessViaTypeOf", declarationMode: .none)
+            b.typeof(v)
 
-        let expected = """
-            typeof alsoNonexistantButSafeToAccessViaTypeOf;
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
 
-            """
+            let expected = """
+                typeof alsoNonexistantButSafeToAccessViaTypeOf;
 
-        XCTAssertEqual(actual, expected)
-    }
+                """
 
-    func testObjectLiteralLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v1 = b.loadInt(42)
-        let v2 = b.loadFloat(13.37)
-        let v3 = b.loadString("foobar")
-        let null = b.loadNull()
-        let v4 = b.binary(v3, v1, with: .Add)
-        let otherObject = b.createNamedVariable(forBuiltin: "SomeObject")
-        let toPrimitive = b.createSymbolProperty("toPrimitive")
-        b.buildObjectLiteral { obj in
-            obj.addProperty("p1", as: v1)
-            obj.addProperty("__proto__", as: null)
-            obj.addElement(0, as: v2)
-            obj.addElement(-1, as: v2)
-            obj.addComputedProperty(v3, as: v3)
-            obj.addProperty("p2", as: v2)
-            obj.addComputedProperty(v4, as: v1)
-            obj.setPrototype(to: null)
-            obj.addMethod("m", with: .parameters(n: 2)) { args in
-                let r = b.binary(args[1], args[2], with: .Sub)
-                b.doReturn(r)
-            }
-            obj.addComputedMethod(toPrimitive, with: .parameters(n: 0)) { args in
-                b.doReturn(v1)
-            }
-            obj.addGetter(for: "prop") { this in
-                let r = b.getProperty("p", of: this)
-                b.doReturn(r)
-            }
-            obj.addSetter(for: "prop") { this, v in
-                b.setProperty("p", of: this, to: v)
-            }
-            obj.addComputedGetter(for: v3) { this in
-                b.doReturn(v1)
-            }
-            obj.addComputedSetter(for: v3) { this, v in
-                b.setProperty("p", of: this, to: v)
-            }
-            obj.copyProperties(from: otherObject)
+            #expect(actual == expected)
         }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v4 = "foobar" + 42;
-            const v7 = Symbol.toPrimitive;
-            const v20 = {
-                p1: 42,
-                __proto__: null,
-                0: 13.37,
-                [-1]: 13.37,
-                ["foobar"]: "foobar",
-                p2: 13.37,
-                [v4]: 42,
-                __proto__: null,
-                m(a9, a10) {
-                    return a9 - a10;
-                },
-                [v7]() {
-                    return 42;
-                },
-                get prop() {
-                    return this.p;
-                },
-                set prop(a16) {
-                    this.p = a16;
-                },
-                get ["foobar"]() {
-                    return 42;
-                },
-                set ["foobar"](a19) {
-                    this.p = a19;
-                },
-                ...SomeObject,
-            };
-
-            """
-        XCTAssertEqual(actual, expected)
     }
 
-    func testObjectLiteralLiftingWeirdNames() {
+    @Test func testObjectLiteralLifting() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        let v = b.loadInt(42)
-        b.buildObjectLiteral { obj in
-            for name in ["???", "0", "01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
-                obj.addProperty(name, as: v)
-                obj.addMethod(name, with: .parameters(n: 0)) { args in
+            let b = fuzzer.makeBuilder()
+
+            let v1 = b.loadInt(42)
+            let v2 = b.loadFloat(13.37)
+            let v3 = b.loadString("foobar")
+            let null = b.loadNull()
+            let v4 = b.binary(v3, v1, with: .Add)
+            let otherObject = b.createNamedVariable(forBuiltin: "SomeObject")
+            let toPrimitive = b.createSymbolProperty("toPrimitive")
+            b.buildObjectLiteral { obj in
+                obj.addProperty("p1", as: v1)
+                obj.addProperty("__proto__", as: null)
+                obj.addElement(0, as: v2)
+                obj.addElement(-1, as: v2)
+                obj.addComputedProperty(v3, as: v3)
+                obj.addProperty("p2", as: v2)
+                obj.addComputedProperty(v4, as: v1)
+                obj.setPrototype(to: null)
+                obj.addMethod("m", with: .parameters(n: 2)) { args in
+                    let r = b.binary(args[1], args[2], with: .Sub)
+                    b.doReturn(r)
                 }
+                obj.addComputedMethod(toPrimitive, with: .parameters(n: 0)) { args in
+                    b.doReturn(v1)
+                }
+                obj.addGetter(for: "prop") { this in
+                    let r = b.getProperty("p", of: this)
+                    b.doReturn(r)
+                }
+                obj.addSetter(for: "prop") { this, v in
+                    b.setProperty("p", of: this, to: v)
+                }
+                obj.addComputedGetter(for: v3) { this in
+                    b.doReturn(v1)
+                }
+                obj.addComputedSetter(for: v3) { this, v in
+                    b.setProperty("p", of: this, to: v)
+                }
+                obj.copyProperties(from: otherObject)
             }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v4 = "foobar" + 42;
+                const v7 = Symbol.toPrimitive;
+                const v20 = {
+                    p1: 42,
+                    __proto__: null,
+                    0: 13.37,
+                    [-1]: 13.37,
+                    ["foobar"]: "foobar",
+                    p2: 13.37,
+                    [v4]: 42,
+                    __proto__: null,
+                    m(a9, a10) {
+                        return a9 - a10;
+                    },
+                    [v7]() {
+                        return 42;
+                    },
+                    get prop() {
+                        return this.p;
+                    },
+                    set prop(a16) {
+                        this.p = a16;
+                    },
+                    get ["foobar"]() {
+                        return 42;
+                    },
+                    set ["foobar"](a19) {
+                        this.p = a19;
+                    },
+                    ...SomeObject,
+                };
+
+                """
+            #expect(actual == expected)
         }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v9 = {
-                "???": 42,
-                "???"() {
-                },
-                0: 42,
-                0() {
-                },
-                "01": 42,
-                "01"() {
-                },
-                1: 42,
-                1() {
-                },
-                "0.1": 42,
-                "0.1"() {
-                },
-                "-1": 42,
-                "-1"() {
-                },
-                $valid_id_42: 42,
-                $valid_id_42() {
-                },
-                "42_invalid_id": 42,
-                "42_invalid_id"() {
-                },
-            };
-
-            """
-        XCTAssertEqual(actual, expected)
     }
 
-    func testObjectLiteralGetterSetterLiftingWeirdNames() {
+    @Test func testObjectLiteralLiftingWeirdNames() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v = b.loadInt(42)
-        b.buildObjectLiteral { obj in
-            for name in ["???", "0", "01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
-                obj.addGetter(for: name) { _ in b.doReturn(v) }
-                obj.addSetter(for: name) { _, _ in }
-            }
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v25 = {
-                get "???"() {
-                    return 42;
-                },
-                set "???"(a3) {
-                },
-                get 0() {
-                    return 42;
-                },
-                set 0(a6) {
-                },
-                get "01"() {
-                    return 42;
-                },
-                set "01"(a9) {
-                },
-                get 1() {
-                    return 42;
-                },
-                set 1(a12) {
-                },
-                get "0.1"() {
-                    return 42;
-                },
-                set "0.1"(a15) {
-                },
-                get "-1"() {
-                    return 42;
-                },
-                set "-1"(a18) {
-                },
-                get $valid_id_42() {
-                    return 42;
-                },
-                set $valid_id_42(a21) {
-                },
-                get "42_invalid_id"() {
-                    return 42;
-                },
-                set "42_invalid_id"(a24) {
-                },
-            };
-
-            """
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testObjectLiteralIsDistinguishableFromBlockStatement() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let i1 = b.loadInt(1)
-        let i2 = b.loadInt(2)
-        b.buildObjectLiteral { obj in
-            obj.addProperty("foo", as: i1)
-            obj.addProperty("bar", as: i2)
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        // These must not lift to something like "{ foo: 1, bar: 2 };" as that would be invalid:
-        // the parser cannot distinguish it from a block statement.
-        let expected = """
-            const v2 = { foo: 1, bar: 2 };
-
-            """
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testObjectLiteralInlining() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let print = b.createNamedVariable(forBuiltin: "print")
-
-        // We inline empty object literals.
-        let o1 = b.buildObjectLiteral { obj in }
-        b.callFunction(print, withArgs: [o1])
-
-        // We inline "simple" object literals"
-        let i = b.loadInt(42)
-        let f = b.loadFloat(13.37)
-        let foo = b.loadString("foo")
-        let o2 = b.buildObjectLiteral { obj in
-            obj.addProperty("foo", as: i)
-            obj.addProperty("bar", as: f)
-            obj.addElement(42, as: foo)
-        }
-        b.callFunction(print, withArgs: [o2])
-
-        // We don't inline object literals as soon as they have any methods.
-        let o3 = b.buildObjectLiteral { obj in
-            obj.addMethod("baz", with: .parameters(n: 0)) { _ in }
-        }
-        b.callFunction(print, withArgs: [o3])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            print({});
-            print({ foo: 42, bar: 13.37, 42: "foo" });
-            const v9 = {
-                baz() {
-                },
-            };
-            print(v9);
-
-            """
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testClassDefinitionLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let i = b.loadInt(42)
-        let two = b.loadInt(2)
-        let baz = b.loadString("baz")
-        let baz42 = b.binary(baz, i, with: .Add)
-        let toPrimitive = b.createSymbolProperty("toPrimitive")
-        let sm = b.loadString("sm")
-        let C = b.buildClassDefinition { cls in
-            cls.addInstanceProperty("foo")
-            cls.addInstanceProperty("bar", value: baz)
-            cls.addInstanceElement(0, value: i)
-            cls.addInstanceElement(1)
-            cls.addInstanceElement(-1)
-            cls.addInstanceComputedProperty(baz42)
-            cls.addInstanceComputedProperty(two, value: baz42)
-            cls.addConstructor(with: .parameters(n: 1)) { params in
-                let this = params[0]
-                b.setProperty("foo", of: this, to: params[1])
-            }
-            cls.addInstanceMethod("m", with: .parameters(n: 0)) { params in
-                let this = params[0]
-                let foo = b.getProperty("foo", of: this)
-                b.doReturn(foo)
-            }
-            cls.addInstanceComputedMethod(toPrimitive, with: .parameters(n: 0)) { params in
-                let this = params[0]
-                let foo = b.getProperty("foo", of: this)
-                b.doReturn(foo)
-            }
-            cls.addInstanceGetter(for: "baz") { this in
-                b.doReturn(b.loadInt(1337))
-            }
-            cls.addInstanceSetter(for: "baz") { this, v in
-            }
-            cls.addInstanceComputedGetter(for: baz) { this in
-                b.doReturn(b.loadInt(1337))
-            }
-            cls.addInstanceComputedSetter(for: baz) { this, v in
-            }
-
-            cls.addStaticProperty("foo")
-            cls.addStaticInitializer { this in
-                b.setProperty("foo", of: this, to: i)
-            }
-            cls.addStaticProperty("bar", value: baz)
-            cls.addStaticElement(0, value: i)
-            cls.addStaticElement(1)
-            cls.addStaticElement(-1)
-            cls.addStaticComputedProperty(baz42)
-            cls.addStaticComputedProperty(two, value: baz42)
-            cls.addStaticMethod("m", with: .parameters(n: 0)) { params in
-                let this = params[0]
-                let foo = b.getProperty("foo", of: this)
-                b.doReturn(foo)
-            }
-            cls.addInstanceComputedMethod(sm, with: .parameters(n: 0)) { params in
-                let this = params[0]
-                let foo = b.getProperty("foo", of: this)
-                b.doReturn(foo)
-            }
-            cls.addStaticGetter(for: "baz") { this in
-                b.doReturn(b.loadInt(1337))
-            }
-            cls.addStaticSetter(for: "baz") { this, v in
-            }
-            cls.addStaticComputedGetter(for: baz) { this in
-                b.doReturn(b.loadInt(1337))
-            }
-            cls.addStaticComputedSetter(for: baz) { this, v in
-            }
-
-            cls.addPrivateInstanceProperty("ifoo")
-            cls.addPrivateInstanceProperty("ibar", value: baz)
-            cls.addPrivateInstanceMethod("im", with: .parameters(n: 0)) { args in
-                let this = args[0]
-                let foo = b.getPrivateProperty("ifoo", of: this)
-                b.setPrivateProperty("ibar", of: this, to: foo)
-                b.doReturn(foo)
-            }
-            cls.addPrivateInstanceMethod("in", with: .parameters(n: 1)) { args in
-                let this = args[0]
-                b.callPrivateMethod("im", on: this)
-                b.updatePrivateProperty("ibar", of: this, with: args[1], using: .Add)
-            }
-            cls.addPrivateStaticProperty("sfoo")
-            cls.addPrivateStaticProperty("sbar", value: baz)
-            cls.addPrivateStaticMethod("sm", with: .parameters(n: 0)) { args in
-                let this = args[0]
-                let foo = b.getPrivateProperty("sfoo", of: this)
-                b.setPrivateProperty("sbar", of: this, to: foo)
-                b.doReturn(foo)
-            }
-            cls.addPrivateStaticMethod("sn", with: .parameters(n: 1)) { args in
-                let this = args[0]
-                b.callPrivateMethod("sm", on: this)
-                b.updatePrivateProperty("sbar", of: this, with: args[1], using: .Add)
-            }
-        }
-        b.construct(C, withArgs: [b.loadInt(42)])
-        b.reassign(variable: C, value: b.createNamedVariable(forBuiltin: "Uint8Array"))
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v3 = "baz" + 42;
-            const v5 = Symbol.toPrimitive;
-            class C7 {
-                foo;
-                bar = "baz";
-                0 = 42;
-                1;
-                [-1];
-                [v3];
-                [2] = v3;
-                constructor(a9) {
-                    this.foo = a9;
-                }
-                m() {
-                    return this.foo;
-                }
-                [v5]() {
-                    return this.foo;
-                }
-                get baz() {
-                    return 1337;
-                }
-                set baz(a17) {
-                }
-                get ["baz"]() {
-                    return 1337;
-                }
-                set ["baz"](a21) {
-                }
-                static foo;
-                static {
-                    this.foo = 42;
-                }
-                static bar = "baz";
-                static 0 = 42;
-                static 1;
-                static [-1];
-                static [v3];
-                static [2] = v3;
-                static m() {
-                    return this.foo;
-                }
-                ["sm"]() {
-                    return this.foo;
-                }
-                static get baz() {
-                    return 1337;
-                }
-                static set baz(a30) {
-                }
-                static get ["baz"]() {
-                    return 1337;
-                }
-                static set ["baz"](a34) {
-                }
-                #ifoo;
-                #ibar = "baz";
-                #im() {
-                    const v36 = this.#ifoo;
-                    this.#ibar = v36;
-                    return v36;
-                }
-                #in(a38) {
-                    this.#im();
-                    this.#ibar += a38;
-                }
-                static #sfoo;
-                static #sbar = "baz";
-                static #sm() {
-                    const v41 = this.#sfoo;
-                    this.#sbar = v41;
-                    return v41;
-                }
-                static #sn(a43) {
-                    this.#sm();
-                    this.#sbar += a43;
-                }
-            }
-            new C7(42);
-            C7 = Uint8Array;
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testClassDefinitionLiftingWeirdNames() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v = b.loadInt(42)
-        b.buildClassDefinition { cls in
-            for name in ["???", "0", "01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
-                cls.addInstanceProperty(name, value: v)
-                cls.addStaticProperty(name, value: v)
-                cls.addInstanceMethod(name, with: .parameters(n: 0)) { params in
-                }
-                cls.addStaticMethod(name, with: .parameters(n: 0)) { params in
-                }
-            }
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            class C1 {
-                "???" = 42;
-                static "???" = 42;
-                "???"() {
-                }
-                static "???"() {
-                }
-                0 = 42;
-                static 0 = 42;
-                0() {
-                }
-                static 0() {
-                }
-                "01" = 42;
-                static "01" = 42;
-                "01"() {
-                }
-                static "01"() {
-                }
-                1 = 42;
-                static 1 = 42;
-                1() {
-                }
-                static 1() {
-                }
-                "0.1" = 42;
-                static "0.1" = 42;
-                "0.1"() {
-                }
-                static "0.1"() {
-                }
-                "-1" = 42;
-                static "-1" = 42;
-                "-1"() {
-                }
-                static "-1"() {
-                }
-                $valid_id_42 = 42;
-                static $valid_id_42 = 42;
-                $valid_id_42() {
-                }
-                static $valid_id_42() {
-                }
-                "42_invalid_id" = 42;
-                static "42_invalid_id" = 42;
-                "42_invalid_id"() {
-                }
-                static "42_invalid_id"() {
-                }
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testClassGetterSetterLiftingWeirdNames() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildClassDefinition { cls in
-            for name in ["???", "0", "01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
-                cls.addInstanceGetter(for: name) { this in
-                }
-                cls.addStaticGetter(for: name) { this in
-                }
-                cls.addInstanceSetter(for: name) { this, val in
-                }
-                cls.addStaticSetter(for: name) { this, val in
-                }
-            }
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            class C0 {
-                get "???"() {
-                }
-                static get "???"() {
-                }
-                set "???"(a4) {
-                }
-                static set "???"(a6) {
-                }
-                get 0() {
-                }
-                static get 0() {
-                }
-                set 0(a10) {
-                }
-                static set 0(a12) {
-                }
-                get "01"() {
-                }
-                static get "01"() {
-                }
-                set "01"(a16) {
-                }
-                static set "01"(a18) {
-                }
-                get 1() {
-                }
-                static get 1() {
-                }
-                set 1(a22) {
-                }
-                static set 1(a24) {
-                }
-                get "0.1"() {
-                }
-                static get "0.1"() {
-                }
-                set "0.1"(a28) {
-                }
-                static set "0.1"(a30) {
-                }
-                get "-1"() {
-                }
-                static get "-1"() {
-                }
-                set "-1"(a34) {
-                }
-                static set "-1"(a36) {
-                }
-                get $valid_id_42() {
-                }
-                static get $valid_id_42() {
-                }
-                set $valid_id_42(a40) {
-                }
-                static set $valid_id_42(a42) {
-                }
-                get "42_invalid_id"() {
-                }
-                static get "42_invalid_id"() {
-                }
-                set "42_invalid_id"(a46) {
-                }
-                static set "42_invalid_id"(a48) {
-                }
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testClassExpressionLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let C = b.buildClassDefinition(isExpression: true) { cls in
-            cls.addInstanceElement(1)
-        }
-
-        let D = b.createNamedVariable("d", declarationMode: .let, initialValue: C)
-        b.construct(C, withArgs: [])
-        b.construct(D, withArgs: [])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v0 = class {
-                1;
-            }
-            let d = v0;
-            new v0();
-            new d();
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testClassExpressionWithSuperClassLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let C = b.buildClassDefinition(isExpression: true) { _ in }
-        let D = b.buildClassDefinition(withSuperclass: C, isExpression: true) { _ in }
-        b.construct(D, withArgs: [])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v0 = class {
-            }
-            const v1 = class extends v0 {
-            }
-            new v1();
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testArrayLiteralLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        var initialValues = [Variable]()
-        initialValues.append(b.loadInt(1))
-        initialValues.append(b.loadInt(2))
-        initialValues.append(b.loadUndefined())
-        initialValues.append(b.loadInt(4))
-        initialValues.append(b.loadUndefined())
-        initialValues.append(b.loadInt(6))
-        let v = b.loadString("foobar")
-        b.reassign(variable: v, value: b.loadUndefined())
-        initialValues.append(v)
-        let va = b.createArray(with: initialValues)
-        b.createArray(with: [b.loadInt(301), b.loadUndefined()])
-        b.createArray(with: [b.loadUndefined()])
-        b.createArray(with: [va, b.loadUndefined()], spreading: [true, false])
-        b.createArray(with: [b.loadUndefined()], spreading: [false])
-        b.createIntArray(with: [1, 2, 3, 4])
-        b.createFloatArray(with: [1.1, 2.2, 3.3, 4.4])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            let v6 = "foobar";
-            const v8 = [1,2,,4,,6,v6 = undefined];
-            [301,,];
-            [,];
-            [...v8,,];
-            [,];
-            [1,2,3,4];
-            [1.1,2.2,3.3,4.4];
-
-            """
-        XCTAssertEqual(actual, expected)
-
-    }
-
-    func testHoleyArrayLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v0 = b.loadInt(42)
-        let v1 = b.loadUndefined()
-        // Should lift to: [42,,,42]
-        b.createArray(with: [v0, v1, v1, v0])
-
-        // Should lift to: [,,]
-        b.createArray(with: [v1, v1])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            [42,,,42];
-            [,,];
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testMapLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.createMap(withKeys: [], withValues: [])
-
-        let key1 = b.loadString("key1")
-        let val1 = b.loadInt(42)
-        let key2 = b.loadString("key2")
-        let val2 = b.loadInt(43)
-        b.createMap(withKeys: [key1, key2], withValues: [val1, val2])
-        let undef = b.loadUndefined()
-        b.emit(CreateMap(numInitialValues: 1), withInputs: [undef])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            new Map([]);
-            new Map([["key1",42],["key2",43]]);
-            new Map([undefined]);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testBinaryOperationLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let Math = b.createNamedVariable(forBuiltin: "Math")
-        let v = b.callMethod("random", on: Math)
-        let two_v = b.binary(v, v, with: .Add)
-        let three_v = b.binary(two_v, v, with: .Add)
-        let twelve_v = b.binary(b.loadInt(4), three_v, with: .Mul)
-        let six_v = b.binary(twelve_v, b.loadInt(2), with: .Div)
-        let print = b.createNamedVariable(forBuiltin: "print")
-        b.callFunction(print, withArgs: [six_v])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        // TODO: Lifting could be improved to remove some brackets.
-        let expected = """
-            const v1 = Math.random();
-            print((4 * ((v1 + v1) + v1)) / 2);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testRegExpInlining() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v0 = b.loadRegExp("a", RegExpFlags())
-        b.compare(v0, with: v0, using: .equal)
-        let v1 = b.loadRegExp("b", RegExpFlags())
-        b.compare(v0, with: v1, using: .equal)
-
-        let program = b.finalize()
-
-        let actual = fuzzer.lifter.lift(program)
-        let expected = """
-            const v0 = /a/;
-            v0 == v0;
-            v0 == /b/;
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testNestedCodeStrings() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let code1 = b.buildCodeString {
-            let code2 = b.buildCodeString {
-                let code3 = b.buildCodeString {
-                    let code4 = b.buildCodeString {
-                        let print = b.createNamedVariable(forBuiltin: "print")
-                        let msg = b.loadString("Hello")
-                        b.callFunction(print, withArgs: [msg])
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let v = b.loadInt(42)
+            b.buildObjectLiteral { obj in
+                for name in ["???", "0", "01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
+                    obj.addProperty(name, as: v)
+                    obj.addMethod(name, with: .parameters(n: 0)) { args in
                     }
-                    let code5 = b.buildCodeString {
-                        let print = b.createNamedVariable(forBuiltin: "print")
-                        let msg = b.loadString("World")
-                        b.callFunction(print, withArgs: [msg])
+                }
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v9 = {
+                    "???": 42,
+                    "???"() {
+                    },
+                    0: 42,
+                    0() {
+                    },
+                    "01": 42,
+                    "01"() {
+                    },
+                    1: 42,
+                    1() {
+                    },
+                    "0.1": 42,
+                    "0.1"() {
+                    },
+                    "-1": 42,
+                    "-1"() {
+                    },
+                    $valid_id_42: 42,
+                    $valid_id_42() {
+                    },
+                    "42_invalid_id": 42,
+                    "42_invalid_id"() {
+                    },
+                };
+
+                """
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testObjectLiteralGetterSetterLiftingWeirdNames() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let v = b.loadInt(42)
+            b.buildObjectLiteral { obj in
+                for name in ["???", "0", "01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
+                    obj.addGetter(for: name) { _ in b.doReturn(v) }
+                    obj.addSetter(for: name) { _, _ in }
+                }
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v25 = {
+                    get "???"() {
+                        return 42;
+                    },
+                    set "???"(a3) {
+                    },
+                    get 0() {
+                        return 42;
+                    },
+                    set 0(a6) {
+                    },
+                    get "01"() {
+                        return 42;
+                    },
+                    set "01"(a9) {
+                    },
+                    get 1() {
+                        return 42;
+                    },
+                    set 1(a12) {
+                    },
+                    get "0.1"() {
+                        return 42;
+                    },
+                    set "0.1"(a15) {
+                    },
+                    get "-1"() {
+                        return 42;
+                    },
+                    set "-1"(a18) {
+                    },
+                    get $valid_id_42() {
+                        return 42;
+                    },
+                    set $valid_id_42(a21) {
+                    },
+                    get "42_invalid_id"() {
+                        return 42;
+                    },
+                    set "42_invalid_id"(a24) {
+                    },
+                };
+
+                """
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testObjectLiteralIsDistinguishableFromBlockStatement() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let i1 = b.loadInt(1)
+            let i2 = b.loadInt(2)
+            b.buildObjectLiteral { obj in
+                obj.addProperty("foo", as: i1)
+                obj.addProperty("bar", as: i2)
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            // These must not lift to something like "{ foo: 1, bar: 2 };" as that would be invalid:
+            // the parser cannot distinguish it from a block statement.
+            let expected = """
+                const v2 = { foo: 1, bar: 2 };
+
+                """
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testObjectLiteralInlining() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let print = b.createNamedVariable(forBuiltin: "print")
+
+            // We inline empty object literals.
+            let o1 = b.buildObjectLiteral { obj in }
+            b.callFunction(print, withArgs: [o1])
+
+            // We inline "simple" object literals"
+            let i = b.loadInt(42)
+            let f = b.loadFloat(13.37)
+            let foo = b.loadString("foo")
+            let o2 = b.buildObjectLiteral { obj in
+                obj.addProperty("foo", as: i)
+                obj.addProperty("bar", as: f)
+                obj.addElement(42, as: foo)
+            }
+            b.callFunction(print, withArgs: [o2])
+
+            // We don't inline object literals as soon as they have any methods.
+            let o3 = b.buildObjectLiteral { obj in
+                obj.addMethod("baz", with: .parameters(n: 0)) { _ in }
+            }
+            b.callFunction(print, withArgs: [o3])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                print({});
+                print({ foo: 42, bar: 13.37, 42: "foo" });
+                const v9 = {
+                    baz() {
+                    },
+                };
+                print(v9);
+
+                """
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testClassDefinitionLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let i = b.loadInt(42)
+            let two = b.loadInt(2)
+            let baz = b.loadString("baz")
+            let baz42 = b.binary(baz, i, with: .Add)
+            let toPrimitive = b.createSymbolProperty("toPrimitive")
+            let sm = b.loadString("sm")
+            let C = b.buildClassDefinition { cls in
+                cls.addInstanceProperty("foo")
+                cls.addInstanceProperty("bar", value: baz)
+                cls.addInstanceElement(0, value: i)
+                cls.addInstanceElement(1)
+                cls.addInstanceElement(-1)
+                cls.addInstanceComputedProperty(baz42)
+                cls.addInstanceComputedProperty(two, value: baz42)
+                cls.addConstructor(with: .parameters(n: 1)) { params in
+                    let this = params[0]
+                    b.setProperty("foo", of: this, to: params[1])
+                }
+                cls.addInstanceMethod("m", with: .parameters(n: 0)) { params in
+                    let this = params[0]
+                    let foo = b.getProperty("foo", of: this)
+                    b.doReturn(foo)
+                }
+                cls.addInstanceComputedMethod(toPrimitive, with: .parameters(n: 0)) { params in
+                    let this = params[0]
+                    let foo = b.getProperty("foo", of: this)
+                    b.doReturn(foo)
+                }
+                cls.addInstanceGetter(for: "baz") { this in
+                    b.doReturn(b.loadInt(1337))
+                }
+                cls.addInstanceSetter(for: "baz") { this, v in
+                }
+                cls.addInstanceComputedGetter(for: baz) { this in
+                    b.doReturn(b.loadInt(1337))
+                }
+                cls.addInstanceComputedSetter(for: baz) { this, v in
+                }
+
+                cls.addStaticProperty("foo")
+                cls.addStaticInitializer { this in
+                    b.setProperty("foo", of: this, to: i)
+                }
+                cls.addStaticProperty("bar", value: baz)
+                cls.addStaticElement(0, value: i)
+                cls.addStaticElement(1)
+                cls.addStaticElement(-1)
+                cls.addStaticComputedProperty(baz42)
+                cls.addStaticComputedProperty(two, value: baz42)
+                cls.addStaticMethod("m", with: .parameters(n: 0)) { params in
+                    let this = params[0]
+                    let foo = b.getProperty("foo", of: this)
+                    b.doReturn(foo)
+                }
+                cls.addInstanceComputedMethod(sm, with: .parameters(n: 0)) { params in
+                    let this = params[0]
+                    let foo = b.getProperty("foo", of: this)
+                    b.doReturn(foo)
+                }
+                cls.addStaticGetter(for: "baz") { this in
+                    b.doReturn(b.loadInt(1337))
+                }
+                cls.addStaticSetter(for: "baz") { this, v in
+                }
+                cls.addStaticComputedGetter(for: baz) { this in
+                    b.doReturn(b.loadInt(1337))
+                }
+                cls.addStaticComputedSetter(for: baz) { this, v in
+                }
+
+                cls.addPrivateInstanceProperty("ifoo")
+                cls.addPrivateInstanceProperty("ibar", value: baz)
+                cls.addPrivateInstanceMethod("im", with: .parameters(n: 0)) { args in
+                    let this = args[0]
+                    let foo = b.getPrivateProperty("ifoo", of: this)
+                    b.setPrivateProperty("ibar", of: this, to: foo)
+                    b.doReturn(foo)
+                }
+                cls.addPrivateInstanceMethod("in", with: .parameters(n: 1)) { args in
+                    let this = args[0]
+                    b.callPrivateMethod("im", on: this)
+                    b.updatePrivateProperty("ibar", of: this, with: args[1], using: .Add)
+                }
+                cls.addPrivateStaticProperty("sfoo")
+                cls.addPrivateStaticProperty("sbar", value: baz)
+                cls.addPrivateStaticMethod("sm", with: .parameters(n: 0)) { args in
+                    let this = args[0]
+                    let foo = b.getPrivateProperty("sfoo", of: this)
+                    b.setPrivateProperty("sbar", of: this, to: foo)
+                    b.doReturn(foo)
+                }
+                cls.addPrivateStaticMethod("sn", with: .parameters(n: 1)) { args in
+                    let this = args[0]
+                    b.callPrivateMethod("sm", on: this)
+                    b.updatePrivateProperty("sbar", of: this, with: args[1], using: .Add)
+                }
+            }
+            b.construct(C, withArgs: [b.loadInt(42)])
+            b.reassign(variable: C, value: b.createNamedVariable(forBuiltin: "Uint8Array"))
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v3 = "baz" + 42;
+                const v5 = Symbol.toPrimitive;
+                class C7 {
+                    foo;
+                    bar = "baz";
+                    0 = 42;
+                    1;
+                    [-1];
+                    [v3];
+                    [2] = v3;
+                    constructor(a9) {
+                        this.foo = a9;
+                    }
+                    m() {
+                        return this.foo;
+                    }
+                    [v5]() {
+                        return this.foo;
+                    }
+                    get baz() {
+                        return 1337;
+                    }
+                    set baz(a17) {
+                    }
+                    get ["baz"]() {
+                        return 1337;
+                    }
+                    set ["baz"](a21) {
+                    }
+                    static foo;
+                    static {
+                        this.foo = 42;
+                    }
+                    static bar = "baz";
+                    static 0 = 42;
+                    static 1;
+                    static [-1];
+                    static [v3];
+                    static [2] = v3;
+                    static m() {
+                        return this.foo;
+                    }
+                    ["sm"]() {
+                        return this.foo;
+                    }
+                    static get baz() {
+                        return 1337;
+                    }
+                    static set baz(a30) {
+                    }
+                    static get ["baz"]() {
+                        return 1337;
+                    }
+                    static set ["baz"](a34) {
+                    }
+                    #ifoo;
+                    #ibar = "baz";
+                    #im() {
+                        const v36 = this.#ifoo;
+                        this.#ibar = v36;
+                        return v36;
+                    }
+                    #in(a38) {
+                        this.#im();
+                        this.#ibar += a38;
+                    }
+                    static #sfoo;
+                    static #sbar = "baz";
+                    static #sm() {
+                        const v41 = this.#sfoo;
+                        this.#sbar = v41;
+                        return v41;
+                    }
+                    static #sn(a43) {
+                        this.#sm();
+                        this.#sbar += a43;
+                    }
+                }
+                new C7(42);
+                C7 = Uint8Array;
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testClassDefinitionLiftingWeirdNames() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let v = b.loadInt(42)
+            b.buildClassDefinition { cls in
+                for name in ["???", "0", "01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
+                    cls.addInstanceProperty(name, value: v)
+                    cls.addStaticProperty(name, value: v)
+                    cls.addInstanceMethod(name, with: .parameters(n: 0)) { params in
+                    }
+                    cls.addStaticMethod(name, with: .parameters(n: 0)) { params in
+                    }
+                }
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                class C1 {
+                    "???" = 42;
+                    static "???" = 42;
+                    "???"() {
+                    }
+                    static "???"() {
+                    }
+                    0 = 42;
+                    static 0 = 42;
+                    0() {
+                    }
+                    static 0() {
+                    }
+                    "01" = 42;
+                    static "01" = 42;
+                    "01"() {
+                    }
+                    static "01"() {
+                    }
+                    1 = 42;
+                    static 1 = 42;
+                    1() {
+                    }
+                    static 1() {
+                    }
+                    "0.1" = 42;
+                    static "0.1" = 42;
+                    "0.1"() {
+                    }
+                    static "0.1"() {
+                    }
+                    "-1" = 42;
+                    static "-1" = 42;
+                    "-1"() {
+                    }
+                    static "-1"() {
+                    }
+                    $valid_id_42 = 42;
+                    static $valid_id_42 = 42;
+                    $valid_id_42() {
+                    }
+                    static $valid_id_42() {
+                    }
+                    "42_invalid_id" = 42;
+                    static "42_invalid_id" = 42;
+                    "42_invalid_id"() {
+                    }
+                    static "42_invalid_id"() {
+                    }
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testClassGetterSetterLiftingWeirdNames() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            b.buildClassDefinition { cls in
+                for name in ["???", "0", "01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
+                    cls.addInstanceGetter(for: name) { this in
+                    }
+                    cls.addStaticGetter(for: name) { this in
+                    }
+                    cls.addInstanceSetter(for: name) { this, val in
+                    }
+                    cls.addStaticSetter(for: name) { this, val in
+                    }
+                }
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                class C0 {
+                    get "???"() {
+                    }
+                    static get "???"() {
+                    }
+                    set "???"(a4) {
+                    }
+                    static set "???"(a6) {
+                    }
+                    get 0() {
+                    }
+                    static get 0() {
+                    }
+                    set 0(a10) {
+                    }
+                    static set 0(a12) {
+                    }
+                    get "01"() {
+                    }
+                    static get "01"() {
+                    }
+                    set "01"(a16) {
+                    }
+                    static set "01"(a18) {
+                    }
+                    get 1() {
+                    }
+                    static get 1() {
+                    }
+                    set 1(a22) {
+                    }
+                    static set 1(a24) {
+                    }
+                    get "0.1"() {
+                    }
+                    static get "0.1"() {
+                    }
+                    set "0.1"(a28) {
+                    }
+                    static set "0.1"(a30) {
+                    }
+                    get "-1"() {
+                    }
+                    static get "-1"() {
+                    }
+                    set "-1"(a34) {
+                    }
+                    static set "-1"(a36) {
+                    }
+                    get $valid_id_42() {
+                    }
+                    static get $valid_id_42() {
+                    }
+                    set $valid_id_42(a40) {
+                    }
+                    static set $valid_id_42(a42) {
+                    }
+                    get "42_invalid_id"() {
+                    }
+                    static get "42_invalid_id"() {
+                    }
+                    set "42_invalid_id"(a46) {
+                    }
+                    static set "42_invalid_id"(a48) {
+                    }
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testClassExpressionLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let C = b.buildClassDefinition(isExpression: true) { cls in
+                cls.addInstanceElement(1)
+            }
+
+            let D = b.createNamedVariable("d", declarationMode: .let, initialValue: C)
+            b.construct(C, withArgs: [])
+            b.construct(D, withArgs: [])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v0 = class {
+                    1;
+                }
+                let d = v0;
+                new v0();
+                new d();
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testClassExpressionWithSuperClassLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let C = b.buildClassDefinition(isExpression: true) { _ in }
+            let D = b.buildClassDefinition(withSuperclass: C, isExpression: true) { _ in }
+            b.construct(D, withArgs: [])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v0 = class {
+                }
+                const v1 = class extends v0 {
+                }
+                new v1();
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testArrayLiteralLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            var initialValues = [Variable]()
+            initialValues.append(b.loadInt(1))
+            initialValues.append(b.loadInt(2))
+            initialValues.append(b.loadUndefined())
+            initialValues.append(b.loadInt(4))
+            initialValues.append(b.loadUndefined())
+            initialValues.append(b.loadInt(6))
+            let v = b.loadString("foobar")
+            b.reassign(variable: v, value: b.loadUndefined())
+            initialValues.append(v)
+            let va = b.createArray(with: initialValues)
+            b.createArray(with: [b.loadInt(301), b.loadUndefined()])
+            b.createArray(with: [b.loadUndefined()])
+            b.createArray(with: [va, b.loadUndefined()], spreading: [true, false])
+            b.createArray(with: [b.loadUndefined()], spreading: [false])
+            b.createIntArray(with: [1, 2, 3, 4])
+            b.createFloatArray(with: [1.1, 2.2, 3.3, 4.4])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                let v6 = "foobar";
+                const v8 = [1,2,,4,,6,v6 = undefined];
+                [301,,];
+                [,];
+                [...v8,,];
+                [,];
+                [1,2,3,4];
+                [1.1,2.2,3.3,4.4];
+
+                """
+            #expect(actual == expected)
+
+        }
+    }
+
+    @Test func testHoleyArrayLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let v0 = b.loadInt(42)
+            let v1 = b.loadUndefined()
+            // Should lift to: [42,,,42]
+            b.createArray(with: [v0, v1, v1, v0])
+
+            // Should lift to: [,,]
+            b.createArray(with: [v1, v1])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                [42,,,42];
+                [,,];
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testMapLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            b.createMap(withKeys: [], withValues: [])
+
+            let key1 = b.loadString("key1")
+            let val1 = b.loadInt(42)
+            let key2 = b.loadString("key2")
+            let val2 = b.loadInt(43)
+            b.createMap(withKeys: [key1, key2], withValues: [val1, val2])
+            let undef = b.loadUndefined()
+            b.emit(CreateMap(numInitialValues: 1), withInputs: [undef])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                new Map([]);
+                new Map([["key1",42],["key2",43]]);
+                new Map([undefined]);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testBinaryOperationLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let Math = b.createNamedVariable(forBuiltin: "Math")
+            let v = b.callMethod("random", on: Math)
+            let two_v = b.binary(v, v, with: .Add)
+            let three_v = b.binary(two_v, v, with: .Add)
+            let twelve_v = b.binary(b.loadInt(4), three_v, with: .Mul)
+            let six_v = b.binary(twelve_v, b.loadInt(2), with: .Div)
+            let print = b.createNamedVariable(forBuiltin: "print")
+            b.callFunction(print, withArgs: [six_v])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            // TODO: Lifting could be improved to remove some brackets.
+            let expected = """
+                const v1 = Math.random();
+                print((4 * ((v1 + v1) + v1)) / 2);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testRegExpInlining() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let v0 = b.loadRegExp("a", RegExpFlags())
+            b.compare(v0, with: v0, using: .equal)
+            let v1 = b.loadRegExp("b", RegExpFlags())
+            b.compare(v0, with: v1, using: .equal)
+
+            let program = b.finalize()
+
+            let actual = fuzzer.lifter.lift(program)
+            let expected = """
+                const v0 = /a/;
+                v0 == v0;
+                v0 == /b/;
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testNestedCodeStrings() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let code1 = b.buildCodeString {
+                let code2 = b.buildCodeString {
+                    let code3 = b.buildCodeString {
+                        let code4 = b.buildCodeString {
+                            let print = b.createNamedVariable(forBuiltin: "print")
+                            let msg = b.loadString("Hello")
+                            b.callFunction(print, withArgs: [msg])
+                        }
+                        let code5 = b.buildCodeString {
+                            let print = b.createNamedVariable(forBuiltin: "print")
+                            let msg = b.loadString("World")
+                            b.callFunction(print, withArgs: [msg])
+                        }
+                        let eval = b.createNamedVariable(forBuiltin: "eval")
+                        b.callFunction(eval, withArgs: [code4])
+                        b.callFunction(eval, withArgs: [code5])
                     }
                     let eval = b.createNamedVariable(forBuiltin: "eval")
-                    b.callFunction(eval, withArgs: [code4])
-                    b.callFunction(eval, withArgs: [code5])
+                    b.callFunction(eval, withArgs: [code3])
                 }
                 let eval = b.createNamedVariable(forBuiltin: "eval")
-                b.callFunction(eval, withArgs: [code3])
+                b.callFunction(eval, withArgs: [code2])
             }
             let eval = b.createNamedVariable(forBuiltin: "eval")
-            b.callFunction(eval, withArgs: [code2])
+            b.callFunction(eval, withArgs: [code1])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v0 = `
+                    const v1 = \\`
+                        const v2 = \\\\\\`
+                            const v3 = \\\\\\\\\\\\\\`
+                                print("Hello");
+                            \\\\\\\\\\\\\\`;
+                            const v7 = \\\\\\\\\\\\\\`
+                                print("World");
+                            \\\\\\\\\\\\\\`;
+                            eval(v3);
+                            eval(v7);
+                        \\\\\\`;
+                        eval(v2);
+                    \\`;
+                    eval(v1);
+                `;
+                eval(v0);
+
+                """
+
+            #expect(actual == expected)
+
         }
-        let eval = b.createNamedVariable(forBuiltin: "eval")
-        b.callFunction(eval, withArgs: [code1])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v0 = `
-                const v1 = \\`
-                    const v2 = \\\\\\`
-                        const v3 = \\\\\\\\\\\\\\`
-                            print("Hello");
-                        \\\\\\\\\\\\\\`;
-                        const v7 = \\\\\\\\\\\\\\`
-                            print("World");
-                        \\\\\\\\\\\\\\`;
-                        eval(v3);
-                        eval(v7);
-                    \\\\\\`;
-                    eval(v2);
-                \\`;
-                eval(v1);
-            `;
-            eval(v0);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-
     }
 
-    func testFunctionLifting() {
+    @Test func testFunctionLifting() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        let f = b.buildPlainFunction(with: .parameters(n: 1)) { args in
-            b.doReturn(args[0])
-        }
-        b.callFunction(f, withArgs: [b.loadFloat(13.37)])
-        let f2 = b.buildArrowFunction(with: .parameters(n: 0)) { args in
-            b.doReturn(b.loadString("foobar"))
-        }
-        b.reassign(variable: f, value: f2)
-        b.callFunction(f)
+            let b = fuzzer.makeBuilder()
 
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            function f0(a1) {
-                return a1;
+            let f = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+                b.doReturn(args[0])
             }
-            f0(13.37);
-            f0 = () => "foobar";
-            f0();
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testStrictFunctionLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let sf = b.buildPlainFunction(with: .parameters(n: 3)) { args in
-            b.directive("use strict")
-            b.buildIfElse(
-                args[0],
-                ifBody: {
-                    let v = b.binary(args[1], args[2], with: .Mul)
-                    b.doReturn(v)
-                },
-                elseBody: {
-                    let v = b.binary(args[1], args[2], with: .Add)
-                    b.doReturn(v)
-                })
-        }
-        b.callFunction(sf, withArgs: [b.loadBool(true), b.loadInt(1), b.loadInt(2)])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            function f0(a1, a2, a3) {
-                'use strict';
-                if (a1) {
-                    return a2 * a3;
-                } else {
-                    return a2 + a3;
-                }
-            }
-            f0(true, 1, 2);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testNamedFunctionLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let foo = b.buildPlainFunction(with: .parameters(n: 0), named: "foo") { args in }
-        let bar = b.buildGeneratorFunction(with: .parameters(n: 0), named: "bar") { args in }
-        let baz = b.buildAsyncFunction(with: .parameters(n: 0), named: "baz") { args in }
-        let bla = b.buildAsyncGeneratorFunction(with: .parameters(n: 0), named: "bla") { args in }
-
-        b.callFunction(foo)
-        b.callFunction(bar)
-        b.callFunction(baz)
-        b.callFunction(bla)
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            function foo() {
-            }
-            function* bar() {
-            }
-            async function baz() {
-            }
-            async function* bla() {
-            }
-            foo();
-            bar();
-            baz();
-            bla();
-
-            """
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testFunctionHoistingLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let foo = b.createNamedVariable("foo", declarationMode: .none)
-        b.callFunction(foo)
-        b.buildPlainFunction(with: .parameters(n: 0), named: "foo") { args in }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            foo();
-            function foo() {
-            }
-
-            """
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testConstructorLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let c1 = b.buildConstructor(with: .parameters(n: 2)) { args in
-            let this = args[0]
-            b.setProperty("foo", of: this, to: args[1])
-            b.setProperty("bar", of: this, to: args[2])
-        }
-        b.construct(c1, withArgs: [b.loadInt(42), b.loadInt(43)])
-        let c2 = b.createNamedVariable(forBuiltin: "Object")
-        b.reassign(variable: c1, value: c2)
-        b.construct(c1, withArgs: [b.loadInt(44), b.loadInt(45)])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            function F0(a2, a3) {
-                if (!new.target) { throw 'must be called with new'; }
-                this.foo = a2;
-                this.bar = a3;
-            }
-            new F0(42, 43);
-            F0 = Object;
-            new F0(44, 45);
-
-            """
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testAsyncFunctionLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let f1 = b.buildAsyncFunction(with: .parameters(n: 2)) { args in
-            let lhs = b.await(args[0])
-            let rhs = b.await(args[1])
-            let r = b.binary(lhs, rhs, with: .Add)
-            b.doReturn(r)
-        }
-        let f2 = b.buildAsyncGeneratorFunction(with: .parameters(n: 2)) { args in
-            b.directive("use strict")
-            let lhs = b.await(args[0])
-            let rhs = b.await(args[1])
-            let r = b.binary(lhs, rhs, with: .Mul)
-            b.yield(r)
-        }
-        b.callFunction(
-            f1,
-            withArgs: [
-                b.createNamedVariable(forBuiltin: "promise1"),
-                b.createNamedVariable(forBuiltin: "promise2"),
-            ])
-        b.callFunction(
-            f2,
-            withArgs: [
-                b.createNamedVariable(forBuiltin: "promise3"),
-                b.createNamedVariable(forBuiltin: "promise4"),
-            ])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            async function f0(a1, a2) {
-                return await a1 + await a2;
-            }
-            async function* f6(a7, a8) {
-                'use strict';
-                yield await a7 * await a8;
-            }
-            f0(promise1, promise2);
-            f6(promise3, promise4);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testConditionalOperationLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v1 = b.createObject(with: ["a": b.loadInt(1337)])
-        let v2 = b.getProperty("a", of: v1)
-        let v3 = b.loadInt(10)
-        let v4 = b.compare(v2, with: v3, using: .greaterThan)
-        let _ = b.ternary(v4, v2, v3)
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v2 = ({ a: 1337 }).a;
-            v2 > 10 ? v2 : 10;
-
-            """
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testReassignmentLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v0 = b.loadInt(1337)
-        let v1 = b.loadFloat(13.37)
-        b.reassign(variable: v0, value: v1, with: .Add)
-        let v2 = b.loadString("Hello")
-        b.reassign(variable: v1, value: v2)
-        let v3 = b.loadInt(1336)
-        let v4 = b.unary(.PreInc, v3)
-        b.unary(.PostInc, v4)
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            let v0 = 1337;
-            let v1 = 13.37;
-            v0 += v1;
-            v1 = "Hello";
-            let v3 = 1336;
-            let v4 = ++v3;
-            v4++;
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testUpdateLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v0 = b.loadInt(1337)
-        let v1 = b.loadFloat(13.37)
-        b.reassign(variable: v0, value: v1, with: .Add)
-        b.reassign(variable: v0, value: v1, with: .Mul)
-        b.reassign(variable: v0, value: v1, with: .LShift)
-        let v2 = b.loadString("hello")
-        let v3 = b.loadString("world")
-        b.reassign(variable: v2, value: v3, with: .Add)
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            let v0 = 1337;
-            v0 += 13.37;
-            v0 *= 13.37;
-            v0 <<= 13.37;
-            let v2 = "hello";
-            v2 += "world";
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testReassignmentInlining() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let foo = b.createNamedVariable(forBuiltin: "foo")
-        let bar = b.createNamedVariable(forBuiltin: "bar")
-        let baz = b.createNamedVariable(forBuiltin: "baz")
-        let i = b.loadInt(42)
-        b.reassign(variable: i, value: b.loadInt(43))
-        b.callFunction(foo, withArgs: [i])
-        b.callFunction(bar, withArgs: [i])
-
-        let j = b.loadInt(44)
-        b.reassign(variable: j, value: b.loadInt(45))
-        b.reassign(variable: j, value: b.loadInt(46))
-        b.callFunction(foo, withArgs: [j])
-
-        let k = b.loadInt(47)
-        b.buildRepeatLoop(n: 10) { i in
-            b.reassign(variable: k, value: i)
-        }
-        b.callFunction(foo, withArgs: [k])
-
-        let l = b.loadInt(48)
-        b.reassign(variable: l, value: b.loadInt(49))
-        b.callFunction(foo, withArgs: [l, l, l])
-
-        let m = b.loadInt(50)
-        b.reassign(variable: m, value: b.loadInt(51))
-        var t = b.callFunction(baz)
-        t = b.callFunction(bar, withArgs: [m, m, t, m])
-        b.callFunction(foo, withArgs: [t])
-
-        // Some operations such as element stores force the lhs to be an identifier, so test that here.
-        let n = b.loadInt(52)
-        b.reassign(variable: n, value: b.createArray(with: []))
-        b.setElement(42, of: n, to: n)
-
-        let o = b.loadInt(53)
-        b.buildWhileLoop({
-            b.reassign(variable: o, value: i)
-            return b.loadBool(false)
-        }) {
-        }
-        b.callFunction(foo, withArgs: [o])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            let v3 = 42;
-            foo(v3 = 43);
-            bar(v3);
-            let v7 = 44;
-            v7 = 45;
-            v7 = 46;
-            foo(v7);
-            let v11 = 47;
-            for (let v12 = 0; v12 < 10; v12++) {
-                v11 = v12;
-            }
-            foo(v11);
-            let v15 = 48;
-            foo(v15 = 49, v15, v15);
-            let v18 = 50;
-            foo(bar(v18 = 51, v18, baz(), v18));
-            let v23 = 52;
-            v23 = [];
-            v23[42] = v23;
-            let v25 = 53;
-            while (v25 = v3, false) {
-            }
-            foo(v25);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testCreateTemplateLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.createTemplateString(from: [""], interpolating: [])
-        let bar = b.loadString("bar")
-        b.createTemplateString(from: ["foo", "baz"], interpolating: [bar])
-        let marker = b.callFunction(b.createNamedVariable(forBuiltin: "getMarker"))
-        let space = b.loadString(" ")
-        let inner = b.createTemplateString(from: ["Hello", "World"], interpolating: [space])
-        let _ = b.createTemplateString(
-            from: ["", "", "", ""], interpolating: [marker, inner, marker])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            ``;
-            `foo${"bar"}baz`;
-            const v4 = getMarker();
-            `${v4}${`Hello${" "}World`}${v4}`;
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testPropertyAccessLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let o = b.createNamedVariable(forBuiltin: "Obj")
-        let propA = b.getProperty("a", of: o)
-        let propB = b.getProperty("b", of: propA)
-        let propC = b.getProperty("c", of: propB)
-        b.setElement(1337, of: o, to: propC)
-        let o2 = b.createArray(with: [])
-        let elem0 = b.getElement(0, of: o)
-        let elem1 = b.getElement(1, of: elem0)
-        let elem2 = b.getElement(2, of: elem1)
-        // For aesthetic reasons, the object literal isn't inlined into the assignment expression, but the property name expression is.
-        b.setComputedProperty(elem2, of: o2, to: b.loadInt(42))
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            Obj[1337] = Obj.a.b.c;
-            const t1 = [];
-            t1[Obj[0][1][2]] = 42;
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testPropertyAccessWithBinopLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v0 = b.loadInt(42)
-        let v1 = b.createObject(with: ["foo": v0])
-        let v2 = b.loadString("baz")
-        let v3 = b.loadInt(1337)
-        let v4 = b.loadString("42")
-        let v5 = b.loadFloat(13.37)
-        b.setProperty("foo", of: v1, to: v5)
-        b.updateProperty("foo", of: v1, with: v4, using: BinaryOperator.Add)
-        b.setProperty("bar", of: v1, to: v3)
-        b.updateProperty("bar", of: v1, with: v3, using: BinaryOperator.Mul)
-        b.setComputedProperty(v2, of: v1, to: v0)
-        b.updateComputedProperty(v2, of: v1, with: v3, using: BinaryOperator.LogicAnd)
-        let arr = b.createArray(with: [v3, v3, v3])
-        b.setElement(0, of: arr, to: v0)
-        b.updateElement(0, of: arr, with: v5, using: BinaryOperator.Sub)
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v1 = { foo: 42 };
-            v1.foo = 13.37;
-            v1.foo += "42";
-            v1.bar = 1337;
-            v1.bar *= 1337;
-            v1["baz"] = 42;
-            v1["baz"] &&= 1337;
-            const v6 = [1337,1337,1337];
-            v6[0] = 42;
-            v6[0] -= 13.37;
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testPropertyConfigurationOpsLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let obj = b.createObject(with: [:])
-        let v = b.loadUndefined()
-        let f1 = b.buildPlainFunction(with: .parameters(n: 0)) { args in
-            b.doReturn(v)
-        }
-        let f2 = b.buildPlainFunction(with: .parameters(n: 1)) { args in
-            b.reassign(variable: v, value: args[0])
-        }
-        let num = b.loadInt(42)
-        b.configureProperty(
-            "foo", of: obj, usingFlags: [.enumerable, .configurable], as: .getter(f1))
-        b.configureProperty("bar", of: obj, usingFlags: [], as: .setter(f2))
-        b.configureProperty("foobar", of: obj, usingFlags: [.enumerable], as: .getterSetter(f1, f2))
-        b.configureProperty("baz", of: obj, usingFlags: [.writable], as: .value(num))
-        b.configureElement(0, of: obj, usingFlags: [.writable], as: .getter(f1))
-        b.configureElement(1, of: obj, usingFlags: [.writable, .enumerable], as: .setter(f2))
-        b.configureElement(
-            2, of: obj, usingFlags: [.writable, .enumerable, .configurable],
-            as: .getterSetter(f1, f2))
-        b.configureElement(3, of: obj, usingFlags: [], as: .value(num))
-        let p = b.createNamedVariable(forBuiltin: "ComputedProperty")
-        b.configureComputedProperty(p, of: obj, usingFlags: [.configurable], as: .getter(f1))
-        b.configureComputedProperty(p, of: obj, usingFlags: [.enumerable], as: .setter(f2))
-        b.configureComputedProperty(p, of: obj, usingFlags: [.writable], as: .getterSetter(f1, f2))
-        b.configureComputedProperty(p, of: obj, usingFlags: [], as: .value(num))
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v0 = {};
-            let v1 = undefined;
-            function f2() {
-                return v1;
-            }
-            function f3(a4) {
-                v1 = a4;
-            }
-            Object.defineProperty(v0, "foo", { configurable: true, enumerable: true, get: f2 });
-            Object.defineProperty(v0, "bar", { set: f3 });
-            Object.defineProperty(v0, "foobar", { enumerable: true, get: f2, set: f3 });
-            Object.defineProperty(v0, "baz", { writable: true, value: 42 });
-            Object.defineProperty(v0, 0, { writable: true, get: f2 });
-            Object.defineProperty(v0, 1, { writable: true, enumerable: true, set: f3 });
-            Object.defineProperty(v0, 2, { writable: true, configurable: true, enumerable: true, get: f2, set: f3 });
-            Object.defineProperty(v0, 3, { value: 42 });
-            Object.defineProperty(v0, ComputedProperty, { configurable: true, get: f2 });
-            Object.defineProperty(v0, ComputedProperty, { enumerable: true, set: f3 });
-            Object.defineProperty(v0, ComputedProperty, { writable: true, get: f2, set: f3 });
-            Object.defineProperty(v0, ComputedProperty, { value: 42 });
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testPropertyDeletionLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let i = b.loadInt(1337)
-        let s = b.loadString("bar")
-        let f = b.loadFloat(13.37)
-        var initialProperties = [String: Variable]()
-        initialProperties["foo"] = i
-        initialProperties["bar"] = f
-        let o = b.createObject(with: initialProperties)
-        let _ = b.deleteProperty("foo", of: o)
-        let _ = b.deleteComputedProperty(s, of: o)
-        let a = b.createArray(with: [b.loadInt(301), b.loadInt(4), b.loadInt(68), b.loadInt(22)])
-        let _ = b.deleteElement(3, of: a)
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v3 = { bar: 13.37, foo: 1337 };
-            delete v3.foo;
-            delete v3["bar"];
-            const t1 = [301,4,68,22];
-            delete t1[3];
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testGuardedPropertyAccessLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let o = b.createNamedVariable(forBuiltin: "o")
-        let a = b.getProperty("a", of: o, guard: true)
-        b.getProperty("b", of: a, guard: true)
-        b.getElement(0, of: o, guard: true)
-        b.getComputedProperty(b.loadString("bar"), of: o, guard: true)
-        b.deleteProperty("unfoo", of: o, guard: true)
-        b.deleteElement(1, of: o, guard: true)
-        b.deleteComputedProperty(b.loadString("unbar"), of: o, guard: true)
-
-        // Stores must never use the optional chaining operator on the left-hand side.
-        let v = b.loadInt(42)
-        let t1 = b.getProperty("t1", of: o, guard: true)
-        b.setProperty("foo", of: t1, to: v)
-        let t2 = b.getProperty("t2", of: o, guard: true)
-        b.setElement(0, of: t2, to: v)
-        let t3 = b.getProperty("t3", of: o, guard: true)
-        b.setComputedProperty(b.loadString("baz"), of: t3, to: v)
-
-        let program = b.finalize()
-
-        let actual = fuzzer.lifter.lift(program)
-        let expected = """
-            o?.a?.b;
-            o?.[0];
-            o?.["bar"];
-            delete o?.unfoo;
-            delete o?.[1];
-            delete o?.["unbar"];
-            const t0 = o?.t1;
-            t0.foo = 42;
-            const t8 = o?.t2;
-            t8[0] = 42;
-            const t10 = o?.t3;
-            t10["baz"] = 42;
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testGuardedCallLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let f1 = b.createNamedVariable(forBuiltin: "f1")
-        let f2 = b.createNamedVariable(forBuiltin: "f2")
-        b.callFunction(f1, guard: true)
-        let v1 = b.callFunction(f2, guard: true)
-        let c1 = b.createNamedVariable(forBuiltin: "c1")
-        let c2 = b.createNamedVariable(forBuiltin: "c2")
-        b.construct(c1, guard: true)
-        let v2 = b.construct(c2, guard: true)
-        let o = b.createNamedVariable(forBuiltin: "obj")
-        b.callMethod("m", on: o, guard: true)
-        let v3 = b.callMethod("n", on: o, guard: true)
-        b.callComputedMethod(b.loadString("o"), on: o, withArgs: [v1, v2, v3], guard: true)
-        let v4 = b.callComputedMethod(
-            b.loadString("p"), on: o, withArgs: [v1, v2, v3], guard: true)
-        b.reassign(variable: v3, value: b.loadString("foo"))
-        b.reassign(variable: v4, value: b.loadString("bar"))
-        b.reassign(variable: v3, value: b.loadString("baz"))
-
-        let program = b.finalize()
-
-        let actual = fuzzer.lifter.lift(program)
-        let expected = """
-            try { f1(); } catch (e) {}
-            let v3;
-            try { v3 = f2(); } catch (e) {}
-            try { new c1(); } catch (e) {}
-            let v7;
-            try { v7 = new c2(); } catch (e) {}
-            try { obj.m(); } catch (e) {}
-            let v10;
-            try { v10 = obj.n(); } catch (e) {}
-            try { obj["o"](v3, v7, v10); } catch (e) {}
-            let v14;
-            try { v14 = obj["p"](v3, v7, v10); } catch (e) {}
-            v10 = "foo";
-            v14 = "bar";
-            v10 = "baz";
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testGuardedMultilineLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let str = b.loadString("foo")
-        let _ = b.construct(str, guard: true)
-
-        let program = b.finalize()
-
-        let actual = fuzzer.lifter.lift(program)
-        let expected = """
-            try {
-            const t0 = "foo";
-            new t0();
-            } catch (e) {}
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testFunctionCallLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let s = b.loadString("print('Hello World!')")
-        var eval = b.createNamedVariable(forBuiltin: "eval")
-        b.callFunction(eval, withArgs: [s])
-        let this = b.createNamedVariable(forBuiltin: "this")
-        eval = b.getProperty("eval", of: this)
-        // The property load must not be inlined, otherwise it would not be distinguishable from a method call (like the one following it).
-        b.callFunction(eval, withArgs: [s])
-        b.callMethod("eval", on: this, withArgs: [s])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            eval("print('Hello World!')");
-            const t0 = this.eval;
-            t0("print('Hello World!')");
-            this.eval("print('Hello World!')");
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testFunctionCallWithSpreadLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        var initialValues = [Variable]()
-        initialValues.append(b.loadInt(1))
-        initialValues.append(b.loadInt(2))
-        initialValues.append(b.loadString("Hello"))
-        initialValues.append(b.loadString("World"))
-        let values = b.createArray(with: initialValues)
-        let n = b.loadFloat(13.37)
-        let Array = b.createNamedVariable(forBuiltin: "Array")
-        let _ = b.callFunction(Array, withArgs: [values, n], spreading: [true, false])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            Array(...[1,2,"Hello","World"], 13.37);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testMethodCallLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let Math = b.createNamedVariable(forBuiltin: "Math")
-        let r = b.callMethod("random", on: Math)
-        b.callMethod("sin", on: Math, withArgs: [r])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            Math.sin(Math.random());
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testMethodBindLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let Math = b.createNamedVariable(forBuiltin: "Math")
-        let r = b.callMethod("random", on: Math)
-        let bound = b.bindMethod("sin", on: Math)
-        b.callFunction(bound, withArgs: [Math, r])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v1 = Math.random();
-            let v2 = Function.prototype.call.bind(Math.sin);
-            v2(Math, v1);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testFunctionBindLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-        let indexOfSig = [.jsAnything, .opt(.integer)] => .integer
-
-        let arrayBuiltin = b.createNamedVariable(forBuiltin: "Array")
-        let arrayProto = b.getProperty("prototype", of: arrayBuiltin)
-        let indexOf = b.getProperty("indexOf", of: arrayProto)
-        XCTAssertEqual(b.type(of: indexOf), .unboundFunction(indexOfSig, receiver: .jsArray))
-        let indexOfNothingBound = b.bindFunction(indexOf, boundArgs: [])
-        XCTAssertEqual(b.type(of: indexOfNothingBound), b.type(of: indexOf))
-        let array = b.construct(arrayBuiltin)
-        let indexOfBoundThis = b.bindFunction(indexOf, boundArgs: [array])
-        XCTAssertEqual(b.type(of: indexOfBoundThis), .function(indexOfSig))
-        let str = b.loadString("value")
-        let indexOfBoundThisAndArg = b.bindFunction(indexOf, boundArgs: [array, str])
-        XCTAssertEqual(b.type(of: indexOfBoundThisAndArg), .function([.opt(.integer)] => .integer))
-        let int = b.loadInt(1)
-        let indexOfBoundAll = b.bindFunction(indexOf, boundArgs: [array, str, int])
-        XCTAssertEqual(b.type(of: indexOfBoundAll), .function([] => .integer))
-        let indexOfBoundTooMuch = b.bindFunction(indexOf, boundArgs: [array, str, int, int])
-        XCTAssertEqual(b.type(of: indexOfBoundTooMuch), .function([] => .integer))
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v2 = Array.prototype.indexOf;
-            let v3 = v2.bind();
-            const v4 = new Array();
-            let v5 = v2.bind(v4);
-            let v7 = v2.bind(v4, "value");
-            let v9 = v2.bind(v4, "value", 1);
-            let v10 = v2.bind(v4, "value", 1, 1);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testMethodCallWithSpreadLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let Math = b.createNamedVariable(forBuiltin: "Math")
-        var initialValues = [Variable]()
-        initialValues.append(b.loadInt(1))
-        initialValues.append(b.loadInt(3))
-        initialValues.append(b.loadInt(9))
-        initialValues.append(b.loadInt(10))
-        initialValues.append(b.loadInt(2))
-        initialValues.append(b.loadInt(6))
-        let values = b.createArray(with: initialValues)
-        let n1 = b.loadInt(0)
-        let n2 = b.loadInt(4)
-        b.callMethod("max", on: Math, withArgs: [n1, values, n2], spreading: [false, true, false])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            Math.max(0, ...[1,3,9,10,2,6], 4);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testComputedMethodCallLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let s = b.loadString("Hello World")
-        let iterator = b.createSymbolProperty("iterator")
-        let r = b.callComputedMethod(iterator, on: s)
-        b.callMethod("next", on: r)
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            ("Hello World")[Symbol.iterator]().next();
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testMethodCallLiftingWeirdNames() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let obj = b.createObject(with: [:])
-        for name in ["???", "0", "01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
-            b.callMethod(name, on: obj)
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v0 = {};
-            v0["???"]();
-            v0[0]();
-            v0["01"]();
-            v0[1]();
-            v0["0.1"]();
-            v0["-1"]();
-            v0.$valid_id_42();
-            v0["42_invalid_id"]();
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testMethodCallWithSpreadLiftingWeirdNames() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let obj = b.createObject(with: [:])
-        let values = b.createArray(with: [])
-        for name in ["???", "0", "01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
-            b.callMethod(name, on: obj, withArgs: [values], spreading: [true])
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v0 = {};
-            const v1 = [];
-            v0["???"](...v1);
-            v0[0](...v1);
-            v0["01"](...v1);
-            v0[1](...v1);
-            v0["0.1"](...v1);
-            v0["-1"](...v1);
-            v0.$valid_id_42(...v1);
-            v0["42_invalid_id"](...v1);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testMethodBindLiftingWeirdNames() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let obj = b.createObject(with: [:])
-        for name in ["???", "0", "01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
-            let bound = b.bindMethod(name, on: obj)
-            b.callFunction(bound, withArgs: [obj])
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v0 = {};
-            let v1 = Function.prototype.call.bind(v0["???"]);
-            v1(v0);
-            let v3 = Function.prototype.call.bind(v0[0]);
-            v3(v0);
-            let v5 = Function.prototype.call.bind(v0["01"]);
-            v5(v0);
-            let v7 = Function.prototype.call.bind(v0[1]);
-            v7(v0);
-            let v9 = Function.prototype.call.bind(v0["0.1"]);
-            v9(v0);
-            let v11 = Function.prototype.call.bind(v0["-1"]);
-            v11(v0);
-            let v13 = Function.prototype.call.bind(v0.$valid_id_42);
-            v13(v0);
-            let v15 = Function.prototype.call.bind(v0["42_invalid_id"]);
-            v15(v0);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testSuperMethodCallLiftingWeirdNames() {
-        let fuzzer: Fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildClassDefinition { cls in
-            cls.addInstanceMethod("sub", with: .parameters(n: 0)) { params in
-                for name in ["???", "0", "01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
-                    b.callSuperMethod(name)
-                }
-            }
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            class C0 {
-                sub() {
-                    super["???"]();
-                    super[0]();
-                    super["01"]();
-                    super[1]();
-                    super["0.1"]();
-                    super["-1"]();
-                    super.$valid_id_42();
-                    super["42_invalid_id"]();
-                }
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testComputedMethodCallWithSpreadLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let SomeObj = b.createNamedVariable(forBuiltin: "SomeObject")
-        let RandomMethod = b.createNamedVariable(forBuiltin: "RandomMethod")
-        let randomMethod = b.callFunction(RandomMethod)
-        let args = b.createArray(with: [b.loadInt(1), b.loadInt(2), b.loadInt(3), b.loadInt(4)])
-        b.callComputedMethod(randomMethod, on: SomeObj, withArgs: [args], spreading: [true])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            SomeObject[RandomMethod()](...[1,2,3,4]);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testPropertyLiftingWeirdNames() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let obj = b.createObject(with: [:])
-        for name in ["???", "0", "01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
-            b.setProperty(name, of: obj, to: b.getProperty(name, of: obj))
-            b.updateProperty(
-                name, of: obj, with: b.getProperty(name, of: obj, guard: true), using: .Add)
-            b.deleteProperty(name, of: obj)
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v0 = {};
-            v0["???"] = v0["???"];
-            v0["???"] += v0?.["???"];
-            delete v0["???"];
-            v0[0] = v0[0];
-            v0[0] += v0?.[0];
-            delete v0[0];
-            v0["01"] = v0["01"];
-            v0["01"] += v0?.["01"];
-            delete v0["01"];
-            v0[1] = v0[1];
-            v0[1] += v0?.[1];
-            delete v0[1];
-            v0["0.1"] = v0["0.1"];
-            v0["0.1"] += v0?.["0.1"];
-            delete v0["0.1"];
-            v0["-1"] = v0["-1"];
-            v0["-1"] += v0?.["-1"];
-            delete v0["-1"];
-            v0.$valid_id_42 = v0.$valid_id_42;
-            v0.$valid_id_42 += v0?.$valid_id_42;
-            delete v0.$valid_id_42;
-            v0["42_invalid_id"] = v0["42_invalid_id"];
-            v0["42_invalid_id"] += v0?.["42_invalid_id"];
-            delete v0["42_invalid_id"];
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testSuperPropertyLiftingWeirdNames() {
-        let fuzzer: Fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildClassDefinition { cls in
-            cls.addInstanceMethod("sub", with: .parameters(n: 0)) { params in
-                for name in ["???", "0", "01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
-                    b.setSuperProperty(name, to: b.getSuperProperty(name))
-                    b.updateSuperProperty(name, with: b.getSuperProperty(name), using: .Add)
-                }
-            }
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            class C0 {
-                sub() {
-                    super["???"] = super["???"];
-                    super["???"] += super["???"];
-                    super[0] = super[0];
-                    super[0] += super[0];
-                    super["01"] = super["01"];
-                    super["01"] += super["01"];
-                    super[1] = super[1];
-                    super[1] += super[1];
-                    super["0.1"] = super["0.1"];
-                    super["0.1"] += super["0.1"];
-                    super["-1"] = super["-1"];
-                    super["-1"] += super["-1"];
-                    super.$valid_id_42 = super.$valid_id_42;
-                    super.$valid_id_42 += super.$valid_id_42;
-                    super["42_invalid_id"] = super["42_invalid_id"];
-                    super["42_invalid_id"] += super["42_invalid_id"];
-                }
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testConstructLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        var initialValues = [Variable]()
-        initialValues.append(b.loadInt(1))
-        initialValues.append(b.loadInt(2))
-        initialValues.append(b.loadString("Hello"))
-        initialValues.append(b.loadString("World"))
-        let values = b.createArray(with: initialValues)
-        let n1 = b.loadFloat(13.37)
-        let n2 = b.loadFloat(13.38)
-        let Array = b.createNamedVariable(forBuiltin: "Array")
-        b.construct(Array, withArgs: [n1, values, n2], spreading: [false, true, false])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            new Array(13.37, ...[1,2,"Hello","World"], 13.38);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testSuperPropertyWithBinopLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let superclass = b.buildClassDefinition { cls in
-            cls.addConstructor(with: .parameters(n: 1)) { params in
-            }
-
-            cls.addInstanceMethod("f", with: .parameters(n: 1)) { params in
+            b.callFunction(f, withArgs: [b.loadFloat(13.37)])
+            let f2 = b.buildArrowFunction(with: .parameters(n: 0)) { args in
                 b.doReturn(b.loadString("foobar"))
             }
-        }
-        let C = b.buildClassDefinition(withSuperclass: superclass) { cls in
-            cls.addConstructor(with: .parameters(n: 1)) { params in
-                b.callSuperConstructor(withArgs: [])
-                b.setSuperProperty("bar", to: b.loadInt(100))
-            }
-            cls.addInstanceMethod("g", with: .parameters(n: 1)) { params in
-                b.updateSuperProperty("bar", with: b.loadInt(1337), using: BinaryOperator.Add)
-            }
-            cls.addInstanceMethod("h", with: .parameters(n: 0)) { params in
-                b.doReturn(b.getSuperProperty("bar"))
-            }
-        }
-        b.construct(C, withArgs: [b.loadFloat(13.37)])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            class C0 {
-                constructor(a2) {
-                }
-                f(a4) {
-                    return "foobar";
-                }
-            }
-            class C6 extends C0 {
-                constructor(a8) {
-                    super();
-                    super.bar = 100;
-                }
-                g(a11) {
-                    super.bar += 1337;
-                }
-                h() {
-                    return super.bar;
-                }
-            }
-            new C6(13.37);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testComputedSuperPropertyAccesses() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let superclass = b.buildClassDefinition { cls in
-            cls.addConstructor(with: .parameters(n: 1)) { params in
-            }
-
-            cls.addInstanceMethod("f", with: .parameters(n: 1)) { params in
-                b.doReturn(b.loadString("foobar"))
-            }
-        }
-
-        let function = b.buildPlainFunction(with: .parameters(n: 0)) { params in
-            b.doReturn(b.loadString("baz"))
-        }
-
-        let C = b.buildClassDefinition(withSuperclass: superclass) { cls in
-            cls.addConstructor(with: .parameters(n: 1)) { params in
-                b.callSuperConstructor(withArgs: [])
-                b.setComputedSuperProperty(params[1], to: b.loadInt(100))
-            }
-            cls.addInstanceMethod("g", with: .parameters(n: 1)) { params in
-                let property = b.binary(b.callFunction(function), params[1], with: .Add)
-                b.doReturn(b.getComputedSuperProperty(property))
-            }
-        }
-        b.construct(C, withArgs: [b.loadFloat(13.37)])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            class C0 {
-                constructor(a2) {
-                }
-                f(a4) {
-                    return "foobar";
-                }
-            }
-            function f6() {
-                return "baz";
-            }
-            class C8 extends C0 {
-                constructor(a10) {
-                    super();
-                    super[a10] = 100;
-                }
-                g(a13) {
-                    return super[f6() + a13];
-                }
-            }
-            new C8(13.37);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-
-    }
-
-    func testObjectDestructLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v0 = b.loadInt(42)
-        let v1 = b.loadFloat(13.37)
-        let v2 = b.createObject(with: ["foo": v0, "bar": v1])
-        b.destruct(v2, selecting: ["foo"], hasRestElement: true)
-        b.destruct(v2, selecting: ["foo", "bar"], hasRestElement: true)
-        b.destruct(v2, selecting: [String](), hasRestElement: true)
-        b.destruct(v2, selecting: ["foo", "bar"])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v2 = { bar: 13.37, foo: 42 };
-            let {"foo":v3,...v4} = v2;
-            let {"foo":v5,"bar":v6,...v7} = v2;
-            let {...v8} = v2;
-            let {"foo":v9,"bar":v10} = v2;
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testObjectDestructLiftingWeirdNames() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v0 = b.loadInt(42)
-        let v1 = b.loadFloat(13.37)
-        let v2 = b.createObject(with: ["foo-bar": v0, "123": v1])
-        b.destruct(v2, selecting: ["foo-bar"], hasRestElement: true)
-        b.destruct(v2, selecting: ["foo-bar", "123"])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v2 = { 123: 13.37, "foo-bar": 42 };
-            let {"foo-bar":v3,...v4} = v2;
-            let {"foo-bar":v5,"123":v6} = v2;
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testObjectDestructAndReassignLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v0 = b.loadInt(42)
-        let v1 = b.loadFloat(13.37)
-        let v2 = b.loadString("Hello")
-        let v3 = b.createObject(with: ["foo": v0, "bar": v1])
-        b.destruct(v3, selecting: ["foo"], into: [v2, v0], hasRestElement: true)
-        b.destruct(v3, selecting: ["foo", "bar"], into: [v2, v0, v1], hasRestElement: true)
-        b.destruct(v3, selecting: [String](), into: [v2], hasRestElement: true)
-        b.destruct(v3, selecting: ["foo", "bar"], into: [v2, v1])
-        b.destruct(v3, selecting: [String](), into: [])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            let v0 = 42;
-            let v1 = 13.37;
-            let v2 = "Hello";
-            const v3 = { bar: v1, foo: v0 };
-            ({"foo":v2,...v0} = v3);
-            ({"foo":v2,"bar":v0,...v1} = v3);
-            ({...v2} = v3);
-            ({"foo":v2,"bar":v1} = v3);
-            ({} = v3);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testArrayDestructLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        var initialValues = [Variable]()
-        initialValues.append(b.loadInt(15))
-        initialValues.append(b.loadInt(30))
-        initialValues.append(b.loadString("Hello"))
-        initialValues.append(b.loadString("World"))
-        let arr = b.createArray(with: initialValues)
-        b.destruct(arr, selecting: [0, 1])
-        b.destruct(arr, selecting: [0, 2, 5])
-        b.destruct(arr, selecting: [0, 2], lastIsRest: true)
-        b.destruct(arr, selecting: [0], lastIsRest: true)
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v4 = [15,30,"Hello","World"];
-            let [v5,v6] = v4;
-            let [v7,,v8,,,v9] = v4;
-            let [v10,,...v11] = v4;
-            let [...v12] = v4;
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testArrayDestructAndReassignLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        var initialValues = [Variable]()
-        initialValues.append(b.loadInt(15))
-        initialValues.append(b.loadInt(30))
-        initialValues.append(b.loadString("Hello"))
-        initialValues.append(b.loadString("World"))
-        let array = b.createArray(with: initialValues)
-        let i = b.loadInt(1000)
-        let s = b.loadString("foobar")
-        b.destruct(array, selecting: [0, 2], into: [i, s], lastIsRest: true)
-        b.destruct(array, selecting: [0], into: [i], lastIsRest: true)
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v4 = [15,30,"Hello","World"];
-            let v5 = 1000;
-            let v6 = "foobar";
-            [v5,,...v6] = v4;
-            [...v5] = v4;
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testNamedVariableLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let print = b.createNamedVariable(forBuiltin: "print")
-        let i1 = b.loadInt(42)
-        let i2 = b.loadInt(1337)
-        let va = b.createNamedVariable("a", declarationMode: .let, initialValue: i1)
-        b.callFunction(print, withArgs: [va])
-        let vb1 = b.createNamedVariable("b", declarationMode: .none)
-        b.callFunction(print, withArgs: [vb1])
-        b.createNamedVariable("c", declarationMode: .global, initialValue: i2)
-        let vb2 = b.createNamedVariable("b", declarationMode: .var, initialValue: i2)
-        b.reassign(variable: vb2, value: i1)
-        let vc = b.createNamedVariable("c", declarationMode: .none)
-        b.callFunction(print, withArgs: [vc])
-        let undefined = b.loadUndefined()
-        let vd = b.createNamedVariable("d", declarationMode: .let, initialValue: undefined)
-        b.callFunction(print, withArgs: [vd])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            let a = 42;
-            print(a);
-            print(b);
-            c = 1337;
-            var b = 1337;
-            b = 42;
-            print(c);
-            let d;
-            print(d);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testTryCatchLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let f = b.buildPlainFunction(with: .parameters(n: 2)) { args in
-            b.buildTryCatchFinally(
-                tryBody: {
-                    let v = b.binary(args[0], args[1], with: .Mul)
-                    b.doReturn(v)
-                },
-                catchBody: { _ in
-                    let v = b.binary(args[0], args[1], with: .Div)
-                    b.doReturn(v)
-                })
-        }
-        b.callFunction(f, withArgs: [b.loadInt(1337), b.loadInt(42)])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            function f0(a1, a2) {
-                try {
-                    return a1 * a2;
-                } catch(e4) {
-                    return a1 / a2;
-                }
-            }
-            f0(1337, 42);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testTryFinallyLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let f = b.buildPlainFunction(with: .parameters(n: 2)) { args in
-            b.buildTryCatchFinally(
-                tryBody: {
-                    let v = b.binary(args[0], args[1], with: .Mul)
-                    b.doReturn(v)
-                },
-                finallyBody: {
-                    let v = b.binary(args[0], args[1], with: .Mod)
-                    b.doReturn(v)
-                })
-        }
-        b.callFunction(f, withArgs: [b.loadInt(1337), b.loadInt(42)])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            function f0(a1, a2) {
-                try {
-                    return a1 * a2;
-                } finally {
-                    return a1 % a2;
-                }
-            }
-            f0(1337, 42);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testTryCatchFinallyLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let f = b.buildPlainFunction(with: .parameters(n: 2)) { args in
-            b.buildTryCatchFinally(
-                tryBody: {
-                    let v = b.binary(args[0], args[1], with: .Mul)
-                    b.doReturn(v)
-                },
-                catchBody: { _ in
-                    let v = b.binary(args[0], args[1], with: .Div)
-                    b.doReturn(v)
-                },
-                finallyBody: {
-                    let v = b.binary(args[0], args[1], with: .Mod)
-                    b.doReturn(v)
-                })
-        }
-        b.callFunction(f, withArgs: [b.loadInt(1337), b.loadInt(42)])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            function f0(a1, a2) {
-                try {
-                    return a1 * a2;
-                } catch(e4) {
-                    return a1 / a2;
-                } finally {
-                    return a1 % a2;
-                }
-            }
-            f0(1337, 42);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testSwitchStatementLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v0 = b.loadInt(42)
-        let v1 = b.createObject(with: ["foo": v0])
-        let v2 = b.getProperty("foo", of: v1)
-        let v3 = b.loadInt(1337)
-        let v4 = b.loadString("42")
-        let v5 = b.loadFloat(13.37)
-
-        b.buildSwitch(on: v2) { swtch in
-            swtch.addCase(v3, fallsThrough: false) {
-                b.setProperty("bar", of: v1, to: v3)
-            }
-            swtch.addCase(v4, fallsThrough: false) {
-                b.setProperty("baz", of: v1, to: v4)
-            }
-            swtch.addDefaultCase(fallsThrough: true) {
-                b.setProperty("foo", of: v1, to: v5)
-            }
-            swtch.addCase(v0, fallsThrough: true) {
-                b.setProperty("bla", of: v1, to: v2)
-            }
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v1 = { foo: 42 };
-            const v2 = v1.foo;
-            switch (v2) {
-                case 1337:
-                    v1.bar = 1337;
-                    break;
-                case "42":
-                    v1.baz = "42";
-                    break;
-                default:
-                    v1.foo = 13.37;
-                case 42:
-                    v1.bla = v2;
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testWhileLoopLifting1() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let loopVar = b.loadInt(0)
-        b.buildWhileLoop({ b.compare(loopVar, with: b.loadInt(100), using: .lessThan) }) {
-            b.unary(.PostInc, loopVar)
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            let v0 = 0;
-            while (v0 < 100) {
-                v0++;
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testWhileLoopLifting2() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let shouldContinue = b.createNamedVariable(forBuiltin: "shouldContinue")
-        b.buildWhileLoop({ b.callFunction(shouldContinue) }) {
-
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            while (shouldContinue()) {
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testWhileLoopLifting3() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let f = b.createNamedVariable(forBuiltin: "f")
-        let g = b.createNamedVariable(forBuiltin: "g")
-        let loopVar = b.loadInt(10)
-        b.buildWhileLoop({
+            b.reassign(variable: f, value: f2)
             b.callFunction(f)
-            b.callFunction(g)
-            return loopVar
-        }) {
-            b.unary(.PostDec, loopVar)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                function f0(a1) {
+                    return a1;
+                }
+                f0(13.37);
+                f0 = () => "foobar";
+                f0();
+
+                """
+
+            #expect(actual == expected)
         }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            let v2 = 10;
-            while (f(), g(), v2) {
-                v2--;
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
     }
 
-    func testWhileLoopLifting4() {
+    @Test func testStrictFunctionLifting() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        var f = b.createNamedVariable(forBuiltin: "f")
-        var g = b.createNamedVariable(forBuiltin: "g")
-        b.buildWhileLoop({
-            b.callFunction(f)
-            let cond = b.callFunction(g)
-            return cond
-        }) {
-        }
+            let b = fuzzer.makeBuilder()
 
-        var program = b.finalize()
-        var actual = fuzzer.lifter.lift(program)
-
-        var expected = """
-            while (f(), g()) {
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-
-        f = b.createNamedVariable(forBuiltin: "f")
-        g = b.createNamedVariable(forBuiltin: "g")
-        b.buildWhileLoop({
-            let cond = b.callFunction(f)
-            b.callFunction(g)
-            return cond
-        }) {
-            b.callFunction(b.createNamedVariable(forBuiltin: "body"))
-        }
-
-        program = b.finalize()
-        actual = fuzzer.lifter.lift(program)
-
-        expected = """
-            while ((() => {
-                    const v2 = f();
-                    g();
-                    return v2;
-                })()) {
-                body();
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testWhileLoopLifting5() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildWhileLoop({
-            let foobar = b.createNamedVariable(forBuiltin: "foobar")
-            let v = b.callFunction(foobar)
-            return b.binary(v, v, with: .Add)
-        }) {
-            let doLoopBodyStuff = b.createNamedVariable(forBuiltin: "doLoopBodyStuff")
-            b.callFunction(doLoopBodyStuff)
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            while ((() => {
-                    const v1 = foobar();
-                    return v1 + v1;
-                })()) {
-                doLoopBodyStuff();
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testWhileLoopLifting6() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let print = b.createNamedVariable(forBuiltin: "print")
-        let f = b.callFunction(b.createNamedVariable(forBuiltin: "f"))
-        let g = b.callFunction(b.createNamedVariable(forBuiltin: "g"))
-        let h = b.callFunction(b.createNamedVariable(forBuiltin: "h"))
-        b.buildWhileLoop({
-            b.callFunction(print, withArgs: [f])
-            return b.loadBool(false)
-        }) {
-            b.callFunction(print, withArgs: [g])
-        }
-        b.callFunction(print, withArgs: [h])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v2 = f();
-            const v4 = g();
-            const v6 = h();
-            while (print(v2), false) {
-                print(v4);
-            }
-            print(v6);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testDoWhileLoopLifting1() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let loopVar1 = b.loadInt(0)
-        b.buildDoWhileLoop(
-            do: {
-                let loopVar2 = b.loadInt(0)
-                b.buildDoWhileLoop(
-                    do: {
-                        b.unary(.PostInc, loopVar2)
+            let sf = b.buildPlainFunction(with: .parameters(n: 3)) { args in
+                b.directive("use strict")
+                b.buildIfElse(
+                    args[0],
+                    ifBody: {
+                        let v = b.binary(args[1], args[2], with: .Mul)
+                        b.doReturn(v)
                     },
-                    while: {
-                        b.callFunction(b.createNamedVariable(forBuiltin: "f"), withArgs: [loopVar2])
+                    elseBody: {
+                        let v = b.binary(args[1], args[2], with: .Add)
+                        b.doReturn(v)
                     })
-                b.unary(.PostInc, loopVar1)
-            }, while: { b.compare(loopVar1, with: b.loadInt(42), using: .lessThan) })
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            let v0 = 0;
-            do {
-                let v2 = 0;
-                do {
-                    v2++;
-                } while (f(v2))
-                v0++;
-            } while (v0 < 42)
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testDoWhileLoopLifting2() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildDoWhileLoop(
-            do: {
-                let doSomething = b.createNamedVariable(forBuiltin: "doSomething")
-                b.callFunction(doSomething)
-            },
-            while: {
-                b.callFunction(b.createNamedVariable(forBuiltin: "f"))
-                return b.callFunction(b.createNamedVariable(forBuiltin: "g"))
-            })
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            do {
-                doSomething();
-            } while (f(), g())
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testDoWhileLoopLifting3() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let print = b.createNamedVariable(forBuiltin: "print")
-        let f = b.callFunction(b.createNamedVariable(forBuiltin: "f"))
-        let g = b.callFunction(b.createNamedVariable(forBuiltin: "g"))
-        let h = b.callFunction(b.createNamedVariable(forBuiltin: "h"))
-        b.buildDoWhileLoop(
-            do: {
-                b.callFunction(print, withArgs: [f])
-            },
-            while: {
-                b.callFunction(print, withArgs: [g])
-                return b.loadBool(false)
-            })
-        b.callFunction(print, withArgs: [h])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v2 = f();
-            const v4 = g();
-            const v6 = h();
-            do {
-                print(v2);
-            } while (print(v4), false)
-            print(v6);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testForLoopLifting1() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildForLoop(
-            i: { b.loadInt(0) }, { i in b.compare(i, with: b.loadInt(10), using: .lessThan) },
-            { i in b.unary(.PostInc, i) }
-        ) { i in
-            b.buildForLoop(
-                i: { b.loadInt(0) }, { j in b.compare(j, with: i, using: .lessThan) },
-                { j in b.unary(.PostInc, j) }
-            ) { j in
-                let print = b.createNamedVariable(forBuiltin: "print")
-                b.callFunction(print, withArgs: [i, j])
             }
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            for (let i1 = 0; i1 < 10; i1++) {
-                for (let i9 = 0; i9 < i1; i9++) {
-                    print(i1, i9);
-                }
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testForLoopLifting2() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildForLoop {
-            b.loopBreak()
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            for (;;) {
-                break;
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testForLoopLifting3() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildForLoop(
-            {
-                return [
-                    b.callFunction(b.createNamedVariable(forBuiltin: "f1")),
-                    b.callFunction(b.createNamedVariable(forBuiltin: "f2")),
-                ]
-            },
-            { vars in
-                b.callFunction(b.createNamedVariable(forBuiltin: "f3"), withArgs: [vars[0]])
-                return b.callFunction(b.createNamedVariable(forBuiltin: "f4"), withArgs: [vars[1]])
-            },
-            { vars in
-                b.callFunction(b.createNamedVariable(forBuiltin: "f5"), withArgs: [vars[1]])
-                b.callFunction(b.createNamedVariable(forBuiltin: "f6"), withArgs: [vars[0]])
-            }
-        ) { vars in
-            b.callFunction(b.createNamedVariable(forBuiltin: "f7"), withArgs: vars)
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            for (let i4 = f1(), i5 = f2(); f3(i4), f4(i5); f5(i5), f6(i4)) {
-                f7(i4, i5);
-            }
-
-            """
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testForLoopLifting4() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildForLoop(
-            {
-                let x = b.callFunction(b.createNamedVariable(forBuiltin: "f"))
-                let y = b.callFunction(b.createNamedVariable(forBuiltin: "g"))
-                b.callFunction(b.createNamedVariable(forBuiltin: "h"))
-                return [x, y]
-            },
-            { vs in return b.compare(vs[0], with: vs[1], using: .lessThan) },
-            { vs in b.reassign(variable: vs[0], value: vs[1], with: .Add) }
-        ) { vs in
-            b.callFunction(b.createNamedVariable(forBuiltin: "print"), withArgs: vs)
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            for (let [i6, i7] = (() => {
-                    const v1 = f();
-                    const v3 = g();
-                    h();
-                    return [v1, v3];
-                })();
-                i6 < i7;
-                i6 += i7) {
-                print(i6, i7);
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testForLoopLifting5() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildForLoop(
-            {
-                b.callFunction(b.createNamedVariable(forBuiltin: "foo"))
-                b.callFunction(b.createNamedVariable(forBuiltin: "bar"))
-            },
-            {
-                let shouldContinue = b.callFunction(
-                    b.createNamedVariable(forBuiltin: "shouldContinue"))
-                b.buildIf(b.callFunction(b.createNamedVariable(forBuiltin: "shouldNotContinue"))) {
-                    b.reassign(variable: shouldContinue, value: b.loadBool(false))
-                }
-                return shouldContinue
-            }
-        ) {
-            b.loopBreak()
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            for (foo(), bar();
-                (() => {
-                    let v5 = shouldContinue();
-                    if (shouldNotContinue()) {
-                        v5 = false;
-                    }
-                    return v5;
-                })();
-                ) {
-                break;
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testForLoopLifting6() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildForLoop(
-            i: { b.loadInt(0) }, { b.compare($0, with: b.loadInt(100), using: .lessThan) },
-            { b.reassign(variable: $0, value: b.loadInt(10), with: .Add) }
-        ) { i in
-            b.callFunction(b.createNamedVariable(forBuiltin: "print"), withArgs: [i])
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            for (let i1 = 0; i1 < 100; i1 += 10) {
-                print(i1);
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testForLoopLifting7() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildForLoop(
-            i: {
-                b.callFunction(b.createNamedVariable(forBuiltin: "f"))
-                return b.callFunction(b.createNamedVariable(forBuiltin: "g"))
-            }, { _ in b.loadBool(true) }, { _ in }
-        ) { i in
-            b.loopBreak()
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            for (let i4 = (() => {
-                    f();
-                    return g();
-                })();
-                ;
-                ) {
-                break;
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testForLoopLifting8() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildPlainFunction(with: .parameters(n: 3)) { args in
-            b.buildForLoop(
-                i: { args[0] }, { i in b.compare(i, with: args[1], using: .greaterThanOrEqual) },
-                { i in b.reassign(variable: i, value: args[2], with: .Sub) }
-            ) { vars in
-            }
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            function f0(a1, a2, a3) {
-                for (let i4 = a1; i4 >= a2; i4 -= a3) {
-                }
-            }
-
-            """
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testForLoopLifting9() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let print = b.createNamedVariable(forBuiltin: "print")
-        let f = b.callFunction(b.createNamedVariable(forBuiltin: "f"))
-        let g = b.callFunction(b.createNamedVariable(forBuiltin: "g"))
-        let h = b.callFunction(b.createNamedVariable(forBuiltin: "h"))
-        let i = b.callFunction(b.createNamedVariable(forBuiltin: "i"))
-        let j = b.callFunction(b.createNamedVariable(forBuiltin: "j"))
-
-        b.buildForLoop(
-            { b.callFunction(print, withArgs: [f]) }, { b.callFunction(print, withArgs: [g]) },
-            { b.callFunction(print, withArgs: [h]) }
-        ) {
-            b.callFunction(print, withArgs: [i])
-        }
-        b.callFunction(print, withArgs: [j])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v2 = f();
-            const v4 = g();
-            const v6 = h();
-            const v8 = i();
-            const v10 = j();
-            for (print(v2); print(v4); print(v6)) {
-                print(v8);
-            }
-            print(v10);
-
-            """
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testForLoopLifting10() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        b.buildPlainFunction(with: .parameters(n: 0)) { _ in
-            let s = b.loadInt(0)
-            // Test that context-dependent operations such as LoadArguments are handled correctly inside loop headers
-            b.buildForLoop(
-                i: { b.loadInt(0) },
-                { i in
-                    b.compare(
-                        i, with: b.getProperty("length", of: b.loadArguments()), using: .lessThan)
-                }, { i in b.unary(.PostInc, i) }
-            ) { i in
-                let arg = b.getComputedProperty(i, of: b.loadArguments())
-                b.reassign(variable: s, value: arg, with: .Add)
-            }
-            b.doReturn(s)
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            function f0() {
-                let v1 = 0;
-                for (let i3 = 0; i3 < arguments.length; i3++) {
-                    v1 += arguments[i3];
-                }
-                return v1;
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testRepeatLoopLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let s = b.loadInt(0)
-        b.buildRepeatLoop(n: 1337) { i in
-            b.reassign(variable: s, value: i, with: .Add)
-        }
-        let print = b.createNamedVariable(forBuiltin: "print")
-        b.callFunction(print, withArgs: [s])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            let v0 = 0;
-            for (let v1 = 0; v1 < 1337; v1++) {
-                v0 += v1;
-            }
-            print(v0);
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testForLoopWithArrayDestructLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let a1 = b.createArray(with: [
-            b.loadInt(10), b.loadInt(11), b.loadInt(12), b.loadInt(13), b.loadInt(14),
-        ])
-        let a2 = b.createArray(with: [b.loadInt(20), b.loadInt(21), b.loadInt(22), b.loadInt(23)])
-        let a3 = b.createArray(with: [b.loadInt(30), b.loadInt(31), b.loadInt(32)])
-        let a4 = b.createArray(with: [a1, a2, a3])
-        let print = b.createNamedVariable(forBuiltin: "print")
-        b.buildForInOfLoop(
-            a4, type: .forOf, isAsync: false,
-            header: .arrayDestruct(indices: [0, 2], hasRestElement: true)
-        ) { args, _ in
-            b.callFunction(print, withArgs: [args[0]])
-            b.buildForInOfLoop(args[1], type: .forOf, isAsync: false, header: .simple) { vars, _ in
-                let v = vars[0]
-                b.callFunction(print, withArgs: [v])
-            }
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            for (let [v17,,...v18] of [[10,11,12,13,14],[20,21,22,23],[30,31,32]]) {
-                print(v17);
-                for (const v21 of v18) {
-                    print(v21);
-                }
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testBlockStatements() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v0 = b.loadInt(1337)
-        let v1 = b.createObject(with: ["a": v0])
-        b.buildForInOfLoop(v1, type: .forIn, isAsync: false, header: .simple) { vars, _ in
-            let v2 = vars[0]
-            b.buildBlockStatement {
-                let v3 = b.loadInt(1337)
-                b.reassign(variable: v2, value: v3)
-                b.buildBlockStatement {
-                    let v4 = b.createObject(with: ["a": v1])
-                    b.reassign(variable: v2, value: v4)
-                }
-
-            }
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v1 = { a: 1337 };
-            for (let v2 in v1) {
-                {
-                    v2 = 1337;
-                    {
-                        v2 = { a: v1 };
+            b.callFunction(sf, withArgs: [b.loadBool(true), b.loadInt(1), b.loadInt(2)])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                function f0(a1, a2, a3) {
+                    'use strict';
+                    if (a1) {
+                        return a2 * a3;
+                    } else {
+                        return a2 + a3;
                     }
                 }
-            }
+                f0(true, 1, 2);
 
-            """
+                """
 
-        XCTAssertEqual(actual, expected)
+            #expect(actual == expected)
+        }
     }
 
-    func testSingularOperationLifting() {
+    @Test func testNamedFunctionLifting() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        // If there are multiple singular operations inside the same surrounding block, then
-        // all but the first one should be ignored by the lifter.
+            let b = fuzzer.makeBuilder()
 
-        b.buildClassDefinition { cls in
-            cls.addConstructor(with: .parameters(n: 1)) { args in
+            let foo = b.buildPlainFunction(with: .parameters(n: 0), named: "foo") { args in }
+            let bar = b.buildGeneratorFunction(with: .parameters(n: 0), named: "bar") { args in }
+            let baz = b.buildAsyncFunction(with: .parameters(n: 0), named: "baz") { args in }
+            let bla = b.buildAsyncGeneratorFunction(with: .parameters(n: 0), named: "bla") { args in
+            }
+
+            b.callFunction(foo)
+            b.callFunction(bar)
+            b.callFunction(baz)
+            b.callFunction(bla)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                function foo() {
+                }
+                function* bar() {
+                }
+                async function baz() {
+                }
+                async function* bla() {
+                }
+                foo();
+                bar();
+                baz();
+                bla();
+
+                """
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testFunctionHoistingLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let foo = b.createNamedVariable("foo", declarationMode: .none)
+            b.callFunction(foo)
+            b.buildPlainFunction(with: .parameters(n: 0), named: "foo") { args in }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                foo();
+                function foo() {
+                }
+
+                """
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testConstructorLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let c1 = b.buildConstructor(with: .parameters(n: 2)) { args in
                 let this = args[0]
                 b.setProperty("foo", of: this, to: args[1])
+                b.setProperty("bar", of: this, to: args[2])
             }
+            b.construct(c1, withArgs: [b.loadInt(42), b.loadInt(43)])
+            let c2 = b.createNamedVariable(forBuiltin: "Object")
+            b.reassign(variable: c1, value: c2)
+            b.construct(c1, withArgs: [b.loadInt(44), b.loadInt(45)])
 
-            cls.addConstructor(with: .parameters(n: 1)) { args in
-                let this = args[0]
-                b.setProperty("bar", of: this, to: args[1])
-            }
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
 
-            cls.addInstanceMethod("baz", with: .parameters(n: 0)) { args in
-                let this = args[0]
-                b.doReturn(b.getProperty("bar", of: this))
-            }
-        }
-
-        let p1 = b.createNamedVariable(forBuiltin: "proto1")
-        let p2 = b.createNamedVariable(forBuiltin: "proto2")
-        let v = b.loadInt(42)
-
-        b.buildObjectLiteral { obj in
-            obj.addProperty("foo", as: v)
-            obj.setPrototype(to: p1)
-            obj.addProperty("bar", as: v)
-            obj.setPrototype(to: p2)
-            obj.addProperty("baz", as: v)
-        }
-
-        let print = b.createNamedVariable(forBuiltin: "print")
-        let v2 = b.loadInt(43)
-        let v3 = b.loadInt(44)
-        b.buildSwitch(on: v) { swtch in
-            swtch.addDefaultCase {
-                b.callFunction(print, withArgs: [b.loadString("default case 1")])
-            }
-            swtch.addCase(v2) {
-                b.callFunction(print, withArgs: [b.loadString("case 43")])
-            }
-            swtch.addDefaultCase {
-                b.callFunction(print, withArgs: [b.loadString("default case 2")])
-            }
-            swtch.addCase(v3) {
-                b.callFunction(print, withArgs: [b.loadString("case 44")])
-            }
-            swtch.addDefaultCase {
-                b.callFunction(print, withArgs: [b.loadString("default case 3")])
-            }
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            class C0 {
-                constructor(a2) {
+            let expected = """
+                function F0(a2, a3) {
+                    if (!new.target) { throw 'must be called with new'; }
                     this.foo = a2;
+                    this.bar = a3;
                 }
-                baz() {
-                    return this.bar;
-                }
-            }
-            const v10 = { foo: 42, __proto__: proto1, bar: 42, baz: 42 };
-            switch (42) {
-                default:
-                    print("default case 1");
-                    break;
-                case 43:
-                    print("case 43");
-                    break;
-                case 44:
-                    print("case 44");
-                    break;
-            }
+                new F0(42, 43);
+                F0 = Object;
+                new F0(44, 45);
 
-            """
-
-        XCTAssertEqual(actual, expected)
+                """
+            #expect(actual == expected)
+        }
     }
 
-    func testNoAssignmentToThis() {
+    @Test func testAsyncFunctionLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let f1 = b.buildAsyncFunction(with: .parameters(n: 2)) { args in
+                let lhs = b.await(args[0])
+                let rhs = b.await(args[1])
+                let r = b.binary(lhs, rhs, with: .Add)
+                b.doReturn(r)
+            }
+            let f2 = b.buildAsyncGeneratorFunction(with: .parameters(n: 2)) { args in
+                b.directive("use strict")
+                let lhs = b.await(args[0])
+                let rhs = b.await(args[1])
+                let r = b.binary(lhs, rhs, with: .Mul)
+                b.yield(r)
+            }
+            b.callFunction(
+                f1,
+                withArgs: [
+                    b.createNamedVariable(forBuiltin: "promise1"),
+                    b.createNamedVariable(forBuiltin: "promise2"),
+                ])
+            b.callFunction(
+                f2,
+                withArgs: [
+                    b.createNamedVariable(forBuiltin: "promise3"),
+                    b.createNamedVariable(forBuiltin: "promise4"),
+                ])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                async function f0(a1, a2) {
+                    return await a1 + await a2;
+                }
+                async function* f6(a7, a8) {
+                    'use strict';
+                    yield await a7 * await a8;
+                }
+                f0(promise1, promise2);
+                f6(promise3, promise4);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testConditionalOperationLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let v1 = b.createObject(with: ["a": b.loadInt(1337)])
+            let v2 = b.getProperty("a", of: v1)
+            let v3 = b.loadInt(10)
+            let v4 = b.compare(v2, with: v3, using: .greaterThan)
+            let _ = b.ternary(v4, v2, v3)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v2 = ({ a: 1337 }).a;
+                v2 > 10 ? v2 : 10;
+
+                """
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testReassignmentLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let v0 = b.loadInt(1337)
+            let v1 = b.loadFloat(13.37)
+            b.reassign(variable: v0, value: v1, with: .Add)
+            let v2 = b.loadString("Hello")
+            b.reassign(variable: v1, value: v2)
+            let v3 = b.loadInt(1336)
+            let v4 = b.unary(.PreInc, v3)
+            b.unary(.PostInc, v4)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                let v0 = 1337;
+                let v1 = 13.37;
+                v0 += v1;
+                v1 = "Hello";
+                let v3 = 1336;
+                let v4 = ++v3;
+                v4++;
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testUpdateLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let v0 = b.loadInt(1337)
+            let v1 = b.loadFloat(13.37)
+            b.reassign(variable: v0, value: v1, with: .Add)
+            b.reassign(variable: v0, value: v1, with: .Mul)
+            b.reassign(variable: v0, value: v1, with: .LShift)
+            let v2 = b.loadString("hello")
+            let v3 = b.loadString("world")
+            b.reassign(variable: v2, value: v3, with: .Add)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                let v0 = 1337;
+                v0 += 13.37;
+                v0 *= 13.37;
+                v0 <<= 13.37;
+                let v2 = "hello";
+                v2 += "world";
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testReassignmentInlining() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let foo = b.createNamedVariable(forBuiltin: "foo")
+            let bar = b.createNamedVariable(forBuiltin: "bar")
+            let baz = b.createNamedVariable(forBuiltin: "baz")
+            let i = b.loadInt(42)
+            b.reassign(variable: i, value: b.loadInt(43))
+            b.callFunction(foo, withArgs: [i])
+            b.callFunction(bar, withArgs: [i])
+
+            let j = b.loadInt(44)
+            b.reassign(variable: j, value: b.loadInt(45))
+            b.reassign(variable: j, value: b.loadInt(46))
+            b.callFunction(foo, withArgs: [j])
+
+            let k = b.loadInt(47)
+            b.buildRepeatLoop(n: 10) { i in
+                b.reassign(variable: k, value: i)
+            }
+            b.callFunction(foo, withArgs: [k])
+
+            let l = b.loadInt(48)
+            b.reassign(variable: l, value: b.loadInt(49))
+            b.callFunction(foo, withArgs: [l, l, l])
+
+            let m = b.loadInt(50)
+            b.reassign(variable: m, value: b.loadInt(51))
+            var t = b.callFunction(baz)
+            t = b.callFunction(bar, withArgs: [m, m, t, m])
+            b.callFunction(foo, withArgs: [t])
+
+            // Some operations such as element stores force the lhs to be an identifier, so test that here.
+            let n = b.loadInt(52)
+            b.reassign(variable: n, value: b.createArray(with: []))
+            b.setElement(42, of: n, to: n)
+
+            let o = b.loadInt(53)
+            b.buildWhileLoop({
+                b.reassign(variable: o, value: i)
+                return b.loadBool(false)
+            }) {
+            }
+            b.callFunction(foo, withArgs: [o])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                let v3 = 42;
+                foo(v3 = 43);
+                bar(v3);
+                let v7 = 44;
+                v7 = 45;
+                v7 = 46;
+                foo(v7);
+                let v11 = 47;
+                for (let v12 = 0; v12 < 10; v12++) {
+                    v11 = v12;
+                }
+                foo(v11);
+                let v15 = 48;
+                foo(v15 = 49, v15, v15);
+                let v18 = 50;
+                foo(bar(v18 = 51, v18, baz(), v18));
+                let v23 = 52;
+                v23 = [];
+                v23[42] = v23;
+                let v25 = 53;
+                while (v25 = v3, false) {
+                }
+                foo(v25);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testCreateTemplateLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            b.createTemplateString(from: [""], interpolating: [])
+            let bar = b.loadString("bar")
+            b.createTemplateString(from: ["foo", "baz"], interpolating: [bar])
+            let marker = b.callFunction(b.createNamedVariable(forBuiltin: "getMarker"))
+            let space = b.loadString(" ")
+            let inner = b.createTemplateString(from: ["Hello", "World"], interpolating: [space])
+            let _ = b.createTemplateString(
+                from: ["", "", "", ""], interpolating: [marker, inner, marker])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                ``;
+                `foo${"bar"}baz`;
+                const v4 = getMarker();
+                `${v4}${`Hello${" "}World`}${v4}`;
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testPropertyAccessLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let o = b.createNamedVariable(forBuiltin: "Obj")
+            let propA = b.getProperty("a", of: o)
+            let propB = b.getProperty("b", of: propA)
+            let propC = b.getProperty("c", of: propB)
+            b.setElement(1337, of: o, to: propC)
+            let o2 = b.createArray(with: [])
+            let elem0 = b.getElement(0, of: o)
+            let elem1 = b.getElement(1, of: elem0)
+            let elem2 = b.getElement(2, of: elem1)
+            // For aesthetic reasons, the object literal isn't inlined into the assignment expression, but the property name expression is.
+            b.setComputedProperty(elem2, of: o2, to: b.loadInt(42))
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                Obj[1337] = Obj.a.b.c;
+                const t1 = [];
+                t1[Obj[0][1][2]] = 42;
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testPropertyAccessWithBinopLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let v0 = b.loadInt(42)
+            let v1 = b.createObject(with: ["foo": v0])
+            let v2 = b.loadString("baz")
+            let v3 = b.loadInt(1337)
+            let v4 = b.loadString("42")
+            let v5 = b.loadFloat(13.37)
+            b.setProperty("foo", of: v1, to: v5)
+            b.updateProperty("foo", of: v1, with: v4, using: BinaryOperator.Add)
+            b.setProperty("bar", of: v1, to: v3)
+            b.updateProperty("bar", of: v1, with: v3, using: BinaryOperator.Mul)
+            b.setComputedProperty(v2, of: v1, to: v0)
+            b.updateComputedProperty(v2, of: v1, with: v3, using: BinaryOperator.LogicAnd)
+            let arr = b.createArray(with: [v3, v3, v3])
+            b.setElement(0, of: arr, to: v0)
+            b.updateElement(0, of: arr, with: v5, using: BinaryOperator.Sub)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v1 = { foo: 42 };
+                v1.foo = 13.37;
+                v1.foo += "42";
+                v1.bar = 1337;
+                v1.bar *= 1337;
+                v1["baz"] = 42;
+                v1["baz"] &&= 1337;
+                const v6 = [1337,1337,1337];
+                v6[0] = 42;
+                v6[0] -= 13.37;
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testPropertyConfigurationOpsLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let obj = b.createObject(with: [:])
+            let v = b.loadUndefined()
+            let f1 = b.buildPlainFunction(with: .parameters(n: 0)) { args in
+                b.doReturn(v)
+            }
+            let f2 = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+                b.reassign(variable: v, value: args[0])
+            }
+            let num = b.loadInt(42)
+            b.configureProperty(
+                "foo", of: obj, usingFlags: [.enumerable, .configurable], as: .getter(f1))
+            b.configureProperty("bar", of: obj, usingFlags: [], as: .setter(f2))
+            b.configureProperty(
+                "foobar", of: obj, usingFlags: [.enumerable], as: .getterSetter(f1, f2))
+            b.configureProperty("baz", of: obj, usingFlags: [.writable], as: .value(num))
+            b.configureElement(0, of: obj, usingFlags: [.writable], as: .getter(f1))
+            b.configureElement(1, of: obj, usingFlags: [.writable, .enumerable], as: .setter(f2))
+            b.configureElement(
+                2, of: obj, usingFlags: [.writable, .enumerable, .configurable],
+                as: .getterSetter(f1, f2))
+            b.configureElement(3, of: obj, usingFlags: [], as: .value(num))
+            let p = b.createNamedVariable(forBuiltin: "ComputedProperty")
+            b.configureComputedProperty(p, of: obj, usingFlags: [.configurable], as: .getter(f1))
+            b.configureComputedProperty(p, of: obj, usingFlags: [.enumerable], as: .setter(f2))
+            b.configureComputedProperty(
+                p, of: obj, usingFlags: [.writable], as: .getterSetter(f1, f2))
+            b.configureComputedProperty(p, of: obj, usingFlags: [], as: .value(num))
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v0 = {};
+                let v1 = undefined;
+                function f2() {
+                    return v1;
+                }
+                function f3(a4) {
+                    v1 = a4;
+                }
+                Object.defineProperty(v0, "foo", { configurable: true, enumerable: true, get: f2 });
+                Object.defineProperty(v0, "bar", { set: f3 });
+                Object.defineProperty(v0, "foobar", { enumerable: true, get: f2, set: f3 });
+                Object.defineProperty(v0, "baz", { writable: true, value: 42 });
+                Object.defineProperty(v0, 0, { writable: true, get: f2 });
+                Object.defineProperty(v0, 1, { writable: true, enumerable: true, set: f3 });
+                Object.defineProperty(v0, 2, { writable: true, configurable: true, enumerable: true, get: f2, set: f3 });
+                Object.defineProperty(v0, 3, { value: 42 });
+                Object.defineProperty(v0, ComputedProperty, { configurable: true, get: f2 });
+                Object.defineProperty(v0, ComputedProperty, { enumerable: true, set: f3 });
+                Object.defineProperty(v0, ComputedProperty, { writable: true, get: f2, set: f3 });
+                Object.defineProperty(v0, ComputedProperty, { value: 42 });
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testPropertyDeletionLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let i = b.loadInt(1337)
+            let s = b.loadString("bar")
+            let f = b.loadFloat(13.37)
+            var initialProperties = [String: Variable]()
+            initialProperties["foo"] = i
+            initialProperties["bar"] = f
+            let o = b.createObject(with: initialProperties)
+            let _ = b.deleteProperty("foo", of: o)
+            let _ = b.deleteComputedProperty(s, of: o)
+            let a = b.createArray(with: [
+                b.loadInt(301), b.loadInt(4), b.loadInt(68), b.loadInt(22),
+            ])
+            let _ = b.deleteElement(3, of: a)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v3 = { bar: 13.37, foo: 1337 };
+                delete v3.foo;
+                delete v3["bar"];
+                const t1 = [301,4,68,22];
+                delete t1[3];
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testGuardedPropertyAccessLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let o = b.createNamedVariable(forBuiltin: "o")
+            let a = b.getProperty("a", of: o, guard: true)
+            b.getProperty("b", of: a, guard: true)
+            b.getElement(0, of: o, guard: true)
+            b.getComputedProperty(b.loadString("bar"), of: o, guard: true)
+            b.deleteProperty("unfoo", of: o, guard: true)
+            b.deleteElement(1, of: o, guard: true)
+            b.deleteComputedProperty(b.loadString("unbar"), of: o, guard: true)
+
+            // Stores must never use the optional chaining operator on the left-hand side.
+            let v = b.loadInt(42)
+            let t1 = b.getProperty("t1", of: o, guard: true)
+            b.setProperty("foo", of: t1, to: v)
+            let t2 = b.getProperty("t2", of: o, guard: true)
+            b.setElement(0, of: t2, to: v)
+            let t3 = b.getProperty("t3", of: o, guard: true)
+            b.setComputedProperty(b.loadString("baz"), of: t3, to: v)
+
+            let program = b.finalize()
+
+            let actual = fuzzer.lifter.lift(program)
+            let expected = """
+                o?.a?.b;
+                o?.[0];
+                o?.["bar"];
+                delete o?.unfoo;
+                delete o?.[1];
+                delete o?.["unbar"];
+                const t0 = o?.t1;
+                t0.foo = 42;
+                const t8 = o?.t2;
+                t8[0] = 42;
+                const t10 = o?.t3;
+                t10["baz"] = 42;
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testGuardedCallLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let f1 = b.createNamedVariable(forBuiltin: "f1")
+            let f2 = b.createNamedVariable(forBuiltin: "f2")
+            b.callFunction(f1, guard: true)
+            let v1 = b.callFunction(f2, guard: true)
+            let c1 = b.createNamedVariable(forBuiltin: "c1")
+            let c2 = b.createNamedVariable(forBuiltin: "c2")
+            b.construct(c1, guard: true)
+            let v2 = b.construct(c2, guard: true)
+            let o = b.createNamedVariable(forBuiltin: "obj")
+            b.callMethod("m", on: o, guard: true)
+            let v3 = b.callMethod("n", on: o, guard: true)
+            b.callComputedMethod(b.loadString("o"), on: o, withArgs: [v1, v2, v3], guard: true)
+            let v4 = b.callComputedMethod(
+                b.loadString("p"), on: o, withArgs: [v1, v2, v3], guard: true)
+            b.reassign(variable: v3, value: b.loadString("foo"))
+            b.reassign(variable: v4, value: b.loadString("bar"))
+            b.reassign(variable: v3, value: b.loadString("baz"))
+
+            let program = b.finalize()
+
+            let actual = fuzzer.lifter.lift(program)
+            let expected = """
+                try { f1(); } catch (e) {}
+                let v3;
+                try { v3 = f2(); } catch (e) {}
+                try { new c1(); } catch (e) {}
+                let v7;
+                try { v7 = new c2(); } catch (e) {}
+                try { obj.m(); } catch (e) {}
+                let v10;
+                try { v10 = obj.n(); } catch (e) {}
+                try { obj["o"](v3, v7, v10); } catch (e) {}
+                let v14;
+                try { v14 = obj["p"](v3, v7, v10); } catch (e) {}
+                v10 = "foo";
+                v14 = "bar";
+                v10 = "baz";
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testGuardedMultilineLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let str = b.loadString("foo")
+            let _ = b.construct(str, guard: true)
+
+            let program = b.finalize()
+
+            let actual = fuzzer.lifter.lift(program)
+            let expected = """
+                try {
+                const t0 = "foo";
+                new t0();
+                } catch (e) {}
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testFunctionCallLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let s = b.loadString("print('Hello World!')")
+            var eval = b.createNamedVariable(forBuiltin: "eval")
+            b.callFunction(eval, withArgs: [s])
+            let this = b.createNamedVariable(forBuiltin: "this")
+            eval = b.getProperty("eval", of: this)
+            // The property load must not be inlined, otherwise it would not be distinguishable from a method call (like the one following it).
+            b.callFunction(eval, withArgs: [s])
+            b.callMethod("eval", on: this, withArgs: [s])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                eval("print('Hello World!')");
+                const t0 = this.eval;
+                t0("print('Hello World!')");
+                this.eval("print('Hello World!')");
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testFunctionCallWithSpreadLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            var initialValues = [Variable]()
+            initialValues.append(b.loadInt(1))
+            initialValues.append(b.loadInt(2))
+            initialValues.append(b.loadString("Hello"))
+            initialValues.append(b.loadString("World"))
+            let values = b.createArray(with: initialValues)
+            let n = b.loadFloat(13.37)
+            let Array = b.createNamedVariable(forBuiltin: "Array")
+            let _ = b.callFunction(Array, withArgs: [values, n], spreading: [true, false])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                Array(...[1,2,"Hello","World"], 13.37);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testMethodCallLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let Math = b.createNamedVariable(forBuiltin: "Math")
+            let r = b.callMethod("random", on: Math)
+            b.callMethod("sin", on: Math, withArgs: [r])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                Math.sin(Math.random());
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testMethodBindLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let Math = b.createNamedVariable(forBuiltin: "Math")
+            let r = b.callMethod("random", on: Math)
+            let bound = b.bindMethod("sin", on: Math)
+            b.callFunction(bound, withArgs: [Math, r])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v1 = Math.random();
+                let v2 = Function.prototype.call.bind(Math.sin);
+                v2(Math, v1);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testFunctionBindLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+            let indexOfSig = [.jsAnything, .opt(.integer)] => .integer
+
+            let arrayBuiltin = b.createNamedVariable(forBuiltin: "Array")
+            let arrayProto = b.getProperty("prototype", of: arrayBuiltin)
+            let indexOf = b.getProperty("indexOf", of: arrayProto)
+            #expect(b.type(of: indexOf) == .unboundFunction(indexOfSig, receiver: .jsArray))
+            let indexOfNothingBound = b.bindFunction(indexOf, boundArgs: [])
+            #expect(b.type(of: indexOfNothingBound) == b.type(of: indexOf))
+            let array = b.construct(arrayBuiltin)
+            let indexOfBoundThis = b.bindFunction(indexOf, boundArgs: [array])
+            #expect(b.type(of: indexOfBoundThis) == .function(indexOfSig))
+            let str = b.loadString("value")
+            let indexOfBoundThisAndArg = b.bindFunction(indexOf, boundArgs: [array, str])
+            #expect(b.type(of: indexOfBoundThisAndArg) == .function([.opt(.integer)] => .integer))
+            let int = b.loadInt(1)
+            let indexOfBoundAll = b.bindFunction(indexOf, boundArgs: [array, str, int])
+            #expect(b.type(of: indexOfBoundAll) == .function([] => .integer))
+            let indexOfBoundTooMuch = b.bindFunction(indexOf, boundArgs: [array, str, int, int])
+            #expect(b.type(of: indexOfBoundTooMuch) == .function([] => .integer))
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v2 = Array.prototype.indexOf;
+                let v3 = v2.bind();
+                const v4 = new Array();
+                let v5 = v2.bind(v4);
+                let v7 = v2.bind(v4, "value");
+                let v9 = v2.bind(v4, "value", 1);
+                let v10 = v2.bind(v4, "value", 1, 1);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testMethodCallWithSpreadLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let Math = b.createNamedVariable(forBuiltin: "Math")
+            var initialValues = [Variable]()
+            initialValues.append(b.loadInt(1))
+            initialValues.append(b.loadInt(3))
+            initialValues.append(b.loadInt(9))
+            initialValues.append(b.loadInt(10))
+            initialValues.append(b.loadInt(2))
+            initialValues.append(b.loadInt(6))
+            let values = b.createArray(with: initialValues)
+            let n1 = b.loadInt(0)
+            let n2 = b.loadInt(4)
+            b.callMethod(
+                "max", on: Math, withArgs: [n1, values, n2], spreading: [false, true, false])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                Math.max(0, ...[1,3,9,10,2,6], 4);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testComputedMethodCallLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let s = b.loadString("Hello World")
+            let iterator = b.createSymbolProperty("iterator")
+            let r = b.callComputedMethod(iterator, on: s)
+            b.callMethod("next", on: r)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                ("Hello World")[Symbol.iterator]().next();
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testMethodCallLiftingWeirdNames() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let obj = b.createObject(with: [:])
+            for name in ["???", "0", "01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
+                b.callMethod(name, on: obj)
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v0 = {};
+                v0["???"]();
+                v0[0]();
+                v0["01"]();
+                v0[1]();
+                v0["0.1"]();
+                v0["-1"]();
+                v0.$valid_id_42();
+                v0["42_invalid_id"]();
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testMethodCallWithSpreadLiftingWeirdNames() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let obj = b.createObject(with: [:])
+            let values = b.createArray(with: [])
+            for name in ["???", "0", "01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
+                b.callMethod(name, on: obj, withArgs: [values], spreading: [true])
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v0 = {};
+                const v1 = [];
+                v0["???"](...v1);
+                v0[0](...v1);
+                v0["01"](...v1);
+                v0[1](...v1);
+                v0["0.1"](...v1);
+                v0["-1"](...v1);
+                v0.$valid_id_42(...v1);
+                v0["42_invalid_id"](...v1);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testMethodBindLiftingWeirdNames() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let obj = b.createObject(with: [:])
+            for name in ["???", "0", "01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
+                let bound = b.bindMethod(name, on: obj)
+                b.callFunction(bound, withArgs: [obj])
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v0 = {};
+                let v1 = Function.prototype.call.bind(v0["???"]);
+                v1(v0);
+                let v3 = Function.prototype.call.bind(v0[0]);
+                v3(v0);
+                let v5 = Function.prototype.call.bind(v0["01"]);
+                v5(v0);
+                let v7 = Function.prototype.call.bind(v0[1]);
+                v7(v0);
+                let v9 = Function.prototype.call.bind(v0["0.1"]);
+                v9(v0);
+                let v11 = Function.prototype.call.bind(v0["-1"]);
+                v11(v0);
+                let v13 = Function.prototype.call.bind(v0.$valid_id_42);
+                v13(v0);
+                let v15 = Function.prototype.call.bind(v0["42_invalid_id"]);
+                v15(v0);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testSuperMethodCallLiftingWeirdNames() {
+        let fuzzer: Fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            b.buildClassDefinition { cls in
+                cls.addInstanceMethod("sub", with: .parameters(n: 0)) { params in
+                    for name in [
+                        "???", "0", "01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id",
+                    ] {
+                        b.callSuperMethod(name)
+                    }
+                }
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                class C0 {
+                    sub() {
+                        super["???"]();
+                        super[0]();
+                        super["01"]();
+                        super[1]();
+                        super["0.1"]();
+                        super["-1"]();
+                        super.$valid_id_42();
+                        super["42_invalid_id"]();
+                    }
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testComputedMethodCallWithSpreadLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let SomeObj = b.createNamedVariable(forBuiltin: "SomeObject")
+            let RandomMethod = b.createNamedVariable(forBuiltin: "RandomMethod")
+            let randomMethod = b.callFunction(RandomMethod)
+            let args = b.createArray(with: [b.loadInt(1), b.loadInt(2), b.loadInt(3), b.loadInt(4)])
+            b.callComputedMethod(randomMethod, on: SomeObj, withArgs: [args], spreading: [true])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                SomeObject[RandomMethod()](...[1,2,3,4]);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testPropertyLiftingWeirdNames() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let obj = b.createObject(with: [:])
+            for name in ["???", "0", "01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id"] {
+                b.setProperty(name, of: obj, to: b.getProperty(name, of: obj))
+                b.updateProperty(
+                    name, of: obj, with: b.getProperty(name, of: obj, guard: true), using: .Add)
+                b.deleteProperty(name, of: obj)
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v0 = {};
+                v0["???"] = v0["???"];
+                v0["???"] += v0?.["???"];
+                delete v0["???"];
+                v0[0] = v0[0];
+                v0[0] += v0?.[0];
+                delete v0[0];
+                v0["01"] = v0["01"];
+                v0["01"] += v0?.["01"];
+                delete v0["01"];
+                v0[1] = v0[1];
+                v0[1] += v0?.[1];
+                delete v0[1];
+                v0["0.1"] = v0["0.1"];
+                v0["0.1"] += v0?.["0.1"];
+                delete v0["0.1"];
+                v0["-1"] = v0["-1"];
+                v0["-1"] += v0?.["-1"];
+                delete v0["-1"];
+                v0.$valid_id_42 = v0.$valid_id_42;
+                v0.$valid_id_42 += v0?.$valid_id_42;
+                delete v0.$valid_id_42;
+                v0["42_invalid_id"] = v0["42_invalid_id"];
+                v0["42_invalid_id"] += v0?.["42_invalid_id"];
+                delete v0["42_invalid_id"];
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testSuperPropertyLiftingWeirdNames() {
+        let fuzzer: Fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            b.buildClassDefinition { cls in
+                cls.addInstanceMethod("sub", with: .parameters(n: 0)) { params in
+                    for name in [
+                        "???", "0", "01", "1", "0.1", "-1", "$valid_id_42", "42_invalid_id",
+                    ] {
+                        b.setSuperProperty(name, to: b.getSuperProperty(name))
+                        b.updateSuperProperty(name, with: b.getSuperProperty(name), using: .Add)
+                    }
+                }
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                class C0 {
+                    sub() {
+                        super["???"] = super["???"];
+                        super["???"] += super["???"];
+                        super[0] = super[0];
+                        super[0] += super[0];
+                        super["01"] = super["01"];
+                        super["01"] += super["01"];
+                        super[1] = super[1];
+                        super[1] += super[1];
+                        super["0.1"] = super["0.1"];
+                        super["0.1"] += super["0.1"];
+                        super["-1"] = super["-1"];
+                        super["-1"] += super["-1"];
+                        super.$valid_id_42 = super.$valid_id_42;
+                        super.$valid_id_42 += super.$valid_id_42;
+                        super["42_invalid_id"] = super["42_invalid_id"];
+                        super["42_invalid_id"] += super["42_invalid_id"];
+                    }
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testConstructLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            var initialValues = [Variable]()
+            initialValues.append(b.loadInt(1))
+            initialValues.append(b.loadInt(2))
+            initialValues.append(b.loadString("Hello"))
+            initialValues.append(b.loadString("World"))
+            let values = b.createArray(with: initialValues)
+            let n1 = b.loadFloat(13.37)
+            let n2 = b.loadFloat(13.38)
+            let Array = b.createNamedVariable(forBuiltin: "Array")
+            b.construct(Array, withArgs: [n1, values, n2], spreading: [false, true, false])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                new Array(13.37, ...[1,2,"Hello","World"], 13.38);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testSuperPropertyWithBinopLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let superclass = b.buildClassDefinition { cls in
+                cls.addConstructor(with: .parameters(n: 1)) { params in
+                }
+
+                cls.addInstanceMethod("f", with: .parameters(n: 1)) { params in
+                    b.doReturn(b.loadString("foobar"))
+                }
+            }
+            let C = b.buildClassDefinition(withSuperclass: superclass) { cls in
+                cls.addConstructor(with: .parameters(n: 1)) { params in
+                    b.callSuperConstructor(withArgs: [])
+                    b.setSuperProperty("bar", to: b.loadInt(100))
+                }
+                cls.addInstanceMethod("g", with: .parameters(n: 1)) { params in
+                    b.updateSuperProperty("bar", with: b.loadInt(1337), using: BinaryOperator.Add)
+                }
+                cls.addInstanceMethod("h", with: .parameters(n: 0)) { params in
+                    b.doReturn(b.getSuperProperty("bar"))
+                }
+            }
+            b.construct(C, withArgs: [b.loadFloat(13.37)])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                class C0 {
+                    constructor(a2) {
+                    }
+                    f(a4) {
+                        return "foobar";
+                    }
+                }
+                class C6 extends C0 {
+                    constructor(a8) {
+                        super();
+                        super.bar = 100;
+                    }
+                    g(a11) {
+                        super.bar += 1337;
+                    }
+                    h() {
+                        return super.bar;
+                    }
+                }
+                new C6(13.37);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testComputedSuperPropertyAccesses() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let superclass = b.buildClassDefinition { cls in
+                cls.addConstructor(with: .parameters(n: 1)) { params in
+                }
+
+                cls.addInstanceMethod("f", with: .parameters(n: 1)) { params in
+                    b.doReturn(b.loadString("foobar"))
+                }
+            }
+
+            let function = b.buildPlainFunction(with: .parameters(n: 0)) { params in
+                b.doReturn(b.loadString("baz"))
+            }
+
+            let C = b.buildClassDefinition(withSuperclass: superclass) { cls in
+                cls.addConstructor(with: .parameters(n: 1)) { params in
+                    b.callSuperConstructor(withArgs: [])
+                    b.setComputedSuperProperty(params[1], to: b.loadInt(100))
+                }
+                cls.addInstanceMethod("g", with: .parameters(n: 1)) { params in
+                    let property = b.binary(b.callFunction(function), params[1], with: .Add)
+                    b.doReturn(b.getComputedSuperProperty(property))
+                }
+            }
+            b.construct(C, withArgs: [b.loadFloat(13.37)])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                class C0 {
+                    constructor(a2) {
+                    }
+                    f(a4) {
+                        return "foobar";
+                    }
+                }
+                function f6() {
+                    return "baz";
+                }
+                class C8 extends C0 {
+                    constructor(a10) {
+                        super();
+                        super[a10] = 100;
+                    }
+                    g(a13) {
+                        return super[f6() + a13];
+                    }
+                }
+                new C8(13.37);
+
+                """
+
+            #expect(actual == expected)
+
+        }
+    }
+
+    @Test func testObjectDestructLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let v0 = b.loadInt(42)
+            let v1 = b.loadFloat(13.37)
+            let v2 = b.createObject(with: ["foo": v0, "bar": v1])
+            b.destruct(v2, selecting: ["foo"], hasRestElement: true)
+            b.destruct(v2, selecting: ["foo", "bar"], hasRestElement: true)
+            b.destruct(v2, selecting: [String](), hasRestElement: true)
+            b.destruct(v2, selecting: ["foo", "bar"])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v2 = { bar: 13.37, foo: 42 };
+                let {"foo":v3,...v4} = v2;
+                let {"foo":v5,"bar":v6,...v7} = v2;
+                let {...v8} = v2;
+                let {"foo":v9,"bar":v10} = v2;
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testObjectDestructLiftingWeirdNames() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+            let v0 = b.loadInt(42)
+            let v1 = b.loadFloat(13.37)
+            let v2 = b.createObject(with: ["foo-bar": v0, "123": v1])
+            b.destruct(v2, selecting: ["foo-bar"], hasRestElement: true)
+            b.destruct(v2, selecting: ["foo-bar", "123"])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v2 = { 123: 13.37, "foo-bar": 42 };
+                let {"foo-bar":v3,...v4} = v2;
+                let {"foo-bar":v5,"123":v6} = v2;
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testObjectDestructAndReassignLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let v0 = b.loadInt(42)
+            let v1 = b.loadFloat(13.37)
+            let v2 = b.loadString("Hello")
+            let v3 = b.createObject(with: ["foo": v0, "bar": v1])
+            b.destruct(v3, selecting: ["foo"], into: [v2, v0], hasRestElement: true)
+            b.destruct(v3, selecting: ["foo", "bar"], into: [v2, v0, v1], hasRestElement: true)
+            b.destruct(v3, selecting: [String](), into: [v2], hasRestElement: true)
+            b.destruct(v3, selecting: ["foo", "bar"], into: [v2, v1])
+            b.destruct(v3, selecting: [String](), into: [])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                let v0 = 42;
+                let v1 = 13.37;
+                let v2 = "Hello";
+                const v3 = { bar: v1, foo: v0 };
+                ({"foo":v2,...v0} = v3);
+                ({"foo":v2,"bar":v0,...v1} = v3);
+                ({...v2} = v3);
+                ({"foo":v2,"bar":v1} = v3);
+                ({} = v3);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testArrayDestructLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            var initialValues = [Variable]()
+            initialValues.append(b.loadInt(15))
+            initialValues.append(b.loadInt(30))
+            initialValues.append(b.loadString("Hello"))
+            initialValues.append(b.loadString("World"))
+            let arr = b.createArray(with: initialValues)
+            b.destruct(arr, selecting: [0, 1])
+            b.destruct(arr, selecting: [0, 2, 5])
+            b.destruct(arr, selecting: [0, 2], lastIsRest: true)
+            b.destruct(arr, selecting: [0], lastIsRest: true)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v4 = [15,30,"Hello","World"];
+                let [v5,v6] = v4;
+                let [v7,,v8,,,v9] = v4;
+                let [v10,,...v11] = v4;
+                let [...v12] = v4;
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testArrayDestructAndReassignLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            var initialValues = [Variable]()
+            initialValues.append(b.loadInt(15))
+            initialValues.append(b.loadInt(30))
+            initialValues.append(b.loadString("Hello"))
+            initialValues.append(b.loadString("World"))
+            let array = b.createArray(with: initialValues)
+            let i = b.loadInt(1000)
+            let s = b.loadString("foobar")
+            b.destruct(array, selecting: [0, 2], into: [i, s], lastIsRest: true)
+            b.destruct(array, selecting: [0], into: [i], lastIsRest: true)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v4 = [15,30,"Hello","World"];
+                let v5 = 1000;
+                let v6 = "foobar";
+                [v5,,...v6] = v4;
+                [...v5] = v4;
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testNamedVariableLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let print = b.createNamedVariable(forBuiltin: "print")
+            let i1 = b.loadInt(42)
+            let i2 = b.loadInt(1337)
+            let va = b.createNamedVariable("a", declarationMode: .let, initialValue: i1)
+            b.callFunction(print, withArgs: [va])
+            let vb1 = b.createNamedVariable("b", declarationMode: .none)
+            b.callFunction(print, withArgs: [vb1])
+            b.createNamedVariable("c", declarationMode: .global, initialValue: i2)
+            let vb2 = b.createNamedVariable("b", declarationMode: .var, initialValue: i2)
+            b.reassign(variable: vb2, value: i1)
+            let vc = b.createNamedVariable("c", declarationMode: .none)
+            b.callFunction(print, withArgs: [vc])
+            let undefined = b.loadUndefined()
+            let vd = b.createNamedVariable("d", declarationMode: .let, initialValue: undefined)
+            b.callFunction(print, withArgs: [vd])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                let a = 42;
+                print(a);
+                print(b);
+                c = 1337;
+                var b = 1337;
+                b = 42;
+                print(c);
+                let d;
+                print(d);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testTryCatchLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let f = b.buildPlainFunction(with: .parameters(n: 2)) { args in
+                b.buildTryCatchFinally(
+                    tryBody: {
+                        let v = b.binary(args[0], args[1], with: .Mul)
+                        b.doReturn(v)
+                    },
+                    catchBody: { _ in
+                        let v = b.binary(args[0], args[1], with: .Div)
+                        b.doReturn(v)
+                    })
+            }
+            b.callFunction(f, withArgs: [b.loadInt(1337), b.loadInt(42)])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                function f0(a1, a2) {
+                    try {
+                        return a1 * a2;
+                    } catch(e4) {
+                        return a1 / a2;
+                    }
+                }
+                f0(1337, 42);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testTryFinallyLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let f = b.buildPlainFunction(with: .parameters(n: 2)) { args in
+                b.buildTryCatchFinally(
+                    tryBody: {
+                        let v = b.binary(args[0], args[1], with: .Mul)
+                        b.doReturn(v)
+                    },
+                    finallyBody: {
+                        let v = b.binary(args[0], args[1], with: .Mod)
+                        b.doReturn(v)
+                    })
+            }
+            b.callFunction(f, withArgs: [b.loadInt(1337), b.loadInt(42)])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                function f0(a1, a2) {
+                    try {
+                        return a1 * a2;
+                    } finally {
+                        return a1 % a2;
+                    }
+                }
+                f0(1337, 42);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testTryCatchFinallyLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let f = b.buildPlainFunction(with: .parameters(n: 2)) { args in
+                b.buildTryCatchFinally(
+                    tryBody: {
+                        let v = b.binary(args[0], args[1], with: .Mul)
+                        b.doReturn(v)
+                    },
+                    catchBody: { _ in
+                        let v = b.binary(args[0], args[1], with: .Div)
+                        b.doReturn(v)
+                    },
+                    finallyBody: {
+                        let v = b.binary(args[0], args[1], with: .Mod)
+                        b.doReturn(v)
+                    })
+            }
+            b.callFunction(f, withArgs: [b.loadInt(1337), b.loadInt(42)])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                function f0(a1, a2) {
+                    try {
+                        return a1 * a2;
+                    } catch(e4) {
+                        return a1 / a2;
+                    } finally {
+                        return a1 % a2;
+                    }
+                }
+                f0(1337, 42);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testSwitchStatementLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let v0 = b.loadInt(42)
+            let v1 = b.createObject(with: ["foo": v0])
+            let v2 = b.getProperty("foo", of: v1)
+            let v3 = b.loadInt(1337)
+            let v4 = b.loadString("42")
+            let v5 = b.loadFloat(13.37)
+
+            b.buildSwitch(on: v2) { swtch in
+                swtch.addCase(v3, fallsThrough: false) {
+                    b.setProperty("bar", of: v1, to: v3)
+                }
+                swtch.addCase(v4, fallsThrough: false) {
+                    b.setProperty("baz", of: v1, to: v4)
+                }
+                swtch.addDefaultCase(fallsThrough: true) {
+                    b.setProperty("foo", of: v1, to: v5)
+                }
+                swtch.addCase(v0, fallsThrough: true) {
+                    b.setProperty("bla", of: v1, to: v2)
+                }
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v1 = { foo: 42 };
+                const v2 = v1.foo;
+                switch (v2) {
+                    case 1337:
+                        v1.bar = 1337;
+                        break;
+                    case "42":
+                        v1.baz = "42";
+                        break;
+                    default:
+                        v1.foo = 13.37;
+                    case 42:
+                        v1.bla = v2;
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testWhileLoopLifting1() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let loopVar = b.loadInt(0)
+            b.buildWhileLoop({ b.compare(loopVar, with: b.loadInt(100), using: .lessThan) }) {
+                b.unary(.PostInc, loopVar)
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                let v0 = 0;
+                while (v0 < 100) {
+                    v0++;
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testWhileLoopLifting2() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let shouldContinue = b.createNamedVariable(forBuiltin: "shouldContinue")
+            b.buildWhileLoop({ b.callFunction(shouldContinue) }) {
+
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                while (shouldContinue()) {
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testWhileLoopLifting3() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let f = b.createNamedVariable(forBuiltin: "f")
+            let g = b.createNamedVariable(forBuiltin: "g")
+            let loopVar = b.loadInt(10)
+            b.buildWhileLoop({
+                b.callFunction(f)
+                b.callFunction(g)
+                return loopVar
+            }) {
+                b.unary(.PostDec, loopVar)
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                let v2 = 10;
+                while (f(), g(), v2) {
+                    v2--;
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testWhileLoopLifting4() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            var f = b.createNamedVariable(forBuiltin: "f")
+            var g = b.createNamedVariable(forBuiltin: "g")
+            b.buildWhileLoop({
+                b.callFunction(f)
+                let cond = b.callFunction(g)
+                return cond
+            }) {
+            }
+
+            var program = b.finalize()
+            var actual = fuzzer.lifter.lift(program)
+
+            var expected = """
+                while (f(), g()) {
+                }
+
+                """
+
+            #expect(actual == expected)
+
+            f = b.createNamedVariable(forBuiltin: "f")
+            g = b.createNamedVariable(forBuiltin: "g")
+            b.buildWhileLoop({
+                let cond = b.callFunction(f)
+                b.callFunction(g)
+                return cond
+            }) {
+                b.callFunction(b.createNamedVariable(forBuiltin: "body"))
+            }
+
+            program = b.finalize()
+            actual = fuzzer.lifter.lift(program)
+
+            expected = """
+                while ((() => {
+                        const v2 = f();
+                        g();
+                        return v2;
+                    })()) {
+                    body();
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testWhileLoopLifting5() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            b.buildWhileLoop({
+                let foobar = b.createNamedVariable(forBuiltin: "foobar")
+                let v = b.callFunction(foobar)
+                return b.binary(v, v, with: .Add)
+            }) {
+                let doLoopBodyStuff = b.createNamedVariable(forBuiltin: "doLoopBodyStuff")
+                b.callFunction(doLoopBodyStuff)
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                while ((() => {
+                        const v1 = foobar();
+                        return v1 + v1;
+                    })()) {
+                    doLoopBodyStuff();
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testWhileLoopLifting6() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let print = b.createNamedVariable(forBuiltin: "print")
+            let f = b.callFunction(b.createNamedVariable(forBuiltin: "f"))
+            let g = b.callFunction(b.createNamedVariable(forBuiltin: "g"))
+            let h = b.callFunction(b.createNamedVariable(forBuiltin: "h"))
+            b.buildWhileLoop({
+                b.callFunction(print, withArgs: [f])
+                return b.loadBool(false)
+            }) {
+                b.callFunction(print, withArgs: [g])
+            }
+            b.callFunction(print, withArgs: [h])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v2 = f();
+                const v4 = g();
+                const v6 = h();
+                while (print(v2), false) {
+                    print(v4);
+                }
+                print(v6);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testDoWhileLoopLifting1() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let loopVar1 = b.loadInt(0)
+            b.buildDoWhileLoop(
+                do: {
+                    let loopVar2 = b.loadInt(0)
+                    b.buildDoWhileLoop(
+                        do: {
+                            b.unary(.PostInc, loopVar2)
+                        },
+                        while: {
+                            b.callFunction(
+                                b.createNamedVariable(forBuiltin: "f"), withArgs: [loopVar2])
+                        })
+                    b.unary(.PostInc, loopVar1)
+                }, while: { b.compare(loopVar1, with: b.loadInt(42), using: .lessThan) })
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                let v0 = 0;
+                do {
+                    let v2 = 0;
+                    do {
+                        v2++;
+                    } while (f(v2))
+                    v0++;
+                } while (v0 < 42)
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testDoWhileLoopLifting2() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            b.buildDoWhileLoop(
+                do: {
+                    let doSomething = b.createNamedVariable(forBuiltin: "doSomething")
+                    b.callFunction(doSomething)
+                },
+                while: {
+                    b.callFunction(b.createNamedVariable(forBuiltin: "f"))
+                    return b.callFunction(b.createNamedVariable(forBuiltin: "g"))
+                })
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                do {
+                    doSomething();
+                } while (f(), g())
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testDoWhileLoopLifting3() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let print = b.createNamedVariable(forBuiltin: "print")
+            let f = b.callFunction(b.createNamedVariable(forBuiltin: "f"))
+            let g = b.callFunction(b.createNamedVariable(forBuiltin: "g"))
+            let h = b.callFunction(b.createNamedVariable(forBuiltin: "h"))
+            b.buildDoWhileLoop(
+                do: {
+                    b.callFunction(print, withArgs: [f])
+                },
+                while: {
+                    b.callFunction(print, withArgs: [g])
+                    return b.loadBool(false)
+                })
+            b.callFunction(print, withArgs: [h])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v2 = f();
+                const v4 = g();
+                const v6 = h();
+                do {
+                    print(v2);
+                } while (print(v4), false)
+                print(v6);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testForLoopLifting1() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            b.buildForLoop(
+                i: { b.loadInt(0) }, { i in b.compare(i, with: b.loadInt(10), using: .lessThan) },
+                { i in b.unary(.PostInc, i) }
+            ) { i in
+                b.buildForLoop(
+                    i: { b.loadInt(0) }, { j in b.compare(j, with: i, using: .lessThan) },
+                    { j in b.unary(.PostInc, j) }
+                ) { j in
+                    let print = b.createNamedVariable(forBuiltin: "print")
+                    b.callFunction(print, withArgs: [i, j])
+                }
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                for (let i1 = 0; i1 < 10; i1++) {
+                    for (let i9 = 0; i9 < i1; i9++) {
+                        print(i1, i9);
+                    }
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testForLoopLifting2() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            b.buildForLoop {
+                b.loopBreak()
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                for (;;) {
+                    break;
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testForLoopLifting3() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            b.buildForLoop(
+                {
+                    return [
+                        b.callFunction(b.createNamedVariable(forBuiltin: "f1")),
+                        b.callFunction(b.createNamedVariable(forBuiltin: "f2")),
+                    ]
+                },
+                { vars in
+                    b.callFunction(b.createNamedVariable(forBuiltin: "f3"), withArgs: [vars[0]])
+                    return b.callFunction(
+                        b.createNamedVariable(forBuiltin: "f4"), withArgs: [vars[1]])
+                },
+                { vars in
+                    b.callFunction(b.createNamedVariable(forBuiltin: "f5"), withArgs: [vars[1]])
+                    b.callFunction(b.createNamedVariable(forBuiltin: "f6"), withArgs: [vars[0]])
+                }
+            ) { vars in
+                b.callFunction(b.createNamedVariable(forBuiltin: "f7"), withArgs: vars)
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                for (let i4 = f1(), i5 = f2(); f3(i4), f4(i5); f5(i5), f6(i4)) {
+                    f7(i4, i5);
+                }
+
+                """
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testForLoopLifting4() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            b.buildForLoop(
+                {
+                    let x = b.callFunction(b.createNamedVariable(forBuiltin: "f"))
+                    let y = b.callFunction(b.createNamedVariable(forBuiltin: "g"))
+                    b.callFunction(b.createNamedVariable(forBuiltin: "h"))
+                    return [x, y]
+                },
+                { vs in return b.compare(vs[0], with: vs[1], using: .lessThan) },
+                { vs in b.reassign(variable: vs[0], value: vs[1], with: .Add) }
+            ) { vs in
+                b.callFunction(b.createNamedVariable(forBuiltin: "print"), withArgs: vs)
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                for (let [i6, i7] = (() => {
+                        const v1 = f();
+                        const v3 = g();
+                        h();
+                        return [v1, v3];
+                    })();
+                    i6 < i7;
+                    i6 += i7) {
+                    print(i6, i7);
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testForLoopLifting5() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            b.buildForLoop(
+                {
+                    b.callFunction(b.createNamedVariable(forBuiltin: "foo"))
+                    b.callFunction(b.createNamedVariable(forBuiltin: "bar"))
+                },
+                {
+                    let shouldContinue = b.callFunction(
+                        b.createNamedVariable(forBuiltin: "shouldContinue"))
+                    b.buildIf(
+                        b.callFunction(b.createNamedVariable(forBuiltin: "shouldNotContinue"))
+                    ) {
+                        b.reassign(variable: shouldContinue, value: b.loadBool(false))
+                    }
+                    return shouldContinue
+                }
+            ) {
+                b.loopBreak()
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                for (foo(), bar();
+                    (() => {
+                        let v5 = shouldContinue();
+                        if (shouldNotContinue()) {
+                            v5 = false;
+                        }
+                        return v5;
+                    })();
+                    ) {
+                    break;
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testForLoopLifting6() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            b.buildForLoop(
+                i: { b.loadInt(0) }, { b.compare($0, with: b.loadInt(100), using: .lessThan) },
+                { b.reassign(variable: $0, value: b.loadInt(10), with: .Add) }
+            ) { i in
+                b.callFunction(b.createNamedVariable(forBuiltin: "print"), withArgs: [i])
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                for (let i1 = 0; i1 < 100; i1 += 10) {
+                    print(i1);
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testForLoopLifting7() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            b.buildForLoop(
+                i: {
+                    b.callFunction(b.createNamedVariable(forBuiltin: "f"))
+                    return b.callFunction(b.createNamedVariable(forBuiltin: "g"))
+                }, { _ in b.loadBool(true) }, { _ in }
+            ) { i in
+                b.loopBreak()
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                for (let i4 = (() => {
+                        f();
+                        return g();
+                    })();
+                    ;
+                    ) {
+                    break;
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testForLoopLifting8() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            b.buildPlainFunction(with: .parameters(n: 3)) { args in
+                b.buildForLoop(
+                    i: { args[0] },
+                    { i in b.compare(i, with: args[1], using: .greaterThanOrEqual) },
+                    { i in b.reassign(variable: i, value: args[2], with: .Sub) }
+                ) { vars in
+                }
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                function f0(a1, a2, a3) {
+                    for (let i4 = a1; i4 >= a2; i4 -= a3) {
+                    }
+                }
+
+                """
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testForLoopLifting9() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let print = b.createNamedVariable(forBuiltin: "print")
+            let f = b.callFunction(b.createNamedVariable(forBuiltin: "f"))
+            let g = b.callFunction(b.createNamedVariable(forBuiltin: "g"))
+            let h = b.callFunction(b.createNamedVariable(forBuiltin: "h"))
+            let i = b.callFunction(b.createNamedVariable(forBuiltin: "i"))
+            let j = b.callFunction(b.createNamedVariable(forBuiltin: "j"))
+
+            b.buildForLoop(
+                { b.callFunction(print, withArgs: [f]) }, { b.callFunction(print, withArgs: [g]) },
+                { b.callFunction(print, withArgs: [h]) }
+            ) {
+                b.callFunction(print, withArgs: [i])
+            }
+            b.callFunction(print, withArgs: [j])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v2 = f();
+                const v4 = g();
+                const v6 = h();
+                const v8 = i();
+                const v10 = j();
+                for (print(v2); print(v4); print(v6)) {
+                    print(v8);
+                }
+                print(v10);
+
+                """
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testForLoopLifting10() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            b.buildPlainFunction(with: .parameters(n: 0)) { _ in
+                let s = b.loadInt(0)
+                // Test that context-dependent operations such as LoadArguments are handled correctly inside loop headers
+                b.buildForLoop(
+                    i: { b.loadInt(0) },
+                    { i in
+                        b.compare(
+                            i, with: b.getProperty("length", of: b.loadArguments()),
+                            using: .lessThan)
+                    }, { i in b.unary(.PostInc, i) }
+                ) { i in
+                    let arg = b.getComputedProperty(i, of: b.loadArguments())
+                    b.reassign(variable: s, value: arg, with: .Add)
+                }
+                b.doReturn(s)
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                function f0() {
+                    let v1 = 0;
+                    for (let i3 = 0; i3 < arguments.length; i3++) {
+                        v1 += arguments[i3];
+                    }
+                    return v1;
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testRepeatLoopLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let s = b.loadInt(0)
+            b.buildRepeatLoop(n: 1337) { i in
+                b.reassign(variable: s, value: i, with: .Add)
+            }
+            let print = b.createNamedVariable(forBuiltin: "print")
+            b.callFunction(print, withArgs: [s])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                let v0 = 0;
+                for (let v1 = 0; v1 < 1337; v1++) {
+                    v0 += v1;
+                }
+                print(v0);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testForLoopWithArrayDestructLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let a1 = b.createArray(with: [
+                b.loadInt(10), b.loadInt(11), b.loadInt(12), b.loadInt(13), b.loadInt(14),
+            ])
+            let a2 = b.createArray(with: [
+                b.loadInt(20), b.loadInt(21), b.loadInt(22), b.loadInt(23),
+            ])
+            let a3 = b.createArray(with: [b.loadInt(30), b.loadInt(31), b.loadInt(32)])
+            let a4 = b.createArray(with: [a1, a2, a3])
+            let print = b.createNamedVariable(forBuiltin: "print")
+            b.buildForInOfLoop(
+                a4, type: .forOf, isAsync: false,
+                header: .arrayDestruct(indices: [0, 2], hasRestElement: true)
+            ) { args, _ in
+                b.callFunction(print, withArgs: [args[0]])
+                b.buildForInOfLoop(args[1], type: .forOf, isAsync: false, header: .simple) {
+                    vars, _ in
+                    let v = vars[0]
+                    b.callFunction(print, withArgs: [v])
+                }
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                for (let [v17,,...v18] of [[10,11,12,13,14],[20,21,22,23],[30,31,32]]) {
+                    print(v17);
+                    for (const v21 of v18) {
+                        print(v21);
+                    }
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testBlockStatements() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let v0 = b.loadInt(1337)
+            let v1 = b.createObject(with: ["a": v0])
+            b.buildForInOfLoop(v1, type: .forIn, isAsync: false, header: .simple) { vars, _ in
+                let v2 = vars[0]
+                b.buildBlockStatement {
+                    let v3 = b.loadInt(1337)
+                    b.reassign(variable: v2, value: v3)
+                    b.buildBlockStatement {
+                        let v4 = b.createObject(with: ["a": v1])
+                        b.reassign(variable: v2, value: v4)
+                    }
+
+                }
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v1 = { a: 1337 };
+                for (let v2 in v1) {
+                    {
+                        v2 = 1337;
+                        {
+                            v2 = { a: v1 };
+                        }
+                    }
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testSingularOperationLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            // If there are multiple singular operations inside the same surrounding block, then
+            // all but the first one should be ignored by the lifter.
+
+            b.buildClassDefinition { cls in
+                cls.addConstructor(with: .parameters(n: 1)) { args in
+                    let this = args[0]
+                    b.setProperty("foo", of: this, to: args[1])
+                }
+
+                cls.addConstructor(with: .parameters(n: 1)) { args in
+                    let this = args[0]
+                    b.setProperty("bar", of: this, to: args[1])
+                }
+
+                cls.addInstanceMethod("baz", with: .parameters(n: 0)) { args in
+                    let this = args[0]
+                    b.doReturn(b.getProperty("bar", of: this))
+                }
+            }
+
+            let p1 = b.createNamedVariable(forBuiltin: "proto1")
+            let p2 = b.createNamedVariable(forBuiltin: "proto2")
+            let v = b.loadInt(42)
+
+            b.buildObjectLiteral { obj in
+                obj.addProperty("foo", as: v)
+                obj.setPrototype(to: p1)
+                obj.addProperty("bar", as: v)
+                obj.setPrototype(to: p2)
+                obj.addProperty("baz", as: v)
+            }
+
+            let print = b.createNamedVariable(forBuiltin: "print")
+            let v2 = b.loadInt(43)
+            let v3 = b.loadInt(44)
+            b.buildSwitch(on: v) { swtch in
+                swtch.addDefaultCase {
+                    b.callFunction(print, withArgs: [b.loadString("default case 1")])
+                }
+                swtch.addCase(v2) {
+                    b.callFunction(print, withArgs: [b.loadString("case 43")])
+                }
+                swtch.addDefaultCase {
+                    b.callFunction(print, withArgs: [b.loadString("default case 2")])
+                }
+                swtch.addCase(v3) {
+                    b.callFunction(print, withArgs: [b.loadString("case 44")])
+                }
+                swtch.addDefaultCase {
+                    b.callFunction(print, withArgs: [b.loadString("default case 3")])
+                }
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                class C0 {
+                    constructor(a2) {
+                        this.foo = a2;
+                    }
+                    baz() {
+                        return this.bar;
+                    }
+                }
+                const v10 = { foo: 42, __proto__: proto1, bar: 42, baz: 42 };
+                switch (42) {
+                    default:
+                        print("default case 1");
+                        break;
+                    case 43:
+                        print("case 43");
+                        break;
+                    case 44:
+                        print("case 44");
+                        break;
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testNoAssignmentToThis() {
         // Assigning to |this| (e.g. `this = 42;`) is a syntax error in JavaScript, so we must never produce such code.
         // Instead, in cases where a variable containing |this| is reassigned, we need to create a local variable (e.g.
         // `let v3 = this; ...; v3 = 42;`).
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        let this = b.loadThis()
-        let v = b.loadInt(42)
-        b.reassign(variable: this, value: v)
+            let b = fuzzer.makeBuilder()
 
-        b.buildConstructor(with: .parameters(n: 0)) { args in
-            b.reassign(variable: args[0], value: v)
-        }
+            let this = b.loadThis()
+            let v = b.loadInt(42)
+            b.reassign(variable: this, value: v)
 
-        b.buildObjectLiteral { obj in
-            obj.addMethod("foo", with: .parameters(n: 0)) { args in
+            b.buildConstructor(with: .parameters(n: 0)) { args in
                 b.reassign(variable: args[0], value: v)
             }
-        }
 
-        b.buildClassDefinition { cls in
-            cls.addInstanceMethod("bar", with: .parameters(n: 0)) { args in
-                b.reassign(variable: args[0], value: v)
-            }
-            cls.addStaticGetter(for: "baz") { this in
-                b.reassign(variable: this, value: v)
-            }
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            let v0 = this;
-            v0 = 42;
-            function F2() {
-                if (!new.target) { throw 'must be called with new'; }
-                let v3 = this;
-                v3 = 42;
-            }
-            const v5 = {
-                foo() {
-                    let v4 = this;
-                    v4 = 42;
-                },
-            };
-            class C6 {
-                bar() {
-                    let v7 = this;
-                    v7 = 42;
-                }
-                static get baz() {
-                    let v8 = this;
-                    v8 = 42;
+            b.buildObjectLiteral { obj in
+                obj.addMethod("foo", with: .parameters(n: 0)) { args in
+                    b.reassign(variable: args[0], value: v)
                 }
             }
 
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testNegativeNumberLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v0 = b.loadInt(-42)
-        let v1 = b.loadBigInt(-43)
-        let v2 = b.loadFloat(-4.4)
-
-        // Negative numbers are technically unary expressions, which makes a difference when performing a negation (otherwise, we'd end up with something like `--42`)
-        b.unary(.Minus, v0)
-        b.unary(.Minus, v1)
-        b.unary(.Minus, v2)
-
-        // For some reason, when performing an exponentiation we also need parenthesis, otherwise "SyntaxError: Unary operator
-        // used immediately before exponentiation expression. Parenthesis must be used to disambiguate operator precedence"
-        b.binary(v0, v2, with: .Exp)
-
-        // However, in pretty much all other cases we dont want/expect parenthesis since unary expressions have fairly high precedence,
-        // and most expressions with higher precendence such as MemberExpressions anyway need special handling for literals.
-        b.unary(.BitwiseNot, v0)
-        b.binary(v0, v2, with: .Add)
-        let v3 = b.loadInt(42)
-        b.reassign(variable: v3, value: v0)
-        let print = b.createNamedVariable(forBuiltin: "print")
-        b.callFunction(print, withArgs: [v0, v1, v2])
-        b.getProperty("foo", of: v1)
-        b.getProperty("bar", of: v2)
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            -(-42);
-            -(-43n);
-            -(-4.4);
-            (-42) ** -4.4;
-            ~-42;
-            -42 + -4.4;
-            let v9 = 42;
-            v9 = -42;
-            print(-42, -43n, -4.4);
-            (-43n).foo;
-            (-4.4).bar;
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testLoadNewTargetLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let variable = b.loadNull()
-        b.buildPlainFunction(with: .parameters(n: 0)) { args in
-            let t = b.loadNewTarget()
-            b.reassign(variable: variable, value: t)
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            let v0 = null;
-            function f1() {
-                v0 = new.target;
+            b.buildClassDefinition { cls in
+                cls.addInstanceMethod("bar", with: .parameters(n: 0)) { args in
+                    b.reassign(variable: args[0], value: v)
+                }
+                cls.addStaticGetter(for: "baz") { this in
+                    b.reassign(variable: this, value: v)
+                }
             }
 
-            """
-        XCTAssertEqual(actual, expected)
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                let v0 = this;
+                v0 = 42;
+                function F2() {
+                    if (!new.target) { throw 'must be called with new'; }
+                    let v3 = this;
+                    v3 = 42;
+                }
+                const v5 = {
+                    foo() {
+                        let v4 = this;
+                        v4 = 42;
+                    },
+                };
+                class C6 {
+                    bar() {
+                        let v7 = this;
+                        v7 = 42;
+                    }
+                    static get baz() {
+                        let v8 = this;
+                        v8 = 42;
+                    }
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testNegativeNumberLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let v0 = b.loadInt(-42)
+            let v1 = b.loadBigInt(-43)
+            let v2 = b.loadFloat(-4.4)
+
+            // Negative numbers are technically unary expressions, which makes a difference when performing a negation (otherwise, we'd end up with something like `--42`)
+            b.unary(.Minus, v0)
+            b.unary(.Minus, v1)
+            b.unary(.Minus, v2)
+
+            // For some reason, when performing an exponentiation we also need parenthesis, otherwise "SyntaxError: Unary operator
+            // used immediately before exponentiation expression. Parenthesis must be used to disambiguate operator precedence"
+            b.binary(v0, v2, with: .Exp)
+
+            // However, in pretty much all other cases we dont want/expect parenthesis since unary expressions have fairly high precedence,
+            // and most expressions with higher precendence such as MemberExpressions anyway need special handling for literals.
+            b.unary(.BitwiseNot, v0)
+            b.binary(v0, v2, with: .Add)
+            let v3 = b.loadInt(42)
+            b.reassign(variable: v3, value: v0)
+            let print = b.createNamedVariable(forBuiltin: "print")
+            b.callFunction(print, withArgs: [v0, v1, v2])
+            b.getProperty("foo", of: v1)
+            b.getProperty("bar", of: v2)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                -(-42);
+                -(-43n);
+                -(-4.4);
+                (-42) ** -4.4;
+                ~-42;
+                -42 + -4.4;
+                let v9 = 42;
+                v9 = -42;
+                print(-42, -43n, -4.4);
+                (-43n).foo;
+                (-4.4).bar;
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testLoadNewTargetLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let variable = b.loadNull()
+            b.buildPlainFunction(with: .parameters(n: 0)) { args in
+                let t = b.loadNewTarget()
+                b.reassign(variable: variable, value: t)
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                let v0 = null;
+                function f1() {
+                    v0 = new.target;
+                }
+
+                """
+            #expect(actual == expected)
+        }
     }
 
     // This test is parameterized for normal and named variables with the
@@ -4009,46 +4352,48 @@ class LifterTests: XCTestCase {
         _ variableName: String, generateVariable: (ProgramBuilder, Variable) -> Void
     ) {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
 
-        let f = b.buildPlainFunction(with: .parameters(n: 0)) { args in
-            let v1 = b.loadInt(1)
-            let v2 = b.loadInt(42)
-            let numVariables = b.numberOfVisibleVariables
-            let dispose = b.createSymbolProperty("dispose")
-            // Test that the intermediate variable for "Symbol" stays hidden.
-            XCTAssertEqual(b.numberOfVisibleVariables, numVariables + 1)
-            let disposableVariable = b.buildObjectLiteral { obj in
-                obj.addProperty("value", as: v1)
-                obj.addComputedMethod(dispose, with: .parameters(n: 0)) { args in
-                    b.doReturn(v2)
+            let f = b.buildPlainFunction(with: .parameters(n: 0)) { args in
+                let v1 = b.loadInt(1)
+                let v2 = b.loadInt(42)
+                let numVariables = b.numberOfVisibleVariables
+                let dispose = b.createSymbolProperty("dispose")
+                // Test that the intermediate variable for "Symbol" stays hidden.
+                #expect(b.numberOfVisibleVariables == numVariables + 1)
+                let disposableVariable = b.buildObjectLiteral { obj in
+                    obj.addProperty("value", as: v1)
+                    obj.addComputedMethod(dispose, with: .parameters(n: 0)) { args in
+                        b.doReturn(v2)
+                    }
                 }
+                generateVariable(b, disposableVariable)
             }
-            generateVariable(b, disposableVariable)
+            b.callFunction(f)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                function f0() {
+                    const v4 = Symbol.dispose;
+                    const v6 = {
+                        value: 1,
+                        [v4]() {
+                            return 42;
+                        },
+                    };
+                    using %@ = v6;
+                }
+                f0();
+
+                """
+            #expect(actual == String(format: expected, variableName))
         }
-        b.callFunction(f)
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            function f0() {
-                const v4 = Symbol.dispose;
-                const v6 = {
-                    value: 1,
-                    [v4]() {
-                        return 42;
-                    },
-                };
-                using %@ = v6;
-            }
-            f0();
-
-            """
-        XCTAssertEqual(actual, String(format: expected, variableName))
     }
 
-    func testLoadDisposableVariableLifting() {
+    @Test func testLoadDisposableVariableLifting() {
         _testDisposableVariableLifting(
             "v7",
             generateVariable: { (b: ProgramBuilder, v: Variable) in
@@ -4056,7 +4401,7 @@ class LifterTests: XCTestCase {
             })
     }
 
-    func testCreateNamedDisposableVariableLifting() {
+    @Test func testCreateNamedDisposableVariableLifting() {
         _testDisposableVariableLifting(
             "dis",
             generateVariable: { (b: ProgramBuilder, v: Variable) in
@@ -4070,50 +4415,52 @@ class LifterTests: XCTestCase {
         _ variableName: String, generateVariable: (ProgramBuilder, Variable) -> Void
     ) {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
 
-        let f = b.buildAsyncFunction(with: .parameters(n: 0)) { args in
-            let v1 = b.loadInt(1)
-            let v2 = b.loadInt(42)
-            let asyncDispose = b.createSymbolProperty("asyncDispose")
-            let asyncDisposableVariable = b.buildObjectLiteral { obj in
-                obj.addProperty("value", as: v1)
-                obj.addComputedMethod(asyncDispose, with: .parameters(n: 0)) { args in
-                    b.doReturn(v2)
+            let f = b.buildAsyncFunction(with: .parameters(n: 0)) { args in
+                let v1 = b.loadInt(1)
+                let v2 = b.loadInt(42)
+                let asyncDispose = b.createSymbolProperty("asyncDispose")
+                let asyncDisposableVariable = b.buildObjectLiteral { obj in
+                    obj.addProperty("value", as: v1)
+                    obj.addComputedMethod(asyncDispose, with: .parameters(n: 0)) { args in
+                        b.doReturn(v2)
+                    }
                 }
+                generateVariable(b, asyncDisposableVariable)
             }
-            generateVariable(b, asyncDisposableVariable)
+
+            let g = b.buildAsyncFunction(with: .parameters(n: 0)) { args in
+                b.await(b.callFunction(f))
+            }
+            b.callFunction(g)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                async function f0() {
+                    const v4 = Symbol.asyncDispose;
+                    const v6 = {
+                        value: 1,
+                        [v4]() {
+                            return 42;
+                        },
+                    };
+                    await using %@ = v6;
+                }
+                async function f8() {
+                    await f0();
+                }
+                f8();
+
+                """
+            #expect(actual == String(format: expected, variableName))
         }
-
-        let g = b.buildAsyncFunction(with: .parameters(n: 0)) { args in
-            b.await(b.callFunction(f))
-        }
-        b.callFunction(g)
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            async function f0() {
-                const v4 = Symbol.asyncDispose;
-                const v6 = {
-                    value: 1,
-                    [v4]() {
-                        return 42;
-                    },
-                };
-                await using %@ = v6;
-            }
-            async function f8() {
-                await f0();
-            }
-            f8();
-
-            """
-        XCTAssertEqual(actual, String(format: expected, variableName))
     }
 
-    func testLoadAsyncDisposableVariableLifting() {
+    @Test func testLoadAsyncDisposableVariableLifting() {
         _testAsyncDisposableVariableLifting(
             "v7",
             generateVariable: { (b: ProgramBuilder, v: Variable) in
@@ -4121,7 +4468,7 @@ class LifterTests: XCTestCase {
             })
     }
 
-    func testCreateNamedAsyncDisposableVariableLifting() {
+    @Test func testCreateNamedAsyncDisposableVariableLifting() {
         _testAsyncDisposableVariableLifting(
             "dis",
             generateVariable: { (b: ProgramBuilder, v: Variable) in
@@ -4129,1109 +4476,1219 @@ class LifterTests: XCTestCase {
             })
     }
 
-    func testWasmAbstractTableLifting() {
+    @Test func testWasmAbstractTableLifting() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        b.createWasmTable(elementType: .wasmAnyRef(), limits: Limits(min: 1), isTable64: false)
-        b.createWasmTable(
-            elementType: .wasmEqRef(), limits: Limits(min: 2, max: 10), isTable64: false)
-        b.createWasmTable(elementType: .wasmStructRef(), limits: Limits(min: 3), isTable64: true)
-        b.createWasmTable(
-            elementType: .wasmArrayRef(), limits: Limits(min: 4, max: 20), isTable64: true)
+            let b = fuzzer.makeBuilder()
 
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
+            b.createWasmTable(elementType: .wasmAnyRef(), limits: Limits(min: 1), isTable64: false)
+            b.createWasmTable(
+                elementType: .wasmEqRef(), limits: Limits(min: 2, max: 10), isTable64: false)
+            b.createWasmTable(
+                elementType: .wasmStructRef(), limits: Limits(min: 3), isTable64: true)
+            b.createWasmTable(
+                elementType: .wasmArrayRef(), limits: Limits(min: 4, max: 20), isTable64: true)
 
-        let expected = """
-            let v0 = new WebAssembly.Table({ element: "anyref", initial: 1, address: 'i32' });
-            let v1 = new WebAssembly.Table({ element: "eqref", initial: 2, maximum: 10, address: 'i32' });
-            let v2 = new WebAssembly.Table({ element: "structref", initial: 3n, address: 'i64' });
-            let v3 = new WebAssembly.Table({ element: "arrayref", initial: 4n, maximum: 20n, address: 'i64' });
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
 
-            """
-        XCTAssertEqual(actual, expected)
+            let expected = """
+                let v0 = new WebAssembly.Table({ element: "anyref", initial: 1, address: 'i32' });
+                let v1 = new WebAssembly.Table({ element: "eqref", initial: 2, maximum: 10, address: 'i32' });
+                let v2 = new WebAssembly.Table({ element: "structref", initial: 3n, address: 'i64' });
+                let v3 = new WebAssembly.Table({ element: "arrayref", initial: 4n, maximum: 20n, address: 'i64' });
+
+                """
+            #expect(actual == expected)
+        }
     }
 
-    func testImportAnalysisMisTypedJS() {
+    @Test func testImportAnalysisMisTypedJS() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        let table = b.createWasmTable(
-            elementType: .wasmFuncRef(), limits: Limits(min: 1), isTable64: true)
-        XCTAssertTrue(b.type(of: table).Is(.object(ofGroup: "WasmTable")))
+            let b = fuzzer.makeBuilder()
 
-        let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in
-            b.doReturn(b.loadInt(1))
-        }
+            let table = b.createWasmTable(
+                elementType: .wasmFuncRef(), limits: Limits(min: 1), isTable64: true)
+            #expect(b.type(of: table).Is(.object(ofGroup: "WasmTable")))
 
-        let mutationIndex = b.indexOfNextInstruction()
-        // We will mutate this to reassign table to be f.
-        // The steps for this to happen during fuzzing are as follows, we emit all of this during generation time, then we emit this reassign later, e.g. during CodeGenMutation or we change an existing reassign during InputMutation.
-        // Then we need to be able to recover from this in the importAnalysis as this is the first code that tries to use the mistyped inputs.
-        b.reassign(variable: table, value: table)
-
-        b.buildWasmModule { m in
-            m.addWasmFunction(with: [] => []) { f, _, _ in
-                let sigDef = f.wasmDefineAdHocSignatureType(signature: [] => [])
-                f.wasmCallIndirect(
-                    signatureDef: sigDef, table: table, functionArgs: [], tableIndex: f.consti64(0))
-                return []
+            let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in
+                b.doReturn(b.loadInt(1))
             }
-        }
 
-        let prog = b.finalize()
-        let lifter = JavaScriptLifter(ecmaVersion: .es6, environment: JavaScriptEnvironment())
+            let mutationIndex = b.indexOfNextInstruction()
+            // We will mutate this to reassign table to be f.
+            // The steps for this to happen during fuzzing are as follows, we emit all of this during generation time, then we emit this reassign later, e.g. during CodeGenMutation or we change an existing reassign during InputMutation.
+            // Then we need to be able to recover from this in the importAnalysis as this is the first code that tries to use the mistyped inputs.
+            b.reassign(variable: table, value: table)
 
-        // lifting this to JavaScript should work and not fail
-        let _ = lifter.lift(prog)
-
-        // Now we build the mutated Program.
-        b.beginAdoption()
-        for i in 0..<mutationIndex {
-            b.adopt(prog.code[i])
-        }
-        // Now, mutate at the mutationIndex and reassign f to table.
-        let oldInstr = prog.code[mutationIndex]
-        var newInouts = oldInstr.inouts
-        // This is the mutation
-        newInouts[1] = f
-        let instr = Instruction(oldInstr.op, inouts: newInouts)
-        // Append the mutated instruction now.
-        b.append(instr)
-        // Adopt the rest of the Program.
-        for i in mutationIndex + 1..<prog.code.count {
-            b.adopt(prog.code[i])
-        }
-
-        let mutatedProg = b.finalize()
-        // This should now fail to lift, i.e. we should see `throw "Wasmlifting failed"` in the JavaScript.
-        let js = lifter.lift(mutatedProg)
-        XCTAssertTrue(js.contains("Wasmlifting failed"))
-    }
-
-    func testBuiltinPrototypeCall() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let dateBuiltin = b.createNamedVariable(forBuiltin: "Date")
-        XCTAssert(b.type(of: dateBuiltin).Is(.object(ofGroup: "DateConstructor")))
-        let dateProto = b.getProperty("prototype", of: dateBuiltin)
-        XCTAssert(b.type(of: dateProto).Is(.object(ofGroup: "Date.prototype")))
-        let getTime = b.getProperty("getTime", of: dateProto)
-        XCTAssertEqual(b.type(of: getTime), .unboundFunction([] => .number, receiver: .jsDate))
-        let date = b.construct(dateBuiltin)
-        XCTAssertEqual(b.type(of: date), .jsDate)
-        b.callMethod("call", on: getTime, withArgs: [date])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v2 = Date.prototype.getTime;
-            const v3 = new Date();
-            v2.call(v3);
-
-            """
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testWasmGCTypeGroupILLifter() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let typeGroupArray = b.wasmDefineTypeGroup {
-            let forwardReference = b.wasmDefineForwardOrSelfReference()
-            // Note that index types use generic .Index() descriptions without a type
-            // description (as the operation doesn't know its inputs).
-            let arrayOfArrayi32 = b.wasmDefineArrayType(
-                elementType: .wasmRef(.Index(), nullability: true),
-                mutability: false,
-                indexType: forwardReference)
-            let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
-            let subtypeArray = b.wasmDefineArrayType(
-                elementType: .wasmi32, mutability: true, superTypeDef: arrayi32
-            )
-            b.wasmResolveForwardReference(forwardReference, to: arrayi32)
-            return [arrayOfArrayi32, arrayi32, subtypeArray]
-        }
-
-        b.wasmDefineTypeGroup {
-            let selfReference = b.wasmDefineForwardOrSelfReference()
-            return [
-                b.wasmDefineStructType(
-                    fields: [
-                        // Note that index types use generic .Index() descriptions without a type
-                        // description (as the operation doesn't know its inputs).
-                        .init(type: .wasmRef(.Index(), nullability: false), mutability: false),
-                        .init(type: .wasmi32, mutability: true),
-                        .init(type: .wasmRef(.Index(), nullability: true), mutability: true),
-                    ],
-                    indexTypes: [typeGroupArray[0], selfReference])
-            ]
-        }
-
-        let program = b.finalize()
-        let actual = FuzzILLifter().lift(program)
-
-        let expected = """
-            WasmBeginTypeGroup
-                v0 <- WasmDefineForwardOrSelfReference
-                v1 <- WasmDefineArrayType .wasmRef(null Index) mutability=false isFinal=false v0
-                v2 <- WasmDefineArrayType .wasmi32 mutability=true isFinal=false
-                v3 <- WasmDefineArrayType .wasmi32 mutability=true superType=v2 isFinal=false
-                WasmResolveForwardReference [v0 => v2]
-            v4, v5, v6 <- WasmEndTypeGroup [v1, v2, v3]
-            WasmBeginTypeGroup
-                v7 <- WasmDefineForwardOrSelfReference
-                v8 <- WasmDefineStructType(.wasmRef(Index) mutability=false, .wasmi32 mutability=true, .wasmRef(null Index) mutability=true) isFinal=false [v4, v7]
-            v9 <- WasmEndTypeGroup [v8]
-
-            """
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testArrowFunctionInliningWithSideEffects() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let f = b.createNamedVariable(forBuiltin: "sideEffect")
-        b.callFunction(f)
-
-        let arrow = b.buildArrowFunction(with: .parameters(n: 0)) { _ in
-            b.doReturn(b.loadInt(42))
-        }
-
-        b.callFunction(arrow)
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        // The side-effect must be emitted before the arrow function is defined.
-        // The arrow function is assigned to a temporary because it's used as a callee.
-        let expected = """
-            sideEffect();
-            const t1 = () => 42;
-            t1();
-
-            """
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testArrowFunctionRecursiveLifting() {
-        let fuzzer = makeMockFuzzer()
-        // Manually construct a recursive arrow function, as the helper does not support it.
-        let b2 = fuzzer.makeBuilder()
-        let i = b2.loadInt(10)
-        let params = Parameters(count: 1)
-        let instr = b2.emit(BeginArrowFunction(parameters: params))
-        let fRec = instr.output
-        let arg0 = instr.innerOutput(0)
-
-        let cond = b2.compare(arg0, with: b2.loadInt(0), using: .equal)
-        b2.buildIf(cond) {
-            b2.doReturn(b2.loadInt(0))
-        }
-        let sub = b2.binary(arg0, b2.loadInt(1), with: .Sub)
-        let recCall = b2.callFunction(fRec, withArgs: [sub])  // Recursion!
-        b2.doReturn(recCall)
-        b2.emit(EndArrowFunction())
-
-        b2.callFunction(fRec, withArgs: [i])
-
-        let program2 = b2.finalize()
-        let actual = fuzzer.lifter.lift(program2)
-
-        // Recursive arrow functions are not inlined, so they are assigned to a constant.
-        let expected = """
-            const v1 = (a2) => {
-                if (a2 == 0) {
-                    return 0;
+            b.buildWasmModule { m in
+                m.addWasmFunction(with: [] => []) { f, _, _ in
+                    let sigDef = f.wasmDefineAdHocSignatureType(signature: [] => [])
+                    f.wasmCallIndirect(
+                        signatureDef: sigDef, table: table, functionArgs: [],
+                        tableIndex: f.consti64(0))
+                    return []
                 }
-                return v1(a2 - 1);
-            };
-            v1(10);
-
-            """
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testArrowFunctionAsArgument() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let f = b.createNamedVariable(forBuiltin: "f")
-        let arrow = b.buildArrowFunction(with: .parameters(n: 1)) { args in
-            b.doReturn(args[0])
-        }
-        b.callFunction(f, withArgs: [arrow])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            f((a2) => a2);
-
-            """
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testNestedArrowFunctions() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let arrowOuter = b.buildArrowFunction(with: .parameters(n: 1)) { argsOuter in
-            let arrowInner = b.buildArrowFunction(with: .parameters(n: 1)) { argsInner in
-                b.doReturn(b.binary(argsOuter[0], argsInner[0], with: .Add))
             }
-            b.doReturn(arrowInner)
+
+            let prog = b.finalize()
+            let lifter = JavaScriptLifter(ecmaVersion: .es6, environment: JavaScriptEnvironment())
+
+            // lifting this to JavaScript should work and not fail
+            let _ = lifter.lift(prog)
+
+            // Now we build the mutated Program.
+            b.beginAdoption()
+            for i in 0..<mutationIndex {
+                b.adopt(prog.code[i])
+            }
+            // Now, mutate at the mutationIndex and reassign f to table.
+            let oldInstr = prog.code[mutationIndex]
+            var newInouts = oldInstr.inouts
+            // This is the mutation
+            newInouts[1] = f
+            let instr = Instruction(oldInstr.op, inouts: newInouts)
+            // Append the mutated instruction now.
+            b.append(instr)
+            // Adopt the rest of the Program.
+            for i in mutationIndex + 1..<prog.code.count {
+                b.adopt(prog.code[i])
+            }
+
+            let mutatedProg = b.finalize()
+            // This should now fail to lift, i.e. we should see `throw "Wasmlifting failed"` in the JavaScript.
+            let js = lifter.lift(mutatedProg)
+            #expect(js.contains("Wasmlifting failed"))
         }
-        b.callFunction(arrowOuter, withArgs: [b.loadInt(1)])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const t0 = (a1) => (a3) => a1 + a3;
-            t0(1);
-
-            """
-        XCTAssertEqual(actual, expected)
     }
 
-    func testAsyncArrowFunctionInlining() {
+    @Test func testBuiltinPrototypeCall() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        let arrow = b.buildAsyncArrowFunction(with: .parameters(n: 0)) { _ in
-            b.doReturn(b.loadInt(42))
+            let b = fuzzer.makeBuilder()
+
+            let dateBuiltin = b.createNamedVariable(forBuiltin: "Date")
+            #expect(b.type(of: dateBuiltin).Is(.object(ofGroup: "DateConstructor")))
+            let dateProto = b.getProperty("prototype", of: dateBuiltin)
+            #expect(b.type(of: dateProto).Is(.object(ofGroup: "Date.prototype")))
+            let getTime = b.getProperty("getTime", of: dateProto)
+            #expect(b.type(of: getTime) == .unboundFunction([] => .number, receiver: .jsDate))
+            let date = b.construct(dateBuiltin)
+            #expect(b.type(of: date) == .jsDate)
+            b.callMethod("call", on: getTime, withArgs: [date])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v2 = Date.prototype.getTime;
+                const v3 = new Date();
+                v2.call(v3);
+
+                """
+            #expect(actual == expected)
         }
-        b.callFunction(arrow)
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const t0 = async () => 42;
-            t0();
-
-            """
-        XCTAssertEqual(actual, expected)
     }
 
-    func testArrowFunctionMultipleUses() {
+    @Test func testWasmGCTypeGroupILLifter() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        let arrow = b.buildArrowFunction(with: .parameters(n: 0)) { _ in }
-        let f = b.createNamedVariable(forBuiltin: "f")
-        b.callFunction(f, withArgs: [arrow, arrow])
+            let b = fuzzer.makeBuilder()
 
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
+            let typeGroupArray = b.wasmDefineTypeGroup {
+                let forwardReference = b.wasmDefineForwardOrSelfReference()
+                // Note that index types use generic .Index() descriptions without a type
+                // description (as the operation doesn't know its inputs).
+                let arrayOfArrayi32 = b.wasmDefineArrayType(
+                    elementType: .wasmRef(.Index(), nullability: true),
+                    mutability: false,
+                    indexType: forwardReference)
+                let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
+                let subtypeArray = b.wasmDefineArrayType(
+                    elementType: .wasmi32, mutability: true, superTypeDef: arrayi32
+                )
+                b.wasmResolveForwardReference(forwardReference, to: arrayi32)
+                return [arrayOfArrayi32, arrayi32, subtypeArray]
+            }
 
-        let expected = """
-            const v0 = () => {
-            };
-            f(v0, v0);
+            b.wasmDefineTypeGroup {
+                let selfReference = b.wasmDefineForwardOrSelfReference()
+                return [
+                    b.wasmDefineStructType(
+                        fields: [
+                            // Note that index types use generic .Index() descriptions without a type
+                            // description (as the operation doesn't know its inputs).
+                            .init(type: .wasmRef(.Index(), nullability: false), mutability: false),
+                            .init(type: .wasmi32, mutability: true),
+                            .init(type: .wasmRef(.Index(), nullability: true), mutability: true),
+                        ],
+                        indexTypes: [typeGroupArray[0], selfReference])
+                ]
+            }
 
-            """
-        XCTAssertEqual(actual, expected)
-    }
+            let program = b.finalize()
+            let actual = FuzzILLifter().lift(program)
 
-    func testArrowFunctionPropertyAssignment() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+            let expected = """
+                WasmBeginTypeGroup
+                    v0 <- WasmDefineForwardOrSelfReference
+                    v1 <- WasmDefineArrayType .wasmRef(null Index) mutability=false isFinal=false v0
+                    v2 <- WasmDefineArrayType .wasmi32 mutability=true isFinal=false
+                    v3 <- WasmDefineArrayType .wasmi32 mutability=true superType=v2 isFinal=false
+                    WasmResolveForwardReference [v0 => v2]
+                v4, v5, v6 <- WasmEndTypeGroup [v1, v2, v3]
+                WasmBeginTypeGroup
+                    v7 <- WasmDefineForwardOrSelfReference
+                    v8 <- WasmDefineStructType(.wasmRef(Index) mutability=false, .wasmi32 mutability=true, .wasmRef(null Index) mutability=true) isFinal=false [v4, v7]
+                v9 <- WasmEndTypeGroup [v8]
 
-        let obj = b.createNamedVariable(forBuiltin: "obj")
-        let arrow = b.buildArrowFunction(with: .parameters(n: 0)) { _ in
-            b.doReturn(b.loadInt(42))
+                """
+            #expect(actual == expected)
         }
-        b.setProperty("x", of: obj, to: arrow)
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            obj.x = () => 42;
-
-            """
-        XCTAssertEqual(actual, expected)
     }
 
-    func testArrowFunctionObjectLiteral() {
+    @Test func testArrowFunctionInliningWithSideEffects() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        let o = b.buildObjectLiteral { _ in }
-        let f = b.buildArrowFunction(with: .parameters(n: 0)) { _ in
-            b.doReturn(b.buildObjectLiteral { _ in })
+            let b = fuzzer.makeBuilder()
+
+            let f = b.createNamedVariable(forBuiltin: "sideEffect")
+            b.callFunction(f)
+
+            let arrow = b.buildArrowFunction(with: .parameters(n: 0)) { _ in
+                b.doReturn(b.loadInt(42))
+            }
+
+            b.callFunction(arrow)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            // The side-effect must be emitted before the arrow function is defined.
+            // The arrow function is assigned to a temporary because it's used as a callee.
+            let expected = """
+                sideEffect();
+                const t1 = () => 42;
+                t1();
+
+                """
+            #expect(actual == expected)
         }
-        b.setProperty("x", of: o, to: f)
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v0 = {};
-            v0.x = () => ({});
-
-            """
-        XCTAssertEqual(actual, expected)
     }
 
-    func testNestedArrowFunctionIndentation() {
+    @Test func testArrowFunctionRecursiveLifting() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        b.buildIf(b.loadBool(true)) {
+            // Manually construct a recursive arrow function, as the helper does not support it.
+            let b2 = fuzzer.makeBuilder()
+            let i = b2.loadInt(10)
+            let params = Parameters(count: 1)
+            let instr = b2.emit(BeginArrowFunction(parameters: params))
+            let fRec = instr.output
+            let arg0 = instr.innerOutput(0)
+
+            let cond = b2.compare(arg0, with: b2.loadInt(0), using: .equal)
+            b2.buildIf(cond) {
+                b2.doReturn(b2.loadInt(0))
+            }
+            let sub = b2.binary(arg0, b2.loadInt(1), with: .Sub)
+            let recCall = b2.callFunction(fRec, withArgs: [sub])  // Recursion!
+            b2.doReturn(recCall)
+            b2.emit(EndArrowFunction())
+
+            b2.callFunction(fRec, withArgs: [i])
+
+            let program2 = b2.finalize()
+            let actual = fuzzer.lifter.lift(program2)
+
+            // Recursive arrow functions are not inlined, so they are assigned to a constant.
+            let expected = """
+                const v1 = (a2) => {
+                    if (a2 == 0) {
+                        return 0;
+                    }
+                    return v1(a2 - 1);
+                };
+                v1(10);
+
+                """
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testArrowFunctionAsArgument() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let f = b.createNamedVariable(forBuiltin: "f")
+            let arrow = b.buildArrowFunction(with: .parameters(n: 1)) { args in
+                b.doReturn(args[0])
+            }
+            b.callFunction(f, withArgs: [arrow])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                f((a2) => a2);
+
+                """
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testNestedArrowFunctions() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let arrowOuter = b.buildArrowFunction(with: .parameters(n: 1)) { argsOuter in
+                let arrowInner = b.buildArrowFunction(with: .parameters(n: 1)) { argsInner in
+                    b.doReturn(b.binary(argsOuter[0], argsInner[0], with: .Add))
+                }
+                b.doReturn(arrowInner)
+            }
+            b.callFunction(arrowOuter, withArgs: [b.loadInt(1)])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const t0 = (a1) => (a3) => a1 + a3;
+                t0(1);
+
+                """
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testAsyncArrowFunctionInlining() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let arrow = b.buildAsyncArrowFunction(with: .parameters(n: 0)) { _ in
+                b.doReturn(b.loadInt(42))
+            }
+            b.callFunction(arrow)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const t0 = async () => 42;
+                t0();
+
+                """
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testArrowFunctionMultipleUses() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let arrow = b.buildArrowFunction(with: .parameters(n: 0)) { _ in }
+            let f = b.createNamedVariable(forBuiltin: "f")
+            b.callFunction(f, withArgs: [arrow, arrow])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v0 = () => {
+                };
+                f(v0, v0);
+
+                """
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testArrowFunctionPropertyAssignment() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let obj = b.createNamedVariable(forBuiltin: "obj")
+            let arrow = b.buildArrowFunction(with: .parameters(n: 0)) { _ in
+                b.doReturn(b.loadInt(42))
+            }
+            b.setProperty("x", of: obj, to: arrow)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                obj.x = () => 42;
+
+                """
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testArrowFunctionObjectLiteral() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
             let o = b.buildObjectLiteral { _ in }
             let f = b.buildArrowFunction(with: .parameters(n: 0)) { _ in
-                let v = b.createNamedVariable(
-                    "a", declarationMode: .const, initialValue: b.loadInt(1))
-                b.doReturn(b.binary(v, v, with: .Add))
+                b.doReturn(b.buildObjectLiteral { _ in })
             }
             b.setProperty("x", of: o, to: f)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v0 = {};
+                v0.x = () => ({});
+
+                """
+            #expect(actual == expected)
         }
+    }
 
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
+    @Test func testNestedArrowFunctionIndentation() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
 
-        let expected = """
-            if (true) {
-                const v2 = {};
-                v2.x = () => {
-                    const a = 1;
-                    return a + a;
-                };
+            let b = fuzzer.makeBuilder()
+
+            b.buildIf(b.loadBool(true)) {
+                let o = b.buildObjectLiteral { _ in }
+                let f = b.buildArrowFunction(with: .parameters(n: 0)) { _ in
+                    let v = b.createNamedVariable(
+                        "a", declarationMode: .const, initialValue: b.loadInt(1))
+                    b.doReturn(b.binary(v, v, with: .Add))
+                }
+                b.setProperty("x", of: o, to: f)
             }
 
-            """
-        XCTAssertEqual(actual, expected)
-    }
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
 
-    func testConciseArrowFunctionStartingWithObjectLiteral() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+            let expected = """
+                if (true) {
+                    const v2 = {};
+                    v2.x = () => {
+                        const a = 1;
+                        return a + a;
+                    };
+                }
 
-        let f = b.buildArrowFunction(with: .parameters(n: 0)) { _ in
-            let o = b.buildObjectLiteral { _ in }
-            let i = b.loadInt(1)
-            b.doReturn(b.binary(o, i, with: .Add))
+                """
+            #expect(actual == expected)
         }
-        b.callFunction(f)
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const t0 = () => ({} + 1);
-            t0();
-
-            """
-        XCTAssertEqual(actual, expected)
     }
 
-    func testStringEscape() {
+    @Test func testConciseArrowFunctionStartingWithObjectLiteral() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-        let v1 = b.loadString("Hello \"World\"")
-        let p = b.createNamedVariable(forBuiltin: "print")
-        b.callFunction(p, withArgs: [v1])
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
+        fuzzer.sync {
 
-        let expected = """
-            print("Hello \\"World\\"");
+            let b = fuzzer.makeBuilder()
 
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testEmptyWasmModule() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-        b.buildWasmModule { _ in }
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        // An empty Wasm module should only contain the needed prefix but no empty sections.
-        let expected = """
-            const v0 = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array([
-                0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00,
-            ])));
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testPlainFunctionDefaultParameterLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v0 = b.loadInt(42)
-        let v1 = b.loadString("default")
-
-        // function f(a, b = 42, c = "default") { return a; }
-        b.buildPlainFunction(
-            with: .parameters(n: 3, defaultParameterIndices: [1, 2]), defaultValues: [v0, v1]
-        ) { args in
-            b.doReturn(args[0])
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            function f2(a3, a4 = 42, a5 = "default") {
-                return a3;
+            let f = b.buildArrowFunction(with: .parameters(n: 0)) { _ in
+                let o = b.buildObjectLiteral { _ in }
+                let i = b.loadInt(1)
+                b.doReturn(b.binary(o, i, with: .Add))
             }
+            b.callFunction(f)
 
-            """
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
 
-        XCTAssertEqual(actual, expected)
-    }
+            let expected = """
+                const t0 = () => ({} + 1);
+                t0();
 
-    func testArrowFunctionDefaultParameterLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v0 = b.loadInt(42)
-
-        // (a, b = 42) => { return a; }
-        b.buildArrowFunction(
-            with: .parameters(n: 2, defaultParameterIndices: [1]), defaultValues: [v0]
-        ) { args in
-            b.doReturn(args[0])
+                """
+            #expect(actual == expected)
         }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = "(a2, a3 = 42) => a2;\n"
-
-        XCTAssertEqual(actual, expected)
     }
 
-    func testPlainFunctionMixedDefaultParametersLifting() {
+    @Test func testStringEscape() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        let v0 = b.loadInt(42)
+            let b = fuzzer.makeBuilder()
+            let v1 = b.loadString("Hello \"World\"")
+            let p = b.createNamedVariable(forBuiltin: "print")
+            b.callFunction(p, withArgs: [v1])
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
 
-        // function f(a = 42, b) { return b; }
-        b.buildPlainFunction(
-            with: .parameters(n: 2, defaultParameterIndices: [0]), defaultValues: [v0]
-        ) { args in
-            b.doReturn(args[1])
+            let expected = """
+                print("Hello \\"World\\"");
+
+                """
+
+            #expect(actual == expected)
         }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            function f1(a2 = 42, a3) {
-                return a3;
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
     }
 
-    func testObjectLiteralMethodDefaultParameterLifting() {
+    @Test func testEmptyWasmModule() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        let v0 = b.loadInt(42)
+            let b = fuzzer.makeBuilder()
+            b.buildWasmModule { _ in }
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
 
-        b.buildObjectLiteral { obj in
-            obj.addMethod(
-                "foo", with: .parameters(n: 2, defaultParameterIndices: [1]), defaultValues: [v0]
+            // An empty Wasm module should only contain the needed prefix but no empty sections.
+            let expected = """
+                const v0 = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array([
+                    0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00,
+                ])));
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testPlainFunctionDefaultParameterLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let v0 = b.loadInt(42)
+            let v1 = b.loadString("default")
+
+            // function f(a, b = 42, c = "default") { return a; }
+            b.buildPlainFunction(
+                with: .parameters(n: 3, defaultParameterIndices: [1, 2]), defaultValues: [v0, v1]
             ) { args in
-                b.doReturn(args[2])
+                b.doReturn(args[0])
             }
-        }
 
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
 
-        let expected = """
-            const v4 = {
-                foo(a2, a3 = 42) {
+            let expected = """
+                function f2(a3, a4 = 42, a5 = "default") {
                     return a3;
-                },
-            };
+                }
 
-            """
+                """
 
-        XCTAssertEqual(actual, expected)
+            #expect(actual == expected)
+        }
     }
 
-    func testClassMethodDefaultParameterLifting() {
+    @Test func testArrowFunctionDefaultParameterLifting() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        let v0 = b.loadInt(42)
+            let b = fuzzer.makeBuilder()
 
-        b.buildClassDefinition { cls in
-            cls.addInstanceMethod(
-                "bar", with: .parameters(n: 2, defaultParameterIndices: [1]), defaultValues: [v0]
+            let v0 = b.loadInt(42)
+
+            // (a, b = 42) => { return a; }
+            b.buildArrowFunction(
+                with: .parameters(n: 2, defaultParameterIndices: [1]), defaultValues: [v0]
             ) { args in
-                b.doReturn(args[2])
+                b.doReturn(args[0])
             }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = "(a2, a3 = 42) => a2;\n"
+
+            #expect(actual == expected)
         }
+    }
 
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
+    @Test func testPlainFunctionMixedDefaultParametersLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
 
-        let expected = """
-            class C1 {
-                bar(a3, a4 = 42) {
-                    return a4;
+            let b = fuzzer.makeBuilder()
+
+            let v0 = b.loadInt(42)
+
+            // function f(a = 42, b) { return b; }
+            b.buildPlainFunction(
+                with: .parameters(n: 2, defaultParameterIndices: [0]), defaultValues: [v0]
+            ) { args in
+                b.doReturn(args[1])
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                function f1(a2 = 42, a3) {
+                    return a3;
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testObjectLiteralMethodDefaultParameterLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let v0 = b.loadInt(42)
+
+            b.buildObjectLiteral { obj in
+                obj.addMethod(
+                    "foo", with: .parameters(n: 2, defaultParameterIndices: [1]),
+                    defaultValues: [v0]
+                ) { args in
+                    b.doReturn(args[2])
                 }
             }
 
-            """
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
 
-        XCTAssertEqual(actual, expected)
+            let expected = """
+                const v4 = {
+                    foo(a2, a3 = 42) {
+                        return a3;
+                    },
+                };
+
+                """
+
+            #expect(actual == expected)
+        }
     }
 
-    func testClassConstructorDefaultParameterLifting() {
+    @Test func testClassMethodDefaultParameterLifting() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        let v0 = b.loadInt(42)
+            let b = fuzzer.makeBuilder()
 
-        b.buildClassDefinition { cls in
-            cls.addConstructor(
-                with: .parameters(n: 1, defaultParameterIndices: [0]), defaultValues: [v0]
-            ) { args in
-                b.setProperty("foo", of: args[0], to: args[1])
-            }
-        }
+            let v0 = b.loadInt(42)
 
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            class C1 {
-                constructor(a3 = 42) {
-                    this.foo = a3;
+            b.buildClassDefinition { cls in
+                cls.addInstanceMethod(
+                    "bar", with: .parameters(n: 2, defaultParameterIndices: [1]),
+                    defaultValues: [v0]
+                ) { args in
+                    b.doReturn(args[2])
                 }
             }
 
-            """
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
 
-        XCTAssertEqual(actual, expected)
+            let expected = """
+                class C1 {
+                    bar(a3, a4 = 42) {
+                        return a4;
+                    }
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
     }
 
-    func testObjectLiteralComputedMethodDefaultParameterLifting() {
+    @Test func testClassConstructorDefaultParameterLifting() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        let v0 = b.loadInt(42)
-        let v1 = b.loadString("computed")
+            let b = fuzzer.makeBuilder()
 
-        b.buildObjectLiteral { obj in
-            obj.addComputedMethod(
-                v1, with: .parameters(n: 2, defaultParameterIndices: [1]), defaultValues: [v0]
+            let v0 = b.loadInt(42)
+
+            b.buildClassDefinition { cls in
+                cls.addConstructor(
+                    with: .parameters(n: 1, defaultParameterIndices: [0]), defaultValues: [v0]
+                ) { args in
+                    b.setProperty("foo", of: args[0], to: args[1])
+                }
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                class C1 {
+                    constructor(a3 = 42) {
+                        this.foo = a3;
+                    }
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testObjectLiteralComputedMethodDefaultParameterLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let v0 = b.loadInt(42)
+            let v1 = b.loadString("computed")
+
+            b.buildObjectLiteral { obj in
+                obj.addComputedMethod(
+                    v1, with: .parameters(n: 2, defaultParameterIndices: [1]), defaultValues: [v0]
+                ) { args in
+                    b.doReturn(args[2])
+                }
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                const v5 = {
+                    ["computed"](a3, a4 = 42) {
+                        return a4;
+                    },
+                };
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testConstructorDefaultParameterLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let v0 = b.loadInt(42)
+
+            // function F(a, b = 42) { if (!new.target) ... }
+            b.buildConstructor(
+                with: .parameters(n: 2, defaultParameterIndices: [1]), defaultValues: [v0]
             ) { args in
-                b.doReturn(args[2])
-            }
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            const v5 = {
-                ["computed"](a3, a4 = 42) {
-                    return a4;
-                },
-            };
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testConstructorDefaultParameterLifting() {
-        let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
-
-        let v0 = b.loadInt(42)
-
-        // function F(a, b = 42) { if (!new.target) ... }
-        b.buildConstructor(
-            with: .parameters(n: 2, defaultParameterIndices: [1]), defaultValues: [v0]
-        ) { args in
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            function F1(a3, a4 = 42) {
-                if (!new.target) { throw 'must be called with new'; }
             }
 
-            """
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
 
-        XCTAssertEqual(actual, expected)
+            let expected = """
+                function F1(a3, a4 = 42) {
+                    if (!new.target) { throw 'must be called with new'; }
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
     }
 
-    func testBundleScripts() {
+    @Test func testBundleScripts() {
         let config = Configuration(logLevel: .error, generateBundle: true)
         let fuzzer = makeMockFuzzer(config: config)
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        b.emit(BeginBundleScript())
-        let Object = b.createNamedVariable(forBuiltin: "Object")
-        b.construct(Object)
-        b.emit(EndBundleScript())
+            let b = fuzzer.makeBuilder()
 
-        b.emit(BeginBundleScript())
-        let Array = b.createNamedVariable(forBuiltin: "Array")
-        b.construct(Array)
-        b.emit(EndBundleScript())
+            b.emit(BeginBundleScript())
+            let Object = b.createNamedVariable(forBuiltin: "Object")
+            b.construct(Object)
+            b.emit(EndBundleScript())
 
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
+            b.emit(BeginBundleScript())
+            let Array = b.createNamedVariable(forBuiltin: "Array")
+            b.construct(Array)
+            b.emit(EndBundleScript())
 
-        let expected = """
-            // JS_BUNDLE_SCRIPT
-            new Object();
-            // JS_BUNDLE_SCRIPT
-            new Array();
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
 
-            """
+            let expected = """
+                // JS_BUNDLE_SCRIPT
+                new Object();
+                // JS_BUNDLE_SCRIPT
+                new Array();
 
-        XCTAssertEqual(actual, expected)
+                """
+
+            #expect(actual == expected)
+        }
     }
 
-    func testRawWasmModuleLifting() {
+    @Test func testRawWasmModuleLifting() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        let bytes: [UInt8] = [0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00]
-        b.rawWasmModule(bytes: bytes)
+            let b = fuzzer.makeBuilder()
 
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
+            let bytes: [UInt8] = [0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00]
+            b.rawWasmModule(bytes: bytes)
 
-        let expected = """
-            \(JavaScriptLifter.wasmProxyPrefix)
-            const v0 = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array([
-                0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00,
-            ])), fuzzing_imports);
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
 
-            """
+            let expected = """
+                \(JavaScriptLifter.wasmProxyPrefix)
+                const v0 = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array([
+                    0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00,
+                ])), fuzzing_imports);
 
-        XCTAssertEqual(actual, expected)
+                """
+
+            #expect(actual == expected)
+        }
     }
 
-    func testBundleModules() {
+    @Test func testBundleModules() {
         let config = Configuration(logLevel: .error, generateBundle: true)
         let fuzzer = makeMockFuzzer(config: config)
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        let moduleVariable = b.buildBundleModule(name: "module.mjs") {
-            let v1 = b.loadInt(42)
-            let v2 = b.loadString("foo")
-            b.exportVariables(variables: [v1, v2], exportNames: ["ex1", "ex2"])
+            let b = fuzzer.makeBuilder()
+
+            let moduleVariable = b.buildBundleModule(name: "module.mjs") {
+                let v1 = b.loadInt(42)
+                let v2 = b.loadString("foo")
+                b.exportVariables(variables: [v1, v2], exportNames: ["ex1", "ex2"])
+            }
+
+            let moduleVariableType = b.type(of: moduleVariable)
+            let exports = moduleVariableType.exports
+
+            #expect(exports["ex1"]!.Is(.integer))
+            #expect(exports["ex2"]!.Is(.string))
+
+            b.buildBundleModuleEntryPoint {
+                let importInstruction = b.importVariables(
+                    module: moduleVariable, importNames: ["ex1", "ex2"])
+                let imported = Array(importInstruction.outputs)
+
+                #expect(imported.count == 2)
+                #expect(b.type(of: imported[0]).Is(.integer))
+                #expect(b.type(of: imported[1]).Is(.string))
+                b.binary(imported[0], imported[1], with: .Add)
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                // JS_BUNDLE_MODULE:module.mjs
+                const v0 = 42;
+                const v1 = "foo";
+                export { v0 as ex1, v1 as ex2 };
+                // JS_BUNDLE_MODULE_ENTRYPOINT
+                import { ex1 as v3, ex2 as v4 } from "module.mjs";
+                v3 + v4;
+
+                """
+
+            #expect(actual == expected)
         }
-
-        let moduleVariableType = b.type(of: moduleVariable)
-        let exports = moduleVariableType.exports
-
-        XCTAssertTrue(exports["ex1"]!.Is(.integer))
-        XCTAssertTrue(exports["ex2"]!.Is(.string))
-
-        b.buildBundleModuleEntryPoint {
-            let importInstruction = b.importVariables(
-                module: moduleVariable, importNames: ["ex1", "ex2"])
-            let imported = Array(importInstruction.outputs)
-
-            XCTAssertEqual(imported.count, 2)
-            XCTAssertTrue(b.type(of: imported[0]).Is(.integer))
-            XCTAssertTrue(b.type(of: imported[1]).Is(.string))
-            b.binary(imported[0], imported[1], with: .Add)
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            // JS_BUNDLE_MODULE:module.mjs
-            const v0 = 42;
-            const v1 = "foo";
-            export { v0 as ex1, v1 as ex2 };
-            // JS_BUNDLE_MODULE_ENTRYPOINT
-            import { ex1 as v3, ex2 as v4 } from "module.mjs";
-            v3 + v4;
-
-            """
-
-        XCTAssertEqual(actual, expected)
     }
 
-    func testForAwaitOfLoopLifting() {
+    @Test func testForAwaitOfLoopLifting() {
         let fuzzer = makeMockFuzzer(
             config: Configuration(logLevel: .error),
             environment: JavaScriptEnvironment()
         )
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        b.buildAsyncFunction(with: .parameters(n: 1)) { args in
-            let asyncIterable = args[0]
+            let b = fuzzer.makeBuilder()
 
-            b.buildForInOfLoop(asyncIterable, type: .forOf, isAsync: true, header: .simple) {
+            b.buildAsyncFunction(with: .parameters(n: 1)) { args in
+                let asyncIterable = args[0]
+
+                b.buildForInOfLoop(asyncIterable, type: .forOf, isAsync: true, header: .simple) {
+                    vars, label in
+                    let loopVar = vars[0]
+                    let printFunc = b.createNamedVariable(forBuiltin: "print")
+                    b.callFunction(printFunc, withArgs: [loopVar])
+                }
+            }
+
+            let program = b.finalize()
+
+            let fuzzILLifter = FuzzILLifter()
+            let fuzzILOutput = fuzzILLifter.lift(program)
+
+            // Assert FuzzIL contains our new instructions
+            #expect(fuzzILOutput.contains("BeginForLoop type='forOf' async='true'"))
+            #expect(fuzzILOutput.contains("EndForLoop"))
+
+            let jsLifter = JavaScriptLifter(
+                prefix: "",
+                suffix: "",
+                ecmaVersion: .es6,
+                environment: fuzzer.environment
+            )
+            let actual = jsLifter.lift(program)
+
+            let expected = """
+                async function f0(a1) {
+                    for await (const v2 of a1) {
+                        print(v2);
+                    }
+                }
+
+                """
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testForAwaitLoopWithArrayDestructLifting() {
+        let fuzzer = makeMockFuzzer(
+            config: Configuration(logLevel: .error),
+            environment: JavaScriptEnvironment()
+        )
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            b.buildAsyncFunction(with: .parameters(n: 1)) { args in
+                let asyncIterable = args[0]
+                b.buildForInOfLoop(
+                    asyncIterable, type: .forOf, isAsync: true,
+                    header: .arrayDestruct(indices: [0, 2], hasRestElement: true)
+                ) { args, _ in
+                    let print = b.createNamedVariable(forBuiltin: "print")
+                    b.callFunction(print, withArgs: [args[0]])
+                    b.buildForInOfLoop(args[1], type: .forOf, isAsync: false, header: .simple) {
+                        vars, _ in
+                        let v = vars[0]
+                        b.callFunction(print, withArgs: [v])
+                    }
+                }
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                async function f0(a1) {
+                    for await (let [v2,,...v3] of a1) {
+                        print(v2);
+                        for (const v7 of v3) {
+                            print(v7);
+                        }
+                    }
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testForLoopWithObjectDestructLifting() {
+        let fuzzer = makeMockFuzzer(
+            config: Configuration(logLevel: .error),
+            environment: JavaScriptEnvironment()
+        )
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            b.buildPlainFunction(with: .parameters(n: 1)) { args in
+                let iterable = args[0]
+                b.buildForInOfLoop(
+                    iterable, type: .forOf, isAsync: false,
+                    header: .objectDestruct(
+                        properties: ["name", "department"], hasRestElement: true)
+                ) { args, _ in
+                    let print = b.createNamedVariable(forBuiltin: "print")
+                    b.callFunction(print, withArgs: [args[0]])  // name
+                    b.callFunction(print, withArgs: [args[1]])  // department
+                    b.callFunction(print, withArgs: [args[2]])  // rest
+                }
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                function f0(a1) {
+                    for (let {"name":v2,"department":v3,...v4} of a1) {
+                        print(v2);
+                        print(v3);
+                        print(v4);
+                    }
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testForAwaitLoopWithObjectDestructLifting() {
+        let fuzzer = makeMockFuzzer(
+            config: Configuration(logLevel: .error),
+            environment: JavaScriptEnvironment()
+        )
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            b.buildAsyncFunction(with: .parameters(n: 1)) { args in
+                let asyncIterable = args[0]
+                b.buildForInOfLoop(
+                    asyncIterable, type: .forOf, isAsync: true,
+                    header: .objectDestruct(
+                        properties: ["name", "department"], hasRestElement: false)
+                ) { args, _ in
+                    let print = b.createNamedVariable(forBuiltin: "print")
+                    b.callFunction(print, withArgs: [args[0]])  // name
+                    b.callFunction(print, withArgs: [args[1]])  // department
+                }
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                async function f0(a1) {
+                    for await (let {"name":v2,"department":v3} of a1) {
+                        print(v2);
+                        print(v3);
+                    }
+                }
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testImportNamespaceLifting() {
+        let config = Configuration(logLevel: .error, generateBundle: true)
+        let fuzzer = makeMockFuzzer(config: config)
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let moduleVariable = b.buildBundleModule(name: "deferMod.mjs") {
+                let v1 = b.loadInt(1337)
+                b.exportVariables(variables: [v1], exportNames: ["value"])
+            }
+
+            b.buildBundleModuleEntryPoint {
+                let ns = b.importNamespace(module: moduleVariable, isDeferred: true).output
+                b.getProperty("value", of: ns)
+            }
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                // JS_BUNDLE_MODULE:deferMod.mjs
+                const v0 = 1337;
+                export { v0 as value };
+                // JS_BUNDLE_MODULE_ENTRYPOINT
+                import defer * as v2 from "deferMod.mjs";
+                v2.value;
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testForOfLoopWithUsingLifting() {
+        let fuzzer = makeMockFuzzer(
+            config: Configuration(logLevel: .error),
+            environment: JavaScriptEnvironment()
+        )
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let iterable = b.createArray(with: [])
+
+            b.buildForInOfLoop(
+                iterable, type: .forOf, isAsync: false, usingType: .using, header: .simple
+            ) {
                 vars, label in
                 let loopVar = vars[0]
                 let printFunc = b.createNamedVariable(forBuiltin: "print")
                 b.callFunction(printFunc, withArgs: [loopVar])
             }
-        }
 
-        let program = b.finalize()
+            let program = b.finalize()
 
-        let fuzzILLifter = FuzzILLifter()
-        let fuzzILOutput = fuzzILLifter.lift(program)
+            let fuzzILLifter = FuzzILLifter()
+            let fuzzILOutput = fuzzILLifter.lift(program)
 
-        // Assert FuzzIL contains our new instructions
-        XCTAssertTrue(fuzzILOutput.contains("BeginForLoop type='forOf' async='true'"))
-        XCTAssertTrue(fuzzILOutput.contains("EndForLoop"))
+            // Assert FuzzIL contains our new instructions
+            #expect(
+                fuzzILOutput.contains("BeginForLoop type='forOf' async='false' usingType='using'"))
+            #expect(fuzzILOutput.contains("EndForLoop"))
 
-        let jsLifter = JavaScriptLifter(
-            prefix: "",
-            suffix: "",
-            ecmaVersion: .es6,
-            environment: fuzzer.environment
-        )
-        let actual = jsLifter.lift(program)
+            let jsLifter = JavaScriptLifter(
+                prefix: "",
+                suffix: "",
+                ecmaVersion: .es6,
+                environment: fuzzer.environment
+            )
+            let actual = jsLifter.lift(program)
 
-        let expected = """
-            async function f0(a1) {
-                for await (const v2 of a1) {
-                    print(v2);
+            let expected = """
+                for (using v1 of []) {
+                    print(v1);
                 }
-            }
 
-            """
-        XCTAssertEqual(actual, expected)
+                """
+            #expect(actual == expected)
+        }
     }
 
-    func testForAwaitLoopWithArrayDestructLifting() {
-        let fuzzer = makeMockFuzzer(
-            config: Configuration(logLevel: .error),
-            environment: JavaScriptEnvironment()
-        )
-        let b = fuzzer.makeBuilder()
-
-        b.buildAsyncFunction(with: .parameters(n: 1)) { args in
-            let asyncIterable = args[0]
-            b.buildForInOfLoop(
-                asyncIterable, type: .forOf, isAsync: true,
-                header: .arrayDestruct(indices: [0, 2], hasRestElement: true)
-            ) { args, _ in
-                let print = b.createNamedVariable(forBuiltin: "print")
-                b.callFunction(print, withArgs: [args[0]])
-                b.buildForInOfLoop(args[1], type: .forOf, isAsync: false, header: .simple) {
-                    vars, _ in
-                    let v = vars[0]
-                    b.callFunction(print, withArgs: [v])
-                }
-            }
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            async function f0(a1) {
-                for await (let [v2,,...v3] of a1) {
-                    print(v2);
-                    for (const v7 of v3) {
-                        print(v7);
-                    }
-                }
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testForLoopWithObjectDestructLifting() {
-        let fuzzer = makeMockFuzzer(
-            config: Configuration(logLevel: .error),
-            environment: JavaScriptEnvironment()
-        )
-        let b = fuzzer.makeBuilder()
-
-        b.buildPlainFunction(with: .parameters(n: 1)) { args in
-            let iterable = args[0]
-            b.buildForInOfLoop(
-                iterable, type: .forOf, isAsync: false,
-                header: .objectDestruct(properties: ["name", "department"], hasRestElement: true)
-            ) { args, _ in
-                let print = b.createNamedVariable(forBuiltin: "print")
-                b.callFunction(print, withArgs: [args[0]])  // name
-                b.callFunction(print, withArgs: [args[1]])  // department
-                b.callFunction(print, withArgs: [args[2]])  // rest
-            }
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            function f0(a1) {
-                for (let {"name":v2,"department":v3,...v4} of a1) {
-                    print(v2);
-                    print(v3);
-                    print(v4);
-                }
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testForAwaitLoopWithObjectDestructLifting() {
-        let fuzzer = makeMockFuzzer(
-            config: Configuration(logLevel: .error),
-            environment: JavaScriptEnvironment()
-        )
-        let b = fuzzer.makeBuilder()
-
-        b.buildAsyncFunction(with: .parameters(n: 1)) { args in
-            let asyncIterable = args[0]
-            b.buildForInOfLoop(
-                asyncIterable, type: .forOf, isAsync: true,
-                header: .objectDestruct(properties: ["name", "department"], hasRestElement: false)
-            ) { args, _ in
-                let print = b.createNamedVariable(forBuiltin: "print")
-                b.callFunction(print, withArgs: [args[0]])  // name
-                b.callFunction(print, withArgs: [args[1]])  // department
-            }
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            async function f0(a1) {
-                for await (let {"name":v2,"department":v3} of a1) {
-                    print(v2);
-                    print(v3);
-                }
-            }
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testImportNamespaceLifting() {
-        let config = Configuration(logLevel: .error, generateBundle: true)
-        let fuzzer = makeMockFuzzer(config: config)
-        let b = fuzzer.makeBuilder()
-
-        let moduleVariable = b.buildBundleModule(name: "deferMod.mjs") {
-            let v1 = b.loadInt(1337)
-            b.exportVariables(variables: [v1], exportNames: ["value"])
-        }
-
-        b.buildBundleModuleEntryPoint {
-            let ns = b.importNamespace(module: moduleVariable, isDeferred: true).output
-            b.getProperty("value", of: ns)
-        }
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        let expected = """
-            // JS_BUNDLE_MODULE:deferMod.mjs
-            const v0 = 1337;
-            export { v0 as value };
-            // JS_BUNDLE_MODULE_ENTRYPOINT
-            import defer * as v2 from "deferMod.mjs";
-            v2.value;
-
-            """
-
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testForOfLoopWithUsingLifting() {
-        let fuzzer = makeMockFuzzer(
-            config: Configuration(logLevel: .error),
-            environment: JavaScriptEnvironment()
-        )
-        let b = fuzzer.makeBuilder()
-
-        let iterable = b.createArray(with: [])
-
-        b.buildForInOfLoop(
-            iterable, type: .forOf, isAsync: false, usingType: .using, header: .simple
-        ) {
-            vars, label in
-            let loopVar = vars[0]
-            let printFunc = b.createNamedVariable(forBuiltin: "print")
-            b.callFunction(printFunc, withArgs: [loopVar])
-        }
-
-        let program = b.finalize()
-
-        let fuzzILLifter = FuzzILLifter()
-        let fuzzILOutput = fuzzILLifter.lift(program)
-
-        // Assert FuzzIL contains our new instructions
-        XCTAssertTrue(
-            fuzzILOutput.contains("BeginForLoop type='forOf' async='false' usingType='using'"))
-        XCTAssertTrue(fuzzILOutput.contains("EndForLoop"))
-
-        let jsLifter = JavaScriptLifter(
-            prefix: "",
-            suffix: "",
-            ecmaVersion: .es6,
-            environment: fuzzer.environment
-        )
-        let actual = jsLifter.lift(program)
-
-        let expected = """
-            for (using v1 of []) {
-                print(v1);
-            }
-
-            """
-        XCTAssertEqual(actual, expected)
-    }
-
+    @Test(.enabled(if: findWasmOptInPath() != nil, "wasm-opt required in PATH"))
     func testBinaryenWasmGenerator() throws {
         let fuzzer = makeMockFuzzer()
-        guard findWasmOptInPath() != nil else {
-            throw XCTSkip(
-                "wasm-opt not found in PATH. To run this test, please ensure that the directory containing wasm-opt is added to your PATH environment variable. Skipping test for now."
-            )
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            // Run the generator
+            _ = BinaryenWasmGenerator.parts.first!.run(in: b, with: [])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            // Verify that it produced a Wasm module instantiation with the correct header
+            #expect(actual.contains("0x00, 0x61, 0x73, 0x6D"))
         }
-        let b = fuzzer.makeBuilder()
-
-        // Run the generator
-        _ = BinaryenWasmGenerator.parts.first!.run(in: b, with: [])
-
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
-
-        // Verify that it produced a Wasm module instantiation with the correct header
-        XCTAssert(actual.contains("0x00, 0x61, 0x73, 0x6D"))
     }
 
-    func testNestedDestructuringLifting() {
+    @Test func testNestedDestructuringLifting() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        let obj = b.loadString("obj")
-        let defaultVal = b.loadInt(42)
-        let computedKey = b.loadString("dynamic")
+            let b = fuzzer.makeBuilder()
 
-        let arrayElements = [
-            DestructuringPattern.ArrayElement(target: .flatBinding),
-            DestructuringPattern.ArrayElement(target: .flatBinding, hasDefaultValue: true),
-        ]
-        let arrayPattern = DestructuringPattern.ArrayPattern(
-            elements: arrayElements, restTarget: .flatBinding)
-        let arrayTarget = DestructuringPattern.Target.pattern(.array(arrayPattern))
-        let properties = [
-            DestructuringPattern.ObjectProperty(key: .computed, target: .flatBinding),
-            DestructuringPattern.ObjectProperty(key: .string("b"), target: arrayTarget),
-        ]
-        let objectPattern = DestructuringPattern.ObjectPattern(
-            properties: properties, hasRestElement: true)
+            let obj = b.loadString("obj")
+            let defaultVal = b.loadInt(42)
+            let computedKey = b.loadString("dynamic")
 
-        b.destruct(
-            obj,
-            using: .object(objectPattern),
-            defaultValues: [computedKey, defaultVal]
-        )
+            let arrayElements = [
+                DestructuringPattern.ArrayElement(target: .flatBinding),
+                DestructuringPattern.ArrayElement(target: .flatBinding, hasDefaultValue: true),
+            ]
+            let arrayPattern = DestructuringPattern.ArrayPattern(
+                elements: arrayElements, restTarget: .flatBinding)
+            let arrayTarget = DestructuringPattern.Target.pattern(.array(arrayPattern))
+            let properties = [
+                DestructuringPattern.ObjectProperty(key: .computed, target: .flatBinding),
+                DestructuringPattern.ObjectProperty(key: .string("b"), target: arrayTarget),
+            ]
+            let objectPattern = DestructuringPattern.ObjectPattern(
+                properties: properties, hasRestElement: true)
 
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
+            b.destruct(
+                obj,
+                using: .object(objectPattern),
+                defaultValues: [computedKey, defaultVal]
+            )
 
-        XCTAssertTrue(
-            actual.contains("let {[\"dynamic\"]:v3,\"b\":[v4,v5=42,...v6],...v7} = \"obj\";"))
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            #expect(
+                actual.contains("let {[\"dynamic\"]:v3,\"b\":[v4,v5=42,...v6],...v7} = \"obj\";"))
+        }
     }
 
-    func testDestructTargetReassignmentLifting() {
+    @Test func testDestructTargetReassignmentLifting() {
         let fuzzer = makeMockFuzzer()
-        let b = fuzzer.makeBuilder()
+        fuzzer.sync {
 
-        let v0 = b.loadInt(42)
-        let v1 = b.loadString("Hello")
-        let v2 = b.createObject(with: ["foo": v0])
-        let v3 = b.createArray(with: [v0])
+            let b = fuzzer.makeBuilder()
+            let v0 = b.loadInt(42)
+            let v1 = b.loadString("Hello")
+            let v2 = b.createObject(with: ["foo": v0])
+            let v3 = b.createArray(with: [v0])
 
-        // ({foo: obj.prop} = obj)
-        let p1 = DestructuringPattern.object(
-            .init(
-                properties: [.init(key: .string("foo"), target: .property("prop"))],
-                hasRestElement: false))
-        b.destruct(v2, using: p1, into: [v2])
+            // ({foo: obj.prop} = obj)
+            let p1 = DestructuringPattern.object(
+                .init(
+                    properties: [.init(key: .string("foo"), target: .property("prop"))],
+                    hasRestElement: false))
+            b.destruct(v2, using: p1, into: [v2])
 
-        // ({foo: arr[0]} = obj)
-        let p2 = DestructuringPattern.object(
-            .init(
-                properties: [.init(key: .string("foo"), target: .element(0))], hasRestElement: false
-            ))
-        b.destruct(v2, using: p2, into: [v3])
+            // ({foo: arr[0]} = obj)
+            let p2 = DestructuringPattern.object(
+                .init(
+                    properties: [.init(key: .string("foo"), target: .element(0))],
+                    hasRestElement: false
+                ))
+            b.destruct(v2, using: p2, into: [v3])
 
-        // ({foo: super[v1]} = obj)
-        let p3 = DestructuringPattern.object(
-            .init(
-                properties: [.init(key: .string("foo"), target: .superComputedProperty)],
-                hasRestElement: false))
-        b.destruct(v2, using: p3, into: [v1])
+            // ({foo: super[v1]} = obj)
+            let p3 = DestructuringPattern.object(
+                .init(
+                    properties: [.init(key: .string("foo"), target: .superComputedProperty)],
+                    hasRestElement: false))
+            b.destruct(v2, using: p3, into: [v1])
 
-        // ({foo: obj[v1]} = obj)
-        let p4 = DestructuringPattern.object(
-            .init(
-                properties: [.init(key: .string("foo"), target: .computedProperty)],
-                hasRestElement: false))
-        b.destruct(v2, using: p4, into: [v2, v1])
+            // ({foo: obj[v1]} = obj)
+            let p4 = DestructuringPattern.object(
+                .init(
+                    properties: [.init(key: .string("foo"), target: .computedProperty)],
+                    hasRestElement: false))
+            b.destruct(v2, using: p4, into: [v2, v1])
 
-        // ({foo: super.prop} = obj)
-        let p5 = DestructuringPattern.object(
-            .init(
-                properties: [.init(key: .string("foo"), target: .superProperty("prop"))],
-                hasRestElement: false))
-        b.destruct(v2, using: p5, into: [])
+            // ({foo: super.prop} = obj)
+            let p5 = DestructuringPattern.object(
+                .init(
+                    properties: [.init(key: .string("foo"), target: .superProperty("prop"))],
+                    hasRestElement: false))
+            b.destruct(v2, using: p5, into: [])
 
-        // ({foo: super[0]} = obj)
-        let p6 = DestructuringPattern.object(
-            .init(
-                properties: [.init(key: .string("foo"), target: .superElement(0))],
-                hasRestElement: false))
-        b.destruct(v2, using: p6, into: [])
+            // ({foo: super[0]} = obj)
+            let p6 = DestructuringPattern.object(
+                .init(
+                    properties: [.init(key: .string("foo"), target: .superElement(0))],
+                    hasRestElement: false))
+            b.destruct(v2, using: p6, into: [])
 
-        let program = b.finalize()
-        let actual = fuzzer.lifter.lift(program)
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
 
-        let expected = """
-            const v2 = { foo: 42 };
-            const v3 = [42];
-            ({"foo":v2.prop} = v2);
-            ({"foo":v3[0]} = v2);
-            ({"foo":super["Hello"]} = v2);
-            ({"foo":v2["Hello"]} = v2);
-            ({"foo":super.prop} = v2);
-            ({"foo":super[0]} = v2);
+            let expected = """
+                const v2 = { foo: 42 };
+                const v3 = [42];
+                ({"foo":v2.prop} = v2);
+                ({"foo":v3[0]} = v2);
+                ({"foo":super["Hello"]} = v2);
+                ({"foo":v2["Hello"]} = v2);
+                ({"foo":super.prop} = v2);
+                ({"foo":super[0]} = v2);
 
-            """
-        XCTAssertEqual(actual, expected)
+                """
+            #expect(actual == expected)
+        }
     }
 }
