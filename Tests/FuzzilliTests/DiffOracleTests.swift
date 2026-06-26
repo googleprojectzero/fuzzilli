@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import XCTest
+import Testing
 
 @testable import Fuzzilli
 
-final class DiffOracleTests: XCTestCase {
+struct DiffOracleTests {
 
+    @Test
     func testSimpleIdentity() {
         let dump = """
             ---I
@@ -31,9 +32,10 @@ final class DiffOracleTests: XCTestCase {
 
             """
         // Should match itself
-        XCTAssertTrue(DiffOracle.relate(dump, with: dump))
+        #expect(DiffOracle.relate(dump, with: dump))
     }
 
+    @Test
     func testIncrementalParsingLogic() {
         // This tests if the second frame correctly inherits 'f:1', 'n:1', 'm:1' from the first frame
         // and only updates 'b' and 'x'.
@@ -76,9 +78,10 @@ final class DiffOracleTests: XCTestCase {
 
             """
 
-        XCTAssertTrue(DiffOracle.relate(optFull, with: unopt))
+        #expect(DiffOracle.relate(optFull, with: unopt))
     }
 
+    @Test
     func testOptimizedOutAccumulator() {
         let unopt = """
             ---I
@@ -101,9 +104,10 @@ final class DiffOracleTests: XCTestCase {
             """
 
         // <optimized_out> in Opt should match distinct value in Unopt
-        XCTAssertTrue(DiffOracle.relate(opt, with: unopt))
+        #expect(DiffOracle.relate(opt, with: unopt))
     }
 
+    @Test
     func testOptimizedOutArgument() {
         let unopt = """
             ---I
@@ -129,9 +133,10 @@ final class DiffOracleTests: XCTestCase {
 
             """
 
-        XCTAssertTrue(DiffOracle.relate(opt, with: unopt))
+        #expect(DiffOracle.relate(opt, with: unopt))
     }
 
+    @Test
     func testNonMaterializedArgument() {
         let unopt = """
             ---I
@@ -157,9 +162,10 @@ final class DiffOracleTests: XCTestCase {
 
             """
 
-        XCTAssertTrue(DiffOracle.relate(opt, with: unopt))
+        #expect(DiffOracle.relate(opt, with: unopt))
     }
 
+    @Test
     func testArgumentMismatch() {
         let unopt = """
             ---I
@@ -183,9 +189,10 @@ final class DiffOracleTests: XCTestCase {
 
             """
 
-        XCTAssertFalse(DiffOracle.relate(opt, with: unopt))
+        #expect(!DiffOracle.relate(opt, with: unopt))
     }
 
+    @Test
     func testRegisterMismatch() {
         let unopt = """
             ---I
@@ -209,9 +216,10 @@ final class DiffOracleTests: XCTestCase {
 
             """
 
-        XCTAssertFalse(DiffOracle.relate(opt, with: unopt))
+        #expect(!DiffOracle.relate(opt, with: unopt))
     }
 
+    @Test
     func testSkipsUnoptimizedFrames() {
         // Scenario: Unoptimized dump has extra intermediate steps (frames at offset 20 and 30).
         // Optimized dump only snapshots offset 10 and 40. This is valid.
@@ -245,9 +253,10 @@ final class DiffOracleTests: XCTestCase {
 
             """
 
-        XCTAssertTrue(DiffOracle.relate(opt, with: unopt))
+        #expect(DiffOracle.relate(opt, with: unopt))
     }
 
+    @Test
     func testOrderMatters() {
         // Scenario: Opt dump tries to match b:40 BEFORE b:10. This is invalid.
         // The relatation consumes the unopt stream forward.
@@ -275,9 +284,10 @@ final class DiffOracleTests: XCTestCase {
 
             """
 
-        XCTAssertFalse(DiffOracle.relate(opt, with: unopt))
+        #expect(!DiffOracle.relate(opt, with: unopt))
     }
 
+    @Test
     func testBytecodeOffsetMismatch() {
         let unopt = """
             ---I
@@ -297,9 +307,10 @@ final class DiffOracleTests: XCTestCase {
 
             """
 
-        XCTAssertFalse(DiffOracle.relate(opt, with: unopt))
+        #expect(!DiffOracle.relate(opt, with: unopt))
     }
 
+    @Test
     func testArrayResizeUpdateValues() {
         // Tests the logic in `updateValues` where it handles missing or excess values
         // when n counts change between frames.
@@ -336,9 +347,10 @@ final class DiffOracleTests: XCTestCase {
 
             """
 
-        XCTAssertTrue(DiffOracle.relate(opt, with: unopt))
+        #expect(DiffOracle.relate(opt, with: unopt))
     }
 
+    @Test
     func testRegisterPersistence() {
         // Scenario:
         // 1. We set r0=A, r1=B (m:2) in the first frame.
@@ -376,9 +388,10 @@ final class DiffOracleTests: XCTestCase {
             r1:B
 
             """
-        XCTAssertTrue(DiffOracle.relate(expectedLastFrame, with: trace))
+        #expect(DiffOracle.relate(expectedLastFrame, with: trace))
     }
 
+    @Test
     func testMissingValueInjection() {
         // Scenario:
         // Frame 1: m=1, r0=A
@@ -411,9 +424,10 @@ final class DiffOracleTests: XCTestCase {
 
             """
 
-        XCTAssertTrue(DiffOracle.relate(explicitMissing, with: trace))
+        #expect(DiffOracle.relate(explicitMissing, with: trace))
     }
 
+    @Test
     func testFarJumpInRegisterIndex() {
         // Scenario: A frame references a high register index directly without defining intermediate ones.
         // Buffer should auto-grow and fill with <missing>.
@@ -449,9 +463,10 @@ final class DiffOracleTests: XCTestCase {
 
             """
 
-        XCTAssertTrue(DiffOracle.relate(expected, with: trace))
+        #expect(DiffOracle.relate(expected, with: trace))
     }
 
+    @Test
     func testEmptyStringValueParsing() {
         let unopt = """
             ---I
@@ -475,7 +490,7 @@ final class DiffOracleTests: XCTestCase {
 
             """
 
-        XCTAssertTrue(
+        #expect(
             DiffOracle.relate(opt, with: unopt),
             "Should handle empty register values (e.g. 'r5:') without crashing")
     }

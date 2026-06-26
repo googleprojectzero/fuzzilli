@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import XCTest
+import Foundation
+import Testing
 
 @testable import Fuzzilli
 
-class EngineTests: XCTestCase {
+struct EngineTests {
+    @Test
     func testPostProcessorOnGenerativeEngine() throws {
         class MockPostProcessor: FuzzingPostProcessor {
             var callCount = 0
@@ -31,9 +33,9 @@ class EngineTests: XCTestCase {
         engine.registerPostProcessor(mockPostProcessor)
         let q = DispatchQueue(label: "fuzzerQueue")
         let fuzzer = makeMockFuzzer(engine: engine, queue: q)
-        XCTAssertNotNil(fuzzer.corpusGenerationEngine.postProcessor)
-        XCTAssertEqual(mockPostProcessor.callCount, 0)
-        q.sync {
+        fuzzer.sync {
+            #expect(fuzzer.corpusGenerationEngine.postProcessor != nil)
+            #expect(mockPostProcessor.callCount == 0)
             fuzzer.start(runUntil: .iterationsPerformed(3))
         }
         // Synchronize on the queue 2 times, so that each time at least one new
@@ -41,73 +43,83 @@ class EngineTests: XCTestCase {
         // This should work consistently as the DispatchQueue is not marked
         // with DispatchQueue.Attributes.concurrent, so each time one of the
         // que.sync {} is executed, a fuzzOne() was executed as well.
-        q.sync {}
-        q.sync {}
-        XCTAssertEqual(mockPostProcessor.callCount, 3)
+        fuzzer.sync {
+            #expect(mockPostProcessor.callCount == 2)
+        }
+        fuzzer.sync {
+            #expect(mockPostProcessor.callCount == 3)
+        }
         // No more tasks are queued.
-        q.sync {}
-        XCTAssertEqual(mockPostProcessor.callCount, 3)
-        XCTAssert(fuzzer.isStopped)
+        fuzzer.sync {
+            #expect(mockPostProcessor.callCount == 3)
+            #expect(fuzzer.isStopped)
+        }
     }
 
     // Test that certain usages of "arguments" are rejected by the Dumpling
     // post processor.
+    @Test
     func testDumplingPostProcessor() {
         let fuzzer = makeMockFuzzer()
-        let processor = DumplingFuzzingPostProcessor()
+        fuzzer.sync {
+            let processor = DumplingFuzzingPostProcessor()
 
-        let rejectedCases: [(ProgramBuilder) -> Void] = [
-            { b in
-                let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
-                b.getProperty("arguments", of: f)
-            },
-            { b in
-                let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
-                let i = b.loadInt(0)
-                b.setProperty("arguments", of: f, to: i)
-            },
-            { b in
-                let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
-                let i = b.loadInt(0)
-                b.updateProperty("arguments", of: f, with: i, using: BinaryOperator.Add)
-            },
-            { b in
-                let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
-                b.deleteProperty("arguments", of: f)
-            },
-            { b in
-                let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
-                let a = b.loadString("arguments")
-                b.getComputedProperty(a, of: f)
-            },
-        ]
+            let rejectedCases: [(ProgramBuilder) -> Void] = [
+                { b in
+                    let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
+                    b.getProperty("arguments", of: f)
+                },
+                { b in
+                    let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
+                    let i = b.loadInt(0)
+                    b.setProperty("arguments", of: f, to: i)
+                },
+                { b in
+                    let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
+                    let i = b.loadInt(0)
+                    b.updateProperty("arguments", of: f, with: i, using: BinaryOperator.Add)
+                },
+                { b in
+                    let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
+                    b.deleteProperty("arguments", of: f)
+                },
+                { b in
+                    let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
+                    let a = b.loadString("arguments")
+                    b.getComputedProperty(a, of: f)
+                },
+            ]
 
-        for (i, rejectedCase) in rejectedCases.enumerated() {
-            let b = fuzzer.makeBuilder()
-            rejectedCase(b)
-            let program = b.finalize()
-            XCTAssertThrowsError(try processor.process(program, for: fuzzer), "test case \(i)")
-        }
+            for (i, rejectedCase) in rejectedCases.enumerated() {
+                let b = fuzzer.makeBuilder()
+                rejectedCase(b)
+                let program = b.finalize()
+                #expect(throws: (any Error).self, "test case \(i)") {
+                    try processor.process(program, for: fuzzer)
+                }
+            }
 
-        for acceptedCase: (ProgramBuilder) -> Void in [
-            { b in
-                let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
-                b.getProperty("not_arguments", of: f)
-            },
-            { b in
-                let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
-                let a = b.loadString("not_arguments")
-                b.getComputedProperty(a, of: f)
-            },
-        ] {
+            for acceptedCase: (ProgramBuilder) -> Void in [
+                { b in
+                    let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
+                    b.getProperty("not_arguments", of: f)
+                },
+                { b in
+                    let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
+                    let a = b.loadString("not_arguments")
+                    b.getComputedProperty(a, of: f)
+                },
+            ] {
 
-            let b = fuzzer.makeBuilder()
-            acceptedCase(b)
-            let program = b.finalize()
-            _ = try! processor.process(program, for: fuzzer)
+                let b = fuzzer.makeBuilder()
+                acceptedCase(b)
+                let program = b.finalize()
+                _ = try! processor.process(program, for: fuzzer)
+            }
         }
     }
 
+    @Test
     func testHybridEngineBundleGeneration() {
         let config = Configuration(logLevel: .error, generateBundle: true)
         let engine = HybridEngine(numConsecutiveMutations: 0)
@@ -124,17 +136,16 @@ class EngineTests: XCTestCase {
             queue: q
         )
 
-        var program: Program? = nil
-        q.sync {
-            program = engine.generateTemplateProgram(template: template)
+        fuzzer.sync {
+            let program = engine.generateTemplateProgram(template: template)
+
+            let liftedCode = fuzzer.lifter.lift(program)
+            let expected = """
+                // JS_BUNDLE_SCRIPT
+                fuzzilli('FUZZILLI_PRINT', 42);
+
+                """
+            #expect(liftedCode == expected)
         }
-
-        let liftedCode = fuzzer.lifter.lift(program!)
-        let expected = """
-            // JS_BUNDLE_SCRIPT
-            fuzzilli('FUZZILLI_PRINT', 42);
-
-            """
-        XCTAssertEqual(liftedCode, expected)
     }
 }
