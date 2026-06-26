@@ -137,14 +137,10 @@ function parse(script, proto) {
         defaultValue = visitExpression(node.right);
       }
 
-      if (targetNode.type === "Identifier") {
-        return { name: targetNode.name, defaultValue: defaultValue };
-      } else {
-        return {
-          pattern: make("DestructuringPattern", parsePattern(targetNode)),
-          defaultValue: defaultValue,
-        };
-      }
+      return {
+        target: visitLValue(targetNode),
+        defaultValue: defaultValue,
+      };
     }
 
     function parsePattern(id) {
@@ -152,26 +148,18 @@ function parse(script, proto) {
         return { name: id.name };
       } else if (id.type === "ObjectPattern") {
         let properties = [];
-        let restBinding = undefined;
+        let restTarget = undefined;
         for (let prop of id.properties) {
           if (prop.type === "ObjectProperty") {
             let key = visitMemberKey(prop);
-            let { name, pattern, defaultValue } = parseTargetAndDefault(
-              prop.value,
-            );
+            let { target, defaultValue } = parseTargetAndDefault(prop.value);
 
-            let outProp = { key };
-            if (name !== undefined) outProp.name = name;
-            if (pattern !== undefined) outProp.pattern = pattern;
+            let outProp = { key, target };
             if (defaultValue !== null) outProp.defaultValue = defaultValue;
 
             properties.push(make("ObjectPatternProperty", outProp));
           } else if (prop.type === "RestElement") {
-            assert(
-              prop.argument.type === "Identifier",
-              "Object rest binding must be an identifier",
-            );
-            restBinding = prop.argument.name;
+            restTarget = visitLValue(prop.argument);
           } else {
             assert(
               false,
@@ -180,12 +168,11 @@ function parse(script, proto) {
           }
         }
         let obj = { properties: properties };
-        if (restBinding !== undefined) obj.restBinding = restBinding;
+        if (restTarget !== undefined) obj.restTarget = restTarget;
         return { objectPattern: make("ObjectPattern", obj) };
       } else if (id.type === "ArrayPattern") {
         let elements = [];
-        let restBinding = undefined;
-        let restPattern = undefined;
+        let restTarget = undefined;
         for (let i = 0; i < id.elements.length; i++) {
           let elem = id.elements[i];
           if (elem === null) {
@@ -193,28 +180,17 @@ function parse(script, proto) {
             continue;
           }
           if (elem.type === "RestElement") {
-            let restTargetNode = elem.argument;
-            if (restTargetNode.type === "Identifier") {
-              restBinding = restTargetNode.name;
-            } else {
-              restPattern = make(
-                "DestructuringPattern",
-                parsePattern(restTargetNode),
-              );
-            }
-          } else {
-            let { name, pattern, defaultValue } = parseTargetAndDefault(elem);
-            let outElem = {};
-            if (name !== undefined) outElem.name = name;
-            if (pattern !== undefined) outElem.pattern = pattern;
-            if (defaultValue !== null) outElem.defaultValue = defaultValue;
-
-            elements.push(make("ArrayPatternElement", outElem));
+            restTarget = visitLValue(elem.argument);
+            continue;
           }
+          let { target, defaultValue } = parseTargetAndDefault(elem);
+          let outElem = { target };
+          if (defaultValue !== null) outElem.defaultValue = defaultValue;
+
+          elements.push(make("ArrayPatternElement", outElem));
         }
         let arrPat = { elements };
-        if (restBinding !== undefined) arrPat.restBinding = restBinding;
-        else if (restPattern !== undefined) arrPat.restPattern = restPattern;
+        if (restTarget !== undefined) arrPat.restTarget = restTarget;
         return { arrayPattern: make("ArrayPattern", arrPat) };
       } else {
         assert(false, "Unsupported pattern type: " + id.type);

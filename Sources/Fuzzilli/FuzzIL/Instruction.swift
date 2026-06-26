@@ -2467,7 +2467,9 @@ extension Instruction: ProtobufConvertible {
                 case .simple:
                     .simple
                 case .destruct:
-                    .destruct(pattern: try decodeDestructuringPattern(from: p.pattern))
+                    .destruct(
+                        pattern: try decodeDestructuringPattern(
+                            from: p.pattern, isDeclaration: true))
                 default:
                     .simple
                 }
@@ -2544,12 +2546,21 @@ extension Instruction: ProtobufConvertible {
         case .dynamicImport(let p):
             op = DynamicImport(isDeferred: p.isDeferred)
         case .destruct(let p):
-            let pattern = try decodeDestructuringPattern(from: p.pattern)
+            let pattern = try decodeDestructuringPattern(from: p.pattern, isDeclaration: true)
+            let numInputs = inouts.count - pattern.numBindings
+            guard numInputs == 1 + pattern.numExtraInputs else {
+                throw FuzzilliError.instructionDecodingError(
+                    "Invalid number of inputs for Destruct")
+            }
             op = Destruct(
-                pattern: pattern, numInputs: inouts.count - pattern.numBindings,
+                pattern: pattern, numInputs: numInputs,
                 numOutputs: pattern.numBindings)
         case .destructAndReassign(let p):
-            let pattern = try decodeDestructuringPattern(from: p.pattern)
+            let pattern = try decodeDestructuringPattern(from: p.pattern, isDeclaration: false)
+            guard inouts.count == 1 + pattern.numExtraInputs + pattern.numBindings else {
+                throw FuzzilliError.instructionDecodingError(
+                    "Invalid number of inputs for DestructAndReassign")
+            }
             op = DestructAndReassign(pattern: pattern, numInputs: inouts.count)
         case .loadNewTarget:
             op = LoadNewTarget()
@@ -3079,6 +3090,62 @@ extension Operation {
     }
 }
 
+private func encodeDestructuringTarget(_ target: DestructuringPattern.Target)
+    -> Fuzzilli_Protobuf_FuzzILDestructuringPattern.Target
+{
+    return Fuzzilli_Protobuf_FuzzILDestructuringPattern.Target.with { encodedTarget in
+        switch target {
+        case .flatBinding: encodedTarget.flatBinding = Fuzzilli_Protobuf_Empty()
+        case .pattern(let pattern): encodedTarget.pattern = encodeDestructuringPattern(pattern)
+        case .property(let propertyName): encodedTarget.property = propertyName
+        case .element(let index): encodedTarget.element = index
+        case .computedProperty: encodedTarget.computedProperty = Fuzzilli_Protobuf_Empty()
+        case .superProperty(let propertyName): encodedTarget.superProperty = propertyName
+        case .superElement(let index): encodedTarget.superElement = index
+        case .superComputedProperty: encodedTarget.superComputedProperty = Fuzzilli_Protobuf_Empty()
+        }
+    }
+}
+
+private func decodeDestructuringTarget(
+    from targetProto: Fuzzilli_Protobuf_FuzzILDestructuringPattern.Target,
+    isDeclaration: Bool
+) throws -> DestructuringPattern.Target {
+    func checkValidTarget() throws {
+        if isDeclaration {
+            throw FuzzilliError.instructionDecodingError(
+                "Member expression targets are only valid in DestructAndReassign, not Destruct")
+        }
+    }
+
+    switch targetProto.value {
+    case .flatBinding(_): return .flatBinding
+    case .pattern(let patternProto):
+        return .pattern(
+            try decodeDestructuringPattern(from: patternProto, isDeclaration: isDeclaration))
+    case .property(let propertyName):
+        try checkValidTarget()
+        return .property(propertyName)
+    case .element(let index):
+        try checkValidTarget()
+        return .element(index)
+    case .computedProperty(_):
+        try checkValidTarget()
+        return .computedProperty
+    case .superProperty(let propertyName):
+        try checkValidTarget()
+        return .superProperty(propertyName)
+    case .superElement(let index):
+        try checkValidTarget()
+        return .superElement(index)
+    case .superComputedProperty(_):
+        try checkValidTarget()
+        return .superComputedProperty
+    case nil:
+        throw FuzzilliError.instructionDecodingError("Missing or invalid target")
+    }
+}
+
 private func encodeDestructuringPattern(_ pattern: DestructuringPattern)
     -> Fuzzilli_Protobuf_FuzzILDestructuringPattern
 {
@@ -3095,12 +3162,7 @@ private func encodeDestructuringPattern(_ pattern: DestructuringPattern)
                         case .computed:
                             propProto.computedKey = Fuzzilli_Protobuf_Empty()
                         }
-                        switch prop.target {
-                        case .flatBinding:
-                            propProto.flatBinding = Fuzzilli_Protobuf_Empty()
-                        case .pattern(let p):
-                            propProto.pattern = encodeDestructuringPattern(p)
-                        }
+                        propProto.target = encodeDestructuringTarget(prop.target)
                         propProto.hasDefaultValue_p = prop.hasDefaultValue
                     }
                 }
@@ -3113,30 +3175,23 @@ private func encodeDestructuringPattern(_ pattern: DestructuringPattern)
                 $0.elements = arr.elements.map { elem in
                     Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayElement.with {
                         elemProto in
-                        switch elem.target {
-                        case .elision:
-                            elemProto.elision = Fuzzilli_Protobuf_Empty()
-                        case .flatBinding:
-                            elemProto.flatBinding = Fuzzilli_Protobuf_Empty()
-                        case .pattern(let p):
-                            elemProto.pattern = encodeDestructuringPattern(p)
+                        if let target = elem.target {
+                            elemProto.target = encodeDestructuringTarget(target)
                         }
                         elemProto.hasDefaultValue_p = elem.hasDefaultValue
                     }
                 }
-                switch arr.restTarget {
-                case .none: break
-                case .flatBinding:
-                    $0.flatBinding = Fuzzilli_Protobuf_Empty()
-                case .pattern(let p):
-                    $0.restPattern = encodeDestructuringPattern(p)
+                if let restTarget = arr.restTarget {
+                    $0.restTarget = encodeDestructuringTarget(restTarget)
                 }
             }
         }
     }
 }
 
-private func decodeDestructuringPattern(from proto: Fuzzilli_Protobuf_FuzzILDestructuringPattern)
+private func decodeDestructuringPattern(
+    from proto: Fuzzilli_Protobuf_FuzzILDestructuringPattern, isDeclaration: Bool
+)
     throws -> DestructuringPattern
 {
     switch proto.pattern {
@@ -3145,27 +3200,18 @@ private func decodeDestructuringPattern(from proto: Fuzzilli_Protobuf_FuzzILDest
             propProto -> DestructuringPattern.ObjectProperty in
             let key: DestructuringPattern.ObjectProperty.Key =
                 switch propProto.key {
-                case .stringKey(let s):
-                    .string(s)
-                case .computedKey(_):
-                    .computed
+                case .stringKey(let s): .string(s)
+                case .computedKey(_): .computed
                 case nil:
                     throw FuzzilliError.instructionDecodingError(
                         "Missing or invalid key in ObjectProperty")
                 }
 
-            let target: DestructuringPattern.ObjectProperty.Target =
-                switch propProto.target {
-                case .flatBinding(_):
-                    .flatBinding
-                case .pattern(let p):
-                    .pattern(try decodeDestructuringPattern(from: p))
-                case nil:
-                    throw FuzzilliError.instructionDecodingError(
-                        "Missing or invalid target in ObjectProperty")
-                }
             return DestructuringPattern.ObjectProperty(
-                key: key, target: target, hasDefaultValue: propProto.hasDefaultValue_p)
+                key: key,
+                target: try decodeDestructuringTarget(
+                    from: propProto.target, isDeclaration: isDeclaration),
+                hasDefaultValue: propProto.hasDefaultValue_p)
         }
         return .object(
             DestructuringPattern.ObjectPattern(
@@ -3173,31 +3219,18 @@ private func decodeDestructuringPattern(from proto: Fuzzilli_Protobuf_FuzzILDest
 
     case .arrayPattern(let arrProto):
         let elements = try arrProto.elements.map { elemProto -> DestructuringPattern.ArrayElement in
-            let target: DestructuringPattern.ArrayElement.Target =
-                switch elemProto.target {
-                case .elision(_):
-                    .elision
-                case .flatBinding(_):
-                    .flatBinding
-                case .pattern(let p):
-                    .pattern(try decodeDestructuringPattern(from: p))
-                case nil:
-                    throw FuzzilliError.instructionDecodingError(
-                        "Missing or invalid target in ArrayElement")
-                }
+            let target: DestructuringPattern.Target? =
+                elemProto.hasTarget
+                ? try decodeDestructuringTarget(
+                    from: elemProto.target, isDeclaration: isDeclaration) : nil
             return DestructuringPattern.ArrayElement(
                 target: target, hasDefaultValue: elemProto.hasDefaultValue_p)
         }
 
-        let restTarget: DestructuringPattern.ArrayPattern.RestTarget =
-            switch arrProto.restTarget {
-            case .flatBinding(_):
-                .flatBinding
-            case .restPattern(let p):
-                .pattern(try decodeDestructuringPattern(from: p))
-            case nil:
-                .none
-            }
+        let restTarget: DestructuringPattern.Target? =
+            arrProto.hasRestTarget
+            ? try decodeDestructuringTarget(from: arrProto.restTarget, isDeclaration: isDeclaration)
+            : nil
         return .array(DestructuringPattern.ArrayPattern(elements: elements, restTarget: restTarget))
 
     default:

@@ -2322,7 +2322,7 @@ public enum LoopHeader: Hashable {
                 } else {
                     elements.append(
                         DestructuringPattern.ArrayElement(
-                            target: .elision))
+                            target: nil))
                 }
             }
         }
@@ -3174,6 +3174,17 @@ public indirect enum DestructuringPattern: Hashable, Equatable {
     case object(ObjectPattern)
     case array(ArrayPattern)
 
+    public enum Target: Hashable, Equatable {
+        case flatBinding
+        case pattern(DestructuringPattern)
+        case property(String)
+        case element(Int64)
+        case computedProperty
+        case superProperty(String)
+        case superElement(Int64)
+        case superComputedProperty
+    }
+
     public struct ObjectPattern: Hashable, Equatable {
         public let properties: [ObjectProperty]
         public let hasRestElement: Bool
@@ -3190,10 +3201,6 @@ public indirect enum DestructuringPattern: Hashable, Equatable {
         }
         public let key: Key
 
-        public enum Target: Hashable, Equatable {
-            case flatBinding
-            case pattern(DestructuringPattern)
-        }
         public let target: Target
         public let hasDefaultValue: Bool
 
@@ -3206,29 +3213,19 @@ public indirect enum DestructuringPattern: Hashable, Equatable {
 
     public struct ArrayPattern: Hashable, Equatable {
         public let elements: [ArrayElement]
-        public enum RestTarget: Hashable, Equatable {
-            case none
-            case flatBinding
-            case pattern(DestructuringPattern)
-        }
-        public let restTarget: RestTarget
+        public let restTarget: Target?
 
-        public init(elements: [ArrayElement], restTarget: RestTarget) {
+        public init(elements: [ArrayElement], restTarget: Target?) {
             self.elements = elements
             self.restTarget = restTarget
         }
     }
 
     public struct ArrayElement: Hashable, Equatable {
-        public enum Target: Hashable, Equatable {
-            case elision
-            case flatBinding
-            case pattern(DestructuringPattern)
-        }
-        public let target: Target
+        public let target: Target?
         public let hasDefaultValue: Bool
 
-        public init(target: Target, hasDefaultValue: Bool = false) {
+        public init(target: Target?, hasDefaultValue: Bool = false) {
             self.target = target
             self.hasDefaultValue = hasDefaultValue
         }
@@ -3262,22 +3259,35 @@ extension DestructuringPattern {
     }
 
     var numExtraInputs: Int {
+        func countTargetInputs(_ target: DestructuringPattern.Target) -> Int {
+            switch target {
+            case .pattern(let p): return p.numExtraInputs
+            case .property(_), .element(_), .superComputedProperty: return 1
+            case .computedProperty: return 2
+            default: return 0
+            }
+        }
+
         switch self {
         case .object(let obj):
             var count = 0
             for prop in obj.properties {
                 if case .computed = prop.key { count += 1 }
                 if prop.hasDefaultValue { count += 1 }
-                if case .pattern(let p) = prop.target { count += p.numExtraInputs }
+                count += countTargetInputs(prop.target)
             }
             return count
         case .array(let arr):
             var count = 0
             for elem in arr.elements {
                 if elem.hasDefaultValue { count += 1 }
-                if case .pattern(let p) = elem.target { count += p.numExtraInputs }
+                if let target = elem.target {
+                    count += countTargetInputs(target)
+                }
             }
-            if case .pattern(let p) = arr.restTarget { count += p.numExtraInputs }
+            if let restTarget = arr.restTarget {
+                count += countTargetInputs(restTarget)
+            }
             return count
         }
     }
@@ -3290,6 +3300,7 @@ extension DestructuringPattern {
                 switch prop.target {
                 case .flatBinding: count += 1
                 case .pattern(let p): count += p.numBindings
+                default: break
                 }
             }
             if obj.hasRestElement { count += 1 }
@@ -3298,15 +3309,15 @@ extension DestructuringPattern {
             var count = 0
             for elem in arr.elements {
                 switch elem.target {
-                case .elision: break
                 case .flatBinding: count += 1
                 case .pattern(let p): count += p.numBindings
+                default: break
                 }
             }
             switch arr.restTarget {
-            case .none: break
             case .flatBinding: count += 1
             case .pattern(let p): count += p.numBindings
+            default: break
             }
             return count
         }
@@ -3352,58 +3363,58 @@ final class DestructAndReassign: JsOperation {
 
     init(pattern: DestructuringPattern, numInputs: Int) {
         self.pattern = pattern
-        var targets = [Bool](repeating: false, count: numInputs)
+        var isReassignmentTarget = [Bool](repeating: false, count: numInputs)
         var currentInputIdx = 1
 
         func traverse(_ pattern: DestructuringPattern) {
+            func traverseTarget(_ target: DestructuringPattern.Target) {
+                switch target {
+                case .flatBinding:
+                    isReassignmentTarget[currentInputIdx] = true
+                    currentInputIdx += 1
+                case .pattern(let p):
+                    traverse(p)
+                case .property(_), .element(_), .superComputedProperty:
+                    currentInputIdx += 1
+                case .computedProperty:
+                    currentInputIdx += 2
+                case .superProperty(_), .superElement(_):
+                    break
+                }
+            }
+
             switch pattern {
             case .object(let obj):
                 for prop in obj.properties {
                     if case .computed = prop.key {
                         currentInputIdx += 1
                     }
-                    switch prop.target {
-                    case .flatBinding:
-                        targets[currentInputIdx] = true
-                        currentInputIdx += 1
-                    case .pattern(let p):
-                        traverse(p)
-                    }
+                    traverseTarget(prop.target)
                     if prop.hasDefaultValue {
                         currentInputIdx += 1
                     }
                 }
                 if obj.hasRestElement {
-                    targets[currentInputIdx] = true
+                    isReassignmentTarget[currentInputIdx] = true
                     currentInputIdx += 1
                 }
             case .array(let arr):
                 for elem in arr.elements {
-                    switch elem.target {
-                    case .elision: break
-                    case .flatBinding:
-                        targets[currentInputIdx] = true
-                        currentInputIdx += 1
-                    case .pattern(let p):
-                        traverse(p)
+                    if let target = elem.target {
+                        traverseTarget(target)
                     }
                     if elem.hasDefaultValue {
                         currentInputIdx += 1
                     }
                 }
-                switch arr.restTarget {
-                case .none: break
-                case .flatBinding:
-                    targets[currentInputIdx] = true
-                    currentInputIdx += 1
-                case .pattern(let p):
-                    traverse(p)
+                if let restTarget = arr.restTarget {
+                    traverseTarget(restTarget)
                 }
             }
         }
         traverse(pattern)
         assert(currentInputIdx == numInputs)
-        self.isTarget = targets
+        self.isTarget = isReassignmentTarget
         super.init(numInputs: numInputs, numOutputs: 0, attributes: [.isMutable])
     }
 }

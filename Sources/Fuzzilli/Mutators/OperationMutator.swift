@@ -1067,9 +1067,15 @@ extension OperationMutator {
             // TODO(rherouart): Support mutating indices when default values are present.
             for elem in arr.elements {
                 if elem.hasDefaultValue { return nil }
-                if case .pattern = elem.target { return nil }
+                switch elem.target {
+                case .flatBinding?, nil: break
+                default: return nil
+                }
             }
-            if case .pattern = arr.restTarget { return nil }
+            switch arr.restTarget {
+            case nil, .flatBinding?: break
+            default: return nil
+            }
 
             // TODO(rherouart): Simplify this by directly adding or removing random elisions instead of mapping to and from indices.
             var indices: [Int64] = []
@@ -1087,13 +1093,13 @@ extension OperationMutator {
 
             let sortedIndices = indices.sorted()
             // TODO(rherouart): Toggle this behind some probability.
-            let lastIsRest = (arr.restTarget == .none)  // Toggle it
+            let lastIsRest = (arr.restTarget == nil)  // Toggle it
 
             var elements: [DestructuringPattern.ArrayElement] = []
             var currentIndex: Int64 = 0
             for idx in sortedIndices {
                 while currentIndex < idx {
-                    elements.append(.init(target: .elision))
+                    elements.append(.init(target: nil))
                     currentIndex += 1
                 }
                 if lastIsRest && idx == sortedIndices.last! { break }
@@ -1101,7 +1107,7 @@ extension OperationMutator {
                 currentIndex += 1
             }
             assert(!sortedIndices.isEmpty)
-            let restTarget: DestructuringPattern.ArrayPattern.RestTarget =
+            let restTarget: DestructuringPattern.Target? =
                 lastIsRest ? .flatBinding : .none
 
             return .array(.init(elements: elements, restTarget: restTarget))
@@ -1110,7 +1116,7 @@ extension OperationMutator {
             for prop in obj.properties {
                 if prop.hasDefaultValue { return nil }
                 if case .computed = prop.key { return nil }
-                if case .pattern = prop.target { return nil }
+                if case .flatBinding = prop.target {} else { return nil }
             }
 
             var properties: [String] = []

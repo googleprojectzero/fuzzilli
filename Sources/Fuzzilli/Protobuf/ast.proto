@@ -545,33 +545,21 @@ message DestructuringPattern {
 
 message ObjectPattern {
     repeated ObjectPatternProperty properties = 1;
-    optional string restBinding = 2;
+    LValue restTarget = 2;
 }
 
 message ObjectPatternProperty {
     PropertyKey key = 1;
-
-    oneof target {
-        string name = 2;
-        DestructuringPattern pattern = 3;
-    }
-
+    LValue target = 2;
     Expression defaultValue = 5;
 }
 
 message ArrayPattern {
     repeated ArrayPatternElement elements = 1;
-
-    oneof restTarget {
-        string restBinding = 2;
-        DestructuringPattern restPattern = 3;
-    }
+    LValue restTarget = 2;
 }
 
 message ArrayPatternElement {
-    oneof target {
-        string name = 1;
-        DestructuringPattern pattern = 2;
-    }
+    LValue target = 1;
     Expression defaultValue = 3;
 }

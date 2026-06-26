@@ -200,6 +200,12 @@ for ([r_aro_n, ...{ length: r_aro_len, 0: r_aro_p }] of arrayRestDataset) {
   output("reassign sync destruct_array_rest_object n: " + r_aro_n + " len: " + r_aro_len + " p: " + r_aro_p);
 }
 
+// sync destruct_member_expression (Reassignment)
+let r_mem_obj = {};
+for ([r_mem_obj.prop] of arrayRestDataset) {
+  output("reassign sync destruct_member_expression prop: " + r_mem_obj.prop);
+}
+
 async function runAsyncTests() {
   // async sync var (Declaration)
   for await (const x of syncDataset) {
@@ -287,6 +293,12 @@ async function runAsyncTests() {
   let ra_aro_n, ra_aro_len, ra_aro_p;
   for await ([ra_aro_n, ...{ length: ra_aro_len, 0: ra_aro_p }] of arrayRestDataset) {
     output("reassign async destruct_array_rest_object n: " + ra_aro_n + " len: " + ra_aro_len + " p: " + ra_aro_p);
+  }
+
+  // async sync destruct_member_expression (Reassignment)
+  let ra_mem_obj = {};
+  for await ([ra_mem_obj.prop] of arrayRestDataset) {
+    output("reassign async destruct_member_expression prop: " + ra_mem_obj.prop);
   }
 
 }

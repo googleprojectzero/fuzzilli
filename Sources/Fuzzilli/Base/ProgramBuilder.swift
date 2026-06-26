@@ -3878,7 +3878,7 @@ public class ProgramBuilder {
                 idx >= currentIndex,
                 "Indices must be non-negative and strictly ascending without duplicates")
             while currentIndex < idx {
-                elements.append(.init(target: .elision))
+                elements.append(.init(target: .none))  // elision
                 currentIndex += 1
             }
             if lastIsRest && idx == sortedIndices.last! {
@@ -3887,8 +3887,8 @@ public class ProgramBuilder {
             elements.append(.init(target: .flatBinding))
             currentIndex += 1
         }
-        let restTarget: DestructuringPattern.ArrayPattern.RestTarget =
-            (lastIsRest && !sortedIndices.isEmpty) ? .flatBinding : .none
+        let restTarget =
+            (lastIsRest && !sortedIndices.isEmpty) ? DestructuringPattern.Target.flatBinding : nil
 
         return .array(.init(elements: elements, restTarget: restTarget))
     }
@@ -5726,7 +5726,7 @@ public class ProgramBuilder {
                         if nullable {
                             return wasmRefNull(typeDef: b.jsTyper.getWasmTypeDef(for: type))
                         }
-                    case .none:
+                    case nil:
                         break
                     }
                 }

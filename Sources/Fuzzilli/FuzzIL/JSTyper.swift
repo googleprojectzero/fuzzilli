@@ -2689,14 +2689,9 @@ public struct JSTyper: Analyzer {
                     extractedKeys.insert(property)
                 }
 
-                switch prop.target {
-                case .flatBinding:
-                    set(iterator.next()!, propType)
-                case .pattern(let p):
-                    processDestructuring(
-                        p, on: sourceVar, isRoot: false, iterator: &iterator,
-                        isReassignment: isReassignment)
-                }
+                processDestructuringTarget(
+                    prop.target, on: sourceVar, iterator: &iterator,
+                    isReassignment: isReassignment, expectedType: propType)
 
                 if prop.hasDefaultValue, isReassignment { _ = iterator.next() }
             }
@@ -2726,26 +2721,44 @@ public struct JSTyper: Analyzer {
             }
         case .array(let arr):
             for elem in arr.elements {
-                switch elem.target {
-                case .elision: break
-                case .flatBinding:
-                    set(iterator.next()!, .jsAnything)
-                case .pattern(let p):
-                    processDestructuring(
-                        p, on: sourceVar, isRoot: false, iterator: &iterator,
-                        isReassignment: isReassignment)
+                if let target = elem.target {
+                    processDestructuringTarget(
+                        target, on: sourceVar, iterator: &iterator,
+                        isReassignment: isReassignment, expectedType: .jsAnything)
                 }
                 if elem.hasDefaultValue, isReassignment { _ = iterator.next() }
             }
-            switch arr.restTarget {
-            case .none: break
-            case .flatBinding:
-                set(iterator.next()!, .jsArray)
-            case .pattern(let p):
-                processDestructuring(
-                    p, on: sourceVar, isRoot: false, iterator: &iterator,
-                    isReassignment: isReassignment)
+            if let target = arr.restTarget {
+                processDestructuringTarget(
+                    target, on: sourceVar, iterator: &iterator,
+                    isReassignment: isReassignment, expectedType: .jsArray)
             }
+        }
+    }
+
+    private mutating func processDestructuringTarget<Iter: IteratorProtocol>(
+        _ target: DestructuringPattern.Target,
+        on sourceVar: Variable?,
+        iterator: inout Iter,
+        isReassignment: Bool,
+        expectedType: ILType
+    ) where Iter.Element == Variable {
+        switch target {
+        case .flatBinding:
+            set(iterator.next()!, expectedType)
+        case .pattern(let p):
+            processDestructuring(
+                p, on: sourceVar, isRoot: false, iterator: &iterator,
+                isReassignment: isReassignment)
+        case .property(_), .element(_), .superComputedProperty:
+            if isReassignment { _ = iterator.next()! }
+        case .computedProperty:
+            if isReassignment {
+                _ = iterator.next()!
+                _ = iterator.next()!
+            }
+        case .superProperty(_), .superElement(_):
+            break
         }
     }
 

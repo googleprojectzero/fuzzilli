@@ -411,7 +411,7 @@ public class JavaScriptCompiler {
                         assert(!currentScope.keys.contains(name) || declarationMode == .var)
                         mapOrRemap(name, to: v)
                     }
-                case .none:
+                case nil:
                     throw CompilerError.invalidASTError("VariableDeclarator is missing its id")
                 }
             }
@@ -1855,6 +1855,55 @@ public class JavaScriptCompiler {
         nextVariable = 0
     }
 
+    private func compileMemberExpressionTarget(
+        _ memExpr: Compiler_Protobuf_MemberExpression,
+        isReassignment: Bool, inputs: inout [Variable]
+    ) throws -> DestructuringPattern.Target {
+        if !isReassignment {
+            throw CompilerError.invalidASTError(
+                "Member expression destructuring must be reassignment")
+        }
+        inputs.append(try compileExpression(memExpr.object))
+        switch memExpr.property {
+        case .name(let s): return .property(s)
+        case .expression(let expr):
+            if case .numberLiteral(let literal) = expr.expression,
+                let index = Int64(exactly: literal.value)
+            {
+                return .element(index)
+            } else {
+                inputs.append(try compileExpression(expr))
+                return .computedProperty
+            }
+        case nil:
+            throw CompilerError.invalidASTError("Missing property in member expression")
+        }
+    }
+
+    private func compileSuperMemberExpressionTarget(
+        _ memExpr: Compiler_Protobuf_SuperMemberExpression,
+        isReassignment: Bool, inputs: inout [Variable]
+    ) throws -> DestructuringPattern.Target {
+        if !isReassignment {
+            throw CompilerError.invalidASTError(
+                "Member expression destructuring must be reassignment")
+        }
+        switch memExpr.property {
+        case .name(let s): return .superProperty(s)
+        case .expression(let expr):
+            if case .numberLiteral(let literal) = expr.expression,
+                let index = Int64(exactly: literal.value)
+            {
+                return .superElement(index)
+            } else {
+                inputs.append(try compileExpression(expr))
+                return .superComputedProperty
+            }
+        case nil:
+            throw CompilerError.invalidASTError("Missing property in super member expression")
+        }
+    }
+
     private func compileDestructuringPattern(
         _ pattern: Compiler_Protobuf_DestructuringPattern, inputs: inout [Variable],
         outputs: inout [String], isReassignment: Bool
@@ -1868,7 +1917,7 @@ public class JavaScriptCompiler {
             return .array(
                 try compileArrayPattern(
                     arrProto, inputs: &inputs, outputs: &outputs, isReassignment: isReassignment))
-        case .none:
+        case nil:
             throw CompilerError.invalidASTError("Missing pattern in DestructuringPattern")
         }
     }
@@ -1893,20 +1942,26 @@ public class JavaScriptCompiler {
                 throw CompilerError.invalidASTError("Invalid key in ObjectPatternProperty")
             }
 
-            let target: DestructuringPattern.ObjectProperty.Target
-            switch propProto.target {
-            case .name(let s):
+            let target: DestructuringPattern.Target
+            switch propProto.target.value {
+            case .identifier(let identifier):
                 target = .flatBinding
                 if isReassignment {
-                    inputs.append(findOrCreateVariable(s))
+                    inputs.append(findOrCreateVariable(identifier.name))
                 } else {
-                    outputs.append(s)
+                    outputs.append(identifier.name)
                 }
-            case .pattern(let p):
+            case .destructuringPattern(let p):
                 target = .pattern(
                     try compileDestructuringPattern(
                         p, inputs: &inputs, outputs: &outputs, isReassignment: isReassignment))
-            case .none:
+            case .memberExpression(let memExpr):
+                target = try compileMemberExpressionTarget(
+                    memExpr, isReassignment: isReassignment, inputs: &inputs)
+            case .superMemberExpression(let memExpr):
+                target = try compileSuperMemberExpressionTarget(
+                    memExpr, isReassignment: isReassignment, inputs: &inputs)
+            case nil:
                 // Implicit shorthand (e.g. {x}) means key is a string and target is the same string
                 if case .string(let s) = key {
                     target = .flatBinding
@@ -1933,15 +1988,21 @@ public class JavaScriptCompiler {
                     key: key, target: target, hasDefaultValue: hasDefaultValue))
         }
 
-        if objProto.hasRestBinding {
-            if isReassignment {
-                inputs.append(findOrCreateVariable(objProto.restBinding))
-            } else {
-                outputs.append(objProto.restBinding)
+        if objProto.hasRestTarget {
+            switch objProto.restTarget.value {
+            case .identifier(let identifier):
+                if isReassignment {
+                    inputs.append(findOrCreateVariable(identifier.name))
+                } else {
+                    outputs.append(identifier.name)
+                }
+            default:
+                throw CompilerError.unsupportedFeatureError(
+                    "Destructuring object rest to non-identifier is not yet supported in FuzzIL")
             }
         }
         return DestructuringPattern.ObjectPattern(
-            properties: properties, hasRestElement: objProto.hasRestBinding)
+            properties: properties, hasRestElement: objProto.hasRestTarget)
     }
 
     private func compileArrayPattern(
@@ -1950,21 +2011,27 @@ public class JavaScriptCompiler {
     ) throws -> DestructuringPattern.ArrayPattern {
         var elements = [DestructuringPattern.ArrayElement]()
         for elemProto in arrProto.elements {
-            let target: DestructuringPattern.ArrayElement.Target
-            switch elemProto.target {
-            case .name(let s):
+            let target: DestructuringPattern.Target?
+            switch elemProto.target.value {
+            case .identifier(let identifier):
                 target = .flatBinding
                 if isReassignment {
-                    inputs.append(findOrCreateVariable(s))
+                    inputs.append(findOrCreateVariable(identifier.name))
                 } else {
-                    outputs.append(s)
+                    outputs.append(identifier.name)
                 }
-            case .pattern(let p):
+            case .destructuringPattern(let p):
                 target = .pattern(
                     try compileDestructuringPattern(
                         p, inputs: &inputs, outputs: &outputs, isReassignment: isReassignment))
-            case .none:
-                target = .elision
+            case .memberExpression(let memExpr):
+                target = try compileMemberExpressionTarget(
+                    memExpr, isReassignment: isReassignment, inputs: &inputs)
+            case .superMemberExpression(let memExpr):
+                target = try compileSuperMemberExpressionTarget(
+                    memExpr, isReassignment: isReassignment, inputs: &inputs)
+            case nil:
+                target = nil
             }
 
             var hasDefaultValue = false
@@ -1979,20 +2046,26 @@ public class JavaScriptCompiler {
                     target: target, hasDefaultValue: hasDefaultValue))
         }
 
-        let restTarget: DestructuringPattern.ArrayPattern.RestTarget
-        switch arrProto.restTarget {
-        case .restBinding(let s):
+        let restTarget: DestructuringPattern.Target?
+        switch arrProto.restTarget.value {
+        case .identifier(let identifier):
             restTarget = .flatBinding
             if isReassignment {
-                inputs.append(findOrCreateVariable(s))
+                inputs.append(findOrCreateVariable(identifier.name))
             } else {
-                outputs.append(s)
+                outputs.append(identifier.name)
             }
-        case .restPattern(let p):
+        case .destructuringPattern(let p):
             restTarget = .pattern(
                 try compileDestructuringPattern(
                     p, inputs: &inputs, outputs: &outputs, isReassignment: isReassignment))
-        case .none:
+        case .memberExpression(let memExpr):
+            restTarget = try compileMemberExpressionTarget(
+                memExpr, isReassignment: isReassignment, inputs: &inputs)
+        case .superMemberExpression(let memExpr):
+            restTarget = try compileSuperMemberExpressionTarget(
+                memExpr, isReassignment: isReassignment, inputs: &inputs)
+        case nil:
             restTarget = .none
         }
 

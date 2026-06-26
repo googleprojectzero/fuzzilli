@@ -6651,6 +6651,115 @@ public struct Fuzzilli_Protobuf_FuzzILDestructuringPattern: @unchecked Sendable 
     public init() {}
   }
 
+  public struct Target: @unchecked Sendable {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    public var value: OneOf_Value? {
+      get {return _storage._value}
+      set {_uniqueStorage()._value = newValue}
+    }
+
+    /// e.g. `[a] = arr` or `{a} = obj`
+    public var flatBinding: Fuzzilli_Protobuf_Empty {
+      get {
+        if case .flatBinding(let v)? = _storage._value {return v}
+        return Fuzzilli_Protobuf_Empty()
+      }
+      set {_uniqueStorage()._value = .flatBinding(newValue)}
+    }
+
+    /// e.g. `[{a}] = arr`
+    public var pattern: Fuzzilli_Protobuf_FuzzILDestructuringPattern {
+      get {
+        if case .pattern(let v)? = _storage._value {return v}
+        return Fuzzilli_Protobuf_FuzzILDestructuringPattern()
+      }
+      set {_uniqueStorage()._value = .pattern(newValue)}
+    }
+
+    /// e.g. `[obj.prop] = arr`
+    public var property: String {
+      get {
+        if case .property(let v)? = _storage._value {return v}
+        return String()
+      }
+      set {_uniqueStorage()._value = .property(newValue)}
+    }
+
+    /// e.g. `[arr[0]] = arr`
+    public var element: Int64 {
+      get {
+        if case .element(let v)? = _storage._value {return v}
+        return 0
+      }
+      set {_uniqueStorage()._value = .element(newValue)}
+    }
+
+    /// e.g. `[obj[key]] = arr`
+    public var computedProperty: Fuzzilli_Protobuf_Empty {
+      get {
+        if case .computedProperty(let v)? = _storage._value {return v}
+        return Fuzzilli_Protobuf_Empty()
+      }
+      set {_uniqueStorage()._value = .computedProperty(newValue)}
+    }
+
+    /// e.g. `[super.prop] = arr`
+    public var superProperty: String {
+      get {
+        if case .superProperty(let v)? = _storage._value {return v}
+        return String()
+      }
+      set {_uniqueStorage()._value = .superProperty(newValue)}
+    }
+
+    /// e.g. `[super[0]] = arr`
+    public var superElement: Int64 {
+      get {
+        if case .superElement(let v)? = _storage._value {return v}
+        return 0
+      }
+      set {_uniqueStorage()._value = .superElement(newValue)}
+    }
+
+    /// e.g. `[super[key]] = arr`
+    public var superComputedProperty: Fuzzilli_Protobuf_Empty {
+      get {
+        if case .superComputedProperty(let v)? = _storage._value {return v}
+        return Fuzzilli_Protobuf_Empty()
+      }
+      set {_uniqueStorage()._value = .superComputedProperty(newValue)}
+    }
+
+    public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    public enum OneOf_Value: Equatable, Sendable {
+      /// e.g. `[a] = arr` or `{a} = obj`
+      case flatBinding(Fuzzilli_Protobuf_Empty)
+      /// e.g. `[{a}] = arr`
+      case pattern(Fuzzilli_Protobuf_FuzzILDestructuringPattern)
+      /// e.g. `[obj.prop] = arr`
+      case property(String)
+      /// e.g. `[arr[0]] = arr`
+      case element(Int64)
+      /// e.g. `[obj[key]] = arr`
+      case computedProperty(Fuzzilli_Protobuf_Empty)
+      /// e.g. `[super.prop] = arr`
+      case superProperty(String)
+      /// e.g. `[super[0]] = arr`
+      case superElement(Int64)
+      /// e.g. `[super[key]] = arr`
+      case superComputedProperty(Fuzzilli_Protobuf_Empty)
+
+    }
+
+    public init() {}
+
+    fileprivate var _storage = _StorageClass.defaultInstance
+  }
+
   public struct ObjectProperty: Sendable {
     // SwiftProtobuf.Message conformance is added in an extension below. See the
     // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -6675,27 +6784,15 @@ public struct Fuzzilli_Protobuf_FuzzILDestructuringPattern: @unchecked Sendable 
       set {key = .computedKey(newValue)}
     }
 
-    /// The target is either a flat binding or a nested pattern
-    public var target: Fuzzilli_Protobuf_FuzzILDestructuringPattern.ObjectProperty.OneOf_Target? = nil
-
-    /// true if it's just a newly bound variable
-    public var flatBinding: Fuzzilli_Protobuf_Empty {
-      get {
-        if case .flatBinding(let v)? = target {return v}
-        return Fuzzilli_Protobuf_Empty()
-      }
-      set {target = .flatBinding(newValue)}
+    public var target: Fuzzilli_Protobuf_FuzzILDestructuringPattern.Target {
+      get {_target ?? Fuzzilli_Protobuf_FuzzILDestructuringPattern.Target()}
+      set {_target = newValue}
     }
+    /// Returns true if `target` has been explicitly set.
+    public var hasTarget: Bool {self._target != nil}
+    /// Clears the value of `target`. Subsequent reads from it will return its default value.
+    public mutating func clearTarget() {self._target = nil}
 
-    public var pattern: Fuzzilli_Protobuf_FuzzILDestructuringPattern {
-      get {
-        if case .pattern(let v)? = target {return v}
-        return Fuzzilli_Protobuf_FuzzILDestructuringPattern()
-      }
-      set {target = .pattern(newValue)}
-    }
-
-    /// Optional default value provided as an input variable
     public var hasDefaultValue_p: Bool = false
 
     public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -6707,15 +6804,9 @@ public struct Fuzzilli_Protobuf_FuzzILDestructuringPattern: @unchecked Sendable 
 
     }
 
-    /// The target is either a flat binding or a nested pattern
-    public enum OneOf_Target: Equatable, Sendable {
-      /// true if it's just a newly bound variable
-      case flatBinding(Fuzzilli_Protobuf_Empty)
-      case pattern(Fuzzilli_Protobuf_FuzzILDestructuringPattern)
-
-    }
-
     public init() {}
+
+    fileprivate var _target: Fuzzilli_Protobuf_FuzzILDestructuringPattern.Target? = nil
   }
 
   public struct ArrayPattern: @unchecked Sendable {
@@ -6728,38 +6819,17 @@ public struct Fuzzilli_Protobuf_FuzzILDestructuringPattern: @unchecked Sendable 
       set {_uniqueStorage()._elements = newValue}
     }
 
-    public var restTarget: OneOf_RestTarget? {
-      get {return _storage._restTarget}
+    /// Unset means no rest element
+    public var restTarget: Fuzzilli_Protobuf_FuzzILDestructuringPattern.Target {
+      get {_storage._restTarget ?? Fuzzilli_Protobuf_FuzzILDestructuringPattern.Target()}
       set {_uniqueStorage()._restTarget = newValue}
     }
-
-    /// simple `...rest`
-    public var flatBinding: Fuzzilli_Protobuf_Empty {
-      get {
-        if case .flatBinding(let v)? = _storage._restTarget {return v}
-        return Fuzzilli_Protobuf_Empty()
-      }
-      set {_uniqueStorage()._restTarget = .flatBinding(newValue)}
-    }
-
-    /// nested `...[a]`
-    public var restPattern: Fuzzilli_Protobuf_FuzzILDestructuringPattern {
-      get {
-        if case .restPattern(let v)? = _storage._restTarget {return v}
-        return Fuzzilli_Protobuf_FuzzILDestructuringPattern()
-      }
-      set {_uniqueStorage()._restTarget = .restPattern(newValue)}
-    }
+    /// Returns true if `restTarget` has been explicitly set.
+    public var hasRestTarget: Bool {_storage._restTarget != nil}
+    /// Clears the value of `restTarget`. Subsequent reads from it will return its default value.
+    public mutating func clearRestTarget() {_uniqueStorage()._restTarget = nil}
 
     public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-    public enum OneOf_RestTarget: Equatable, Sendable {
-      /// simple `...rest`
-      case flatBinding(Fuzzilli_Protobuf_Empty)
-      /// nested `...[a]`
-      case restPattern(Fuzzilli_Protobuf_FuzzILDestructuringPattern)
-
-    }
 
     public init() {}
 
@@ -6771,44 +6841,23 @@ public struct Fuzzilli_Protobuf_FuzzILDestructuringPattern: @unchecked Sendable 
     // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
     // methods supported on all messages.
 
-    public var target: Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayElement.OneOf_Target? = nil
-
-    public var elision: Fuzzilli_Protobuf_Empty {
-      get {
-        if case .elision(let v)? = target {return v}
-        return Fuzzilli_Protobuf_Empty()
-      }
-      set {target = .elision(newValue)}
+    /// Unset means it is an elision (e.g. `[,]`)
+    public var target: Fuzzilli_Protobuf_FuzzILDestructuringPattern.Target {
+      get {_target ?? Fuzzilli_Protobuf_FuzzILDestructuringPattern.Target()}
+      set {_target = newValue}
     }
-
-    public var flatBinding: Fuzzilli_Protobuf_Empty {
-      get {
-        if case .flatBinding(let v)? = target {return v}
-        return Fuzzilli_Protobuf_Empty()
-      }
-      set {target = .flatBinding(newValue)}
-    }
-
-    public var pattern: Fuzzilli_Protobuf_FuzzILDestructuringPattern {
-      get {
-        if case .pattern(let v)? = target {return v}
-        return Fuzzilli_Protobuf_FuzzILDestructuringPattern()
-      }
-      set {target = .pattern(newValue)}
-    }
+    /// Returns true if `target` has been explicitly set.
+    public var hasTarget: Bool {self._target != nil}
+    /// Clears the value of `target`. Subsequent reads from it will return its default value.
+    public mutating func clearTarget() {self._target = nil}
 
     public var hasDefaultValue_p: Bool = false
 
     public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-    public enum OneOf_Target: Equatable, Sendable {
-      case elision(Fuzzilli_Protobuf_Empty)
-      case flatBinding(Fuzzilli_Protobuf_Empty)
-      case pattern(Fuzzilli_Protobuf_FuzzILDestructuringPattern)
-
-    }
-
     public init() {}
+
+    fileprivate var _target: Fuzzilli_Protobuf_FuzzILDestructuringPattern.Target? = nil
   }
 
   public init() {}
@@ -17250,9 +17299,194 @@ extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ObjectPattern: SwiftProto
   }
 }
 
+extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.Target: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = Fuzzilli_Protobuf_FuzzILDestructuringPattern.protoMessageName + ".Target"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}flatBinding\0\u{1}pattern\0\u{1}property\0\u{1}element\0\u{1}computedProperty\0\u{1}superProperty\0\u{1}superElement\0\u{1}superComputedProperty\0")
+
+  fileprivate class _StorageClass {
+    var _value: Fuzzilli_Protobuf_FuzzILDestructuringPattern.Target.OneOf_Value?
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _value = source._value
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try {
+          var v: Fuzzilli_Protobuf_Empty?
+          var hadOneofValue = false
+          if let current = _storage._value {
+            hadOneofValue = true
+            if case .flatBinding(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._value = .flatBinding(v)
+          }
+        }()
+        case 2: try {
+          var v: Fuzzilli_Protobuf_FuzzILDestructuringPattern?
+          var hadOneofValue = false
+          if let current = _storage._value {
+            hadOneofValue = true
+            if case .pattern(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._value = .pattern(v)
+          }
+        }()
+        case 3: try {
+          var v: String?
+          try decoder.decodeSingularStringField(value: &v)
+          if let v = v {
+            if _storage._value != nil {try decoder.handleConflictingOneOf()}
+            _storage._value = .property(v)
+          }
+        }()
+        case 4: try {
+          var v: Int64?
+          try decoder.decodeSingularInt64Field(value: &v)
+          if let v = v {
+            if _storage._value != nil {try decoder.handleConflictingOneOf()}
+            _storage._value = .element(v)
+          }
+        }()
+        case 5: try {
+          var v: Fuzzilli_Protobuf_Empty?
+          var hadOneofValue = false
+          if let current = _storage._value {
+            hadOneofValue = true
+            if case .computedProperty(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._value = .computedProperty(v)
+          }
+        }()
+        case 6: try {
+          var v: String?
+          try decoder.decodeSingularStringField(value: &v)
+          if let v = v {
+            if _storage._value != nil {try decoder.handleConflictingOneOf()}
+            _storage._value = .superProperty(v)
+          }
+        }()
+        case 7: try {
+          var v: Int64?
+          try decoder.decodeSingularInt64Field(value: &v)
+          if let v = v {
+            if _storage._value != nil {try decoder.handleConflictingOneOf()}
+            _storage._value = .superElement(v)
+          }
+        }()
+        case 8: try {
+          var v: Fuzzilli_Protobuf_Empty?
+          var hadOneofValue = false
+          if let current = _storage._value {
+            hadOneofValue = true
+            if case .superComputedProperty(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._value = .superComputedProperty(v)
+          }
+        }()
+        default: break
+        }
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      switch _storage._value {
+      case .flatBinding?: try {
+        guard case .flatBinding(let v)? = _storage._value else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+      }()
+      case .pattern?: try {
+        guard case .pattern(let v)? = _storage._value else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+      }()
+      case .property?: try {
+        guard case .property(let v)? = _storage._value else { preconditionFailure() }
+        try visitor.visitSingularStringField(value: v, fieldNumber: 3)
+      }()
+      case .element?: try {
+        guard case .element(let v)? = _storage._value else { preconditionFailure() }
+        try visitor.visitSingularInt64Field(value: v, fieldNumber: 4)
+      }()
+      case .computedProperty?: try {
+        guard case .computedProperty(let v)? = _storage._value else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+      }()
+      case .superProperty?: try {
+        guard case .superProperty(let v)? = _storage._value else { preconditionFailure() }
+        try visitor.visitSingularStringField(value: v, fieldNumber: 6)
+      }()
+      case .superElement?: try {
+        guard case .superElement(let v)? = _storage._value else { preconditionFailure() }
+        try visitor.visitSingularInt64Field(value: v, fieldNumber: 7)
+      }()
+      case .superComputedProperty?: try {
+        guard case .superComputedProperty(let v)? = _storage._value else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+      }()
+      case nil: break
+      }
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Fuzzilli_Protobuf_FuzzILDestructuringPattern.Target, rhs: Fuzzilli_Protobuf_FuzzILDestructuringPattern.Target) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._value != rhs_storage._value {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ObjectProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = Fuzzilli_Protobuf_FuzzILDestructuringPattern.protoMessageName + ".ObjectProperty"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}stringKey\0\u{1}computedKey\0\u{1}flatBinding\0\u{1}pattern\0\u{1}hasDefaultValue\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}stringKey\0\u{1}computedKey\0\u{1}target\0\u{2}\u{2}hasDefaultValue\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -17281,32 +17515,7 @@ extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ObjectProperty: SwiftProt
           self.key = .computedKey(v)
         }
       }()
-      case 3: try {
-        var v: Fuzzilli_Protobuf_Empty?
-        var hadOneofValue = false
-        if let current = self.target {
-          hadOneofValue = true
-          if case .flatBinding(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.target = .flatBinding(v)
-        }
-      }()
-      case 4: try {
-        var v: Fuzzilli_Protobuf_FuzzILDestructuringPattern?
-        var hadOneofValue = false
-        if let current = self.target {
-          hadOneofValue = true
-          if case .pattern(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.target = .pattern(v)
-        }
-      }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._target) }()
       case 5: try { try decoder.decodeSingularBoolField(value: &self.hasDefaultValue_p) }()
       default: break
       }
@@ -17329,17 +17538,9 @@ extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ObjectProperty: SwiftProt
     }()
     case nil: break
     }
-    switch self.target {
-    case .flatBinding?: try {
-      guard case .flatBinding(let v)? = self.target else { preconditionFailure() }
+    try { if let v = self._target {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    }()
-    case .pattern?: try {
-      guard case .pattern(let v)? = self.target else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
-    }()
-    case nil: break
-    }
+    } }()
     if self.hasDefaultValue_p != false {
       try visitor.visitSingularBoolField(value: self.hasDefaultValue_p, fieldNumber: 5)
     }
@@ -17348,7 +17549,7 @@ extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ObjectProperty: SwiftProt
 
   public static func ==(lhs: Fuzzilli_Protobuf_FuzzILDestructuringPattern.ObjectProperty, rhs: Fuzzilli_Protobuf_FuzzILDestructuringPattern.ObjectProperty) -> Bool {
     if lhs.key != rhs.key {return false}
-    if lhs.target != rhs.target {return false}
+    if lhs._target != rhs._target {return false}
     if lhs.hasDefaultValue_p != rhs.hasDefaultValue_p {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -17357,11 +17558,11 @@ extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ObjectProperty: SwiftProt
 
 extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayPattern: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = Fuzzilli_Protobuf_FuzzILDestructuringPattern.protoMessageName + ".ArrayPattern"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}elements\0\u{1}flatBinding\0\u{1}restPattern\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}elements\0\u{1}restTarget\0")
 
   fileprivate class _StorageClass {
     var _elements: [Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayElement] = []
-    var _restTarget: Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayPattern.OneOf_RestTarget?
+    var _restTarget: Fuzzilli_Protobuf_FuzzILDestructuringPattern.Target? = nil
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -17393,32 +17594,7 @@ extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayPattern: SwiftProtob
         // enabled. https://github.com/apple/swift-protobuf/issues/1034
         switch fieldNumber {
         case 1: try { try decoder.decodeRepeatedMessageField(value: &_storage._elements) }()
-        case 2: try {
-          var v: Fuzzilli_Protobuf_Empty?
-          var hadOneofValue = false
-          if let current = _storage._restTarget {
-            hadOneofValue = true
-            if case .flatBinding(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._restTarget = .flatBinding(v)
-          }
-        }()
-        case 3: try {
-          var v: Fuzzilli_Protobuf_FuzzILDestructuringPattern?
-          var hadOneofValue = false
-          if let current = _storage._restTarget {
-            hadOneofValue = true
-            if case .restPattern(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._restTarget = .restPattern(v)
-          }
-        }()
+        case 2: try { try decoder.decodeSingularMessageField(value: &_storage._restTarget) }()
         default: break
         }
       }
@@ -17434,17 +17610,9 @@ extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayPattern: SwiftProtob
       if !_storage._elements.isEmpty {
         try visitor.visitRepeatedMessageField(value: _storage._elements, fieldNumber: 1)
       }
-      switch _storage._restTarget {
-      case .flatBinding?: try {
-        guard case .flatBinding(let v)? = _storage._restTarget else { preconditionFailure() }
+      try { if let v = _storage._restTarget {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-      }()
-      case .restPattern?: try {
-        guard case .restPattern(let v)? = _storage._restTarget else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-      }()
-      case nil: break
-      }
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -17467,7 +17635,7 @@ extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayPattern: SwiftProtob
 
 extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayElement: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = Fuzzilli_Protobuf_FuzzILDestructuringPattern.protoMessageName + ".ArrayElement"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}elision\0\u{1}flatBinding\0\u{1}pattern\0\u{1}hasDefaultValue\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}target\0\u{1}hasDefaultValue\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -17475,46 +17643,8 @@ extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayElement: SwiftProtob
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try {
-        var v: Fuzzilli_Protobuf_Empty?
-        var hadOneofValue = false
-        if let current = self.target {
-          hadOneofValue = true
-          if case .elision(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.target = .elision(v)
-        }
-      }()
-      case 2: try {
-        var v: Fuzzilli_Protobuf_Empty?
-        var hadOneofValue = false
-        if let current = self.target {
-          hadOneofValue = true
-          if case .flatBinding(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.target = .flatBinding(v)
-        }
-      }()
-      case 3: try {
-        var v: Fuzzilli_Protobuf_FuzzILDestructuringPattern?
-        var hadOneofValue = false
-        if let current = self.target {
-          hadOneofValue = true
-          if case .pattern(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.target = .pattern(v)
-        }
-      }()
-      case 4: try { try decoder.decodeSingularBoolField(value: &self.hasDefaultValue_p) }()
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._target) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.hasDefaultValue_p) }()
       default: break
       }
     }
@@ -17525,29 +17655,17 @@ extension Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayElement: SwiftProtob
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    switch self.target {
-    case .elision?: try {
-      guard case .elision(let v)? = self.target else { preconditionFailure() }
+    try { if let v = self._target {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-    }()
-    case .flatBinding?: try {
-      guard case .flatBinding(let v)? = self.target else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    }()
-    case .pattern?: try {
-      guard case .pattern(let v)? = self.target else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    }()
-    case nil: break
-    }
+    } }()
     if self.hasDefaultValue_p != false {
-      try visitor.visitSingularBoolField(value: self.hasDefaultValue_p, fieldNumber: 4)
+      try visitor.visitSingularBoolField(value: self.hasDefaultValue_p, fieldNumber: 2)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayElement, rhs: Fuzzilli_Protobuf_FuzzILDestructuringPattern.ArrayElement) -> Bool {
-    if lhs.target != rhs.target {return false}
+    if lhs._target != rhs._target {return false}
     if lhs.hasDefaultValue_p != rhs.hasDefaultValue_p {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

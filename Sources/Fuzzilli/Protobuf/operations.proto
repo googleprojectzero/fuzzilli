@@ -1816,6 +1816,19 @@ message FuzzILDestructuringPattern {
         bool hasRestElement = 2;
     }
 
+    message Target {
+        oneof value {
+            Empty flatBinding = 1;                  // e.g. `[a] = arr` or `{a} = obj`
+            FuzzILDestructuringPattern pattern = 2; // e.g. `[{a}] = arr`
+            string property = 3;                    // e.g. `[obj.prop] = arr`
+            int64 element = 4;                      // e.g. `[arr[0]] = arr`
+            Empty computedProperty = 5;             // e.g. `[obj[key]] = arr`
+            string superProperty = 6;               // e.g. `[super.prop] = arr`
+            int64 superElement = 7;                 // e.g. `[super[0]] = arr`
+            Empty superComputedProperty = 8;        // e.g. `[super[key]] = arr`
+        }
+    }
+
     message ObjectProperty {
         // The key is either a known string, or a computed key provided as an input variable
         oneof key {
@@ -1823,32 +1836,18 @@ message FuzzILDestructuringPattern {
             Empty computedKey = 2;
         }
 
-        // The target is either a flat binding or a nested pattern
-        oneof target {
-            Empty flatBinding = 3; // true if it's just a newly bound variable
-            FuzzILDestructuringPattern pattern = 4;
-        }
-
-        // Optional default value provided as an input variable
+        Target target = 3;
         bool hasDefaultValue = 5;
     }
 
     message ArrayPattern {
         repeated ArrayElement elements = 1;
-
-        oneof restTarget {
-            Empty flatBinding = 2; // simple `...rest`
-            FuzzILDestructuringPattern restPattern = 3; // nested `...[a]`
-        }
+        Target restTarget = 2; // Unset means no rest element
     }
 
     message ArrayElement {
-        oneof target {
-            Empty elision = 1;
-            Empty flatBinding = 2;
-            FuzzILDestructuringPattern pattern = 3;
-        }
-        bool hasDefaultValue = 4;
+        Target target = 1; // Unset means it is an elision (e.g. `[,]`)
+        bool hasDefaultValue = 2;
     }
 }
 

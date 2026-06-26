@@ -249,3 +249,73 @@ let r_head2, r_tail2;
 [r_head2, , ...r_tail2] = [1, 2, 3, 4];
 output(r_tail2[0], r_tail2[1]);
 
+// MemberExpression in array destructuring
+let m_a = {};
+[m_a.b] = [1];
+output(m_a.b);
+
+// MemberExpression in array destructuring rest
+let m_arr = {};
+[...m_arr.prop] = [1, 2];
+output(m_arr.prop[0], m_arr.prop[1]);
+
+// SuperMemberExpression in array destructuring
+class A_super {
+  get a() { return this._a; }
+  set a(v) { this._a = v; }
+}
+class B_super extends A_super {
+  m() {
+    [...super.a] = [1, 2];
+    output(super.a[0], super.a[1]);
+  }
+}
+new B_super().m();
+
+// MemberExpression in object destructuring
+let o_obj = {};
+({ key: o_obj.prop } = { key: 42 });
+output(o_obj.prop);
+
+// Destructuring reassignment with MemberExpression and SuperProperty
+let obj = { x: 10, y: 20 };
+let arr = [30, 40];
+let targetObj = {};
+let targetArr = [];
+let prop = "dynamic";
+
+class Parent {}
+class Child extends Parent {
+    test() {
+        // Test .superProperty and .superElement
+        ({ x: super.parentProp } = obj);
+        ([super[0]] = arr);
+        output(this.parentProp);
+        output(this[0]);
+    }
+    testComputed() {
+        ({ x: super[prop] } = obj);
+        output(this[prop]);
+    }
+}
+
+// Test .property
+({ x: targetObj.prop1 } = obj);
+output(targetObj.prop1);
+
+// Test .computedProperty
+({ y: targetObj[prop] } = obj);
+output(targetObj.dynamic);
+
+// Test .element
+([targetArr[0]] = arr);
+output(targetArr[0]);
+
+let c = new Child();
+c.test();
+c.testComputed();
+
+// Also test array target pattern (nested destructuring reassignment)
+let nestedTarget = {};
+({ a: { b: nestedTarget.b } } = { a: { b: 100 } });
+output(nestedTarget.b);

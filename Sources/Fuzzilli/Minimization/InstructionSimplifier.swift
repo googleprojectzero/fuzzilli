@@ -202,10 +202,10 @@ struct InstructionSimplifier: Reducer {
                                     GetElement(index: Int64(currentIndex), isGuarded: false),
                                     output: output, inputs: [instr.input(0)]))
                             leftOverElements.append(
-                                DestructuringPattern.ArrayElement(target: .elision))
+                                DestructuringPattern.ArrayElement(target: nil))
                             simplifiedAny = true
                         } else {
-                            if case .elision = element.target {
+                            if element.target == nil {
                                 // No output variable for elisions
                             } else {
                                 leftOverOutputs.append(outputs.next()!)

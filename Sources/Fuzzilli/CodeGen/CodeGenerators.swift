@@ -209,8 +209,8 @@ func makeArrayDestructForOfLoopGenerator(
                 pattern: .array(
                     DestructuringPattern.ArrayPattern(
                         elements: (0...(indices.max() ?? 0)).map { i in
-                            let target: DestructuringPattern.ArrayElement.Target =
-                                indices.contains(Int64(i)) ? .flatBinding : .elision
+                            let target: DestructuringPattern.Target? =
+                                indices.contains(Int64(i)) ? .flatBinding : nil
                             return DestructuringPattern.ArrayElement(target: target)
                         },
                         restTarget: hasRestElement ? .flatBinding : .none))))

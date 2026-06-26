@@ -2758,6 +2758,29 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testObjectDestructLiftingWeirdNames() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.loadInt(42)
+        let v1 = b.loadFloat(13.37)
+        let v2 = b.createObject(with: ["foo-bar": v0, "123": v1])
+        b.destruct(v2, selecting: ["foo-bar"], hasRestElement: true)
+        b.destruct(v2, selecting: ["foo-bar", "123"])
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+            const v2 = { 123: 13.37, "foo-bar": 42 };
+            let {"foo-bar":v3,...v4} = v2;
+            let {"foo-bar":v5,"123":v6} = v2;
+
+            """
+
+        XCTAssertEqual(actual, expected)
+    }
+
     func testObjectDestructAndReassignLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -5123,7 +5146,7 @@ class LifterTests: XCTestCase {
         ]
         let arrayPattern = DestructuringPattern.ArrayPattern(
             elements: arrayElements, restTarget: .flatBinding)
-        let arrayTarget = DestructuringPattern.ObjectProperty.Target.pattern(.array(arrayPattern))
+        let arrayTarget = DestructuringPattern.Target.pattern(.array(arrayPattern))
         let properties = [
             DestructuringPattern.ObjectProperty(key: .computed, target: .flatBinding),
             DestructuringPattern.ObjectProperty(key: .string("b"), target: arrayTarget),
@@ -5142,5 +5165,73 @@ class LifterTests: XCTestCase {
 
         XCTAssertTrue(
             actual.contains("let {[\"dynamic\"]:v3,\"b\":[v4,v5=42,...v6],...v7} = \"obj\";"))
+    }
+
+    func testDestructTargetReassignmentLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let v0 = b.loadInt(42)
+        let v1 = b.loadString("Hello")
+        let v2 = b.createObject(with: ["foo": v0])
+        let v3 = b.createArray(with: [v0])
+
+        // ({foo: obj.prop} = obj)
+        let p1 = DestructuringPattern.object(
+            .init(
+                properties: [.init(key: .string("foo"), target: .property("prop"))],
+                hasRestElement: false))
+        b.destruct(v2, using: p1, into: [v2])
+
+        // ({foo: arr[0]} = obj)
+        let p2 = DestructuringPattern.object(
+            .init(
+                properties: [.init(key: .string("foo"), target: .element(0))], hasRestElement: false
+            ))
+        b.destruct(v2, using: p2, into: [v3])
+
+        // ({foo: super[v1]} = obj)
+        let p3 = DestructuringPattern.object(
+            .init(
+                properties: [.init(key: .string("foo"), target: .superComputedProperty)],
+                hasRestElement: false))
+        b.destruct(v2, using: p3, into: [v1])
+
+        // ({foo: obj[v1]} = obj)
+        let p4 = DestructuringPattern.object(
+            .init(
+                properties: [.init(key: .string("foo"), target: .computedProperty)],
+                hasRestElement: false))
+        b.destruct(v2, using: p4, into: [v2, v1])
+
+        // ({foo: super.prop} = obj)
+        let p5 = DestructuringPattern.object(
+            .init(
+                properties: [.init(key: .string("foo"), target: .superProperty("prop"))],
+                hasRestElement: false))
+        b.destruct(v2, using: p5, into: [])
+
+        // ({foo: super[0]} = obj)
+        let p6 = DestructuringPattern.object(
+            .init(
+                properties: [.init(key: .string("foo"), target: .superElement(0))],
+                hasRestElement: false))
+        b.destruct(v2, using: p6, into: [])
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+            const v2 = { foo: 42 };
+            const v3 = [42];
+            ({"foo":v2.prop} = v2);
+            ({"foo":v3[0]} = v2);
+            ({"foo":super["Hello"]} = v2);
+            ({"foo":v2["Hello"]} = v2);
+            ({"foo":super.prop} = v2);
+            ({"foo":super[0]} = v2);
+
+            """
+        XCTAssertEqual(actual, expected)
     }
 }
