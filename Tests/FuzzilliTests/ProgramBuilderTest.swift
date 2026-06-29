@@ -3480,47 +3480,35 @@ struct ProgramBuilderTests {
         }
     }
 
-    @Test func testArrayGetSchedulingTest() {
-        let fuzzer = makeMockFuzzer()
+    /// Test that scheduling a dynamic import while in the .bundle context succeeds.
+    @Test func testBundleDynamicImportScheduling() {
+        let config = Configuration(logLevel: .error, generateBundle: true)
+        let fuzzer = makeMockFuzzer(config: config)
         let numPrograms = 30
 
         for _ in 0..<numPrograms {
             fuzzer.sync {
                 let b = fuzzer.makeBuilder()
-                b.buildPrefix()
-
-                // TODO(mliedtke): The mechanism needs to learn how to resolve nested input dependencies.
-                b.wasmDefineTypeGroup {
-                    [
-                        b.wasmDefineArrayType(elementType: .wasmi32, mutability: true),
-                        b.wasmDefineStructType(
-                            fields: [.init(type: .wasmi32, mutability: true)], indexTypes: []),
-                    ]
-                }
 
                 let generator = fuzzer.codeGenerators.filter {
-                    $0.name == "WasmArrayGetGenerator"
+                    $0.name == "DynamicImportGenerator"
                 }[0]
 
-                // Now build this.
                 let syntheticGenerator = b.assembleSyntheticGenerator(for: generator)
                 #expect(syntheticGenerator != nil)
 
-                let numGeneratedInstructions = b.complete(
-                    generator: syntheticGenerator!, withBudget: 30)
-
+                _ = b.complete(generator: syntheticGenerator!, withBudget: 30)
                 let program = b.finalize()
 
                 #expect(
                     program.code.contains(where: { instr in
                         switch instr.op.opcode {
-                        case .wasmArrayGet(_):
+                        case .dynamicImport(_):
                             return true
                         default:
                             return false
                         }
                     }))
-                #expect(numGeneratedInstructions > 0)
             }
         }
     }

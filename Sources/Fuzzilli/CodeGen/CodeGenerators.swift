@@ -3646,6 +3646,7 @@ public let CodeGenerators: [CodeGenerator] = [
             GeneratorStub(
                 "BundleModuleEndGenerator",
                 inContext: .single([.moduleTopLevel, .javascript]),
+                produces: [.jsModule()]
             ) { b in
                 // Generate one export at the end to ensure there are at least some exports.
                 b.generateExport()
@@ -3697,10 +3698,8 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("DynamicImportGenerator") { b in
-        if let module = b.randomVariable(ofType: .jsModule()) {
-            b.dynamicImport(module, isDeferred: probability(0.5))
-        }
+    CodeGenerator("DynamicImportGenerator", inputs: .required(.jsModule())) { b, module in
+        b.dynamicImport(module, isDeferred: probability(0.5))
     },
 
     CodeGenerator("ModuleExportGenerator", inContext: .single(.moduleTopLevel)) { b in
