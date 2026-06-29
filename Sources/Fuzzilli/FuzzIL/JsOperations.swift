@@ -2997,15 +2997,17 @@ public struct WasmModuleMetadata: Hashable {
     public let globals: [String]
     public let tables: [String]
     public let tags: [String]
+    public let memories: [String]
 
     public init(
         functions: [FunctionExport] = [], globals: [String] = [], tables: [String] = [],
-        tags: [String] = []
+        tags: [String] = [], memories: [String] = []
     ) {
         self.functions = functions
         self.globals = globals
         self.tables = tables
         self.tags = tags
+        self.memories = memories
     }
 }
 

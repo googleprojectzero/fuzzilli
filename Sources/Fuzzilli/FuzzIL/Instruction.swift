@@ -1854,6 +1854,7 @@ extension Instruction: ProtobufConvertible {
                         meta.globals = op.metadata.globals
                         meta.tables = op.metadata.tables
                         meta.tags = op.metadata.tags
+                        meta.memories = op.metadata.memories
                     }
                 }
             }
@@ -3034,7 +3035,8 @@ extension Instruction: ProtobufConvertible {
                 },
                 globals: p.metadata.globals,
                 tables: p.metadata.tables,
-                tags: p.metadata.tags
+                tags: p.metadata.tags,
+                memories: p.metadata.memories
             )
             op = RawWasmModule(bytes: [UInt8](p.bytes), metadata: metadata)
         }

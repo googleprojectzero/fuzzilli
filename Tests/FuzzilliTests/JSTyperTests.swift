@@ -2612,7 +2612,8 @@ struct JSTyperTests {
                 ],
                 globals: ["g1"],
                 tables: ["t1"],
-                tags: ["tag1"]
+                tags: ["tag1"],
+                memories: ["mem1"]
             )
 
             let module = b.rawWasmModule(bytes: bytes, metadata: metadata)
@@ -2624,6 +2625,7 @@ struct JSTyperTests {
             #expect(exportsType.properties.contains("g1"))
             #expect(exportsType.properties.contains("t1"))
             #expect(exportsType.properties.contains("tag1"))
+            #expect(exportsType.properties.contains("mem1"))
 
             let foo = b.getProperty("foo", of: exports)
             #expect(
@@ -2640,6 +2642,13 @@ struct JSTyperTests {
             #expect(t1Type.methods.contains("grow"))
             #expect(t1Type.methods.contains("get"))
             #expect(t1Type.methods.contains("set"))
+
+            let mem1 = b.getProperty("mem1", of: exports)
+            let mem1Type = b.type(of: mem1)
+            #expect(mem1Type.properties.contains("buffer"))
+            #expect(mem1Type.methods.contains("grow"))
+            #expect(mem1Type.methods.contains("toResizableBuffer"))
+            #expect(mem1Type.methods.contains("toFixedLengthBuffer"))
         }
     }
 

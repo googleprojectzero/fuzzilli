@@ -1760,6 +1760,7 @@ message WasmModuleMetadata {
   repeated string globals = 2;
   repeated string tables = 3;
   repeated string tags = 4;
+  repeated string memories = 5;
 }
 
 message RawWasmModule {

@@ -6442,6 +6442,8 @@ public struct Fuzzilli_Protobuf_WasmModuleMetadata: Sendable {
 
   public var tags: [String] = []
 
+  public var memories: [String] = []
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -16803,7 +16805,7 @@ extension Fuzzilli_Protobuf_WasmFunctionExport: SwiftProtobuf.Message, SwiftProt
 
 extension Fuzzilli_Protobuf_WasmModuleMetadata: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WasmModuleMetadata"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}functions\0\u{1}globals\0\u{1}tables\0\u{1}tags\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}functions\0\u{1}globals\0\u{1}tables\0\u{1}tags\0\u{1}memories\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -16815,6 +16817,7 @@ extension Fuzzilli_Protobuf_WasmModuleMetadata: SwiftProtobuf.Message, SwiftProt
       case 2: try { try decoder.decodeRepeatedStringField(value: &self.globals) }()
       case 3: try { try decoder.decodeRepeatedStringField(value: &self.tables) }()
       case 4: try { try decoder.decodeRepeatedStringField(value: &self.tags) }()
+      case 5: try { try decoder.decodeRepeatedStringField(value: &self.memories) }()
       default: break
       }
     }
@@ -16833,6 +16836,9 @@ extension Fuzzilli_Protobuf_WasmModuleMetadata: SwiftProtobuf.Message, SwiftProt
     if !self.tags.isEmpty {
       try visitor.visitRepeatedStringField(value: self.tags, fieldNumber: 4)
     }
+    if !self.memories.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.memories, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -16841,6 +16847,7 @@ extension Fuzzilli_Protobuf_WasmModuleMetadata: SwiftProtobuf.Message, SwiftProt
     if lhs.globals != rhs.globals {return false}
     if lhs.tables != rhs.tables {return false}
     if lhs.tags != rhs.tags {return false}
+    if lhs.memories != rhs.memories {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -2185,6 +2185,12 @@ public struct JSTyper: Analyzer {
             for t in op.metadata.tags {
                 properties[t] = .object()
             }
+            for m in op.metadata.memories {
+                properties[m] = .object(
+                    withProperties: ["buffer"],
+                    withMethods: ["grow", "toResizableBuffer", "toFixedLengthBuffer"]
+                )
+            }
 
             let exportsGroup = ObjectGroup(
                 name: groupName, instanceType: nil, properties: properties, overloads: methods)

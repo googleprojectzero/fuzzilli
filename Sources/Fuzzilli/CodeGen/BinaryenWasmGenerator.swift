@@ -82,6 +82,7 @@ public func runBinaryenWasmGenerator(b: ProgramBuilder) -> WasmModuleMetadata? {
     var globals: [String] = []
     var tables: [String] = []
     var tags: [String] = []
+    var memories: [String] = []
 
     for export in boundary.exports {
         switch export.kind {
@@ -110,13 +111,15 @@ public func runBinaryenWasmGenerator(b: ProgramBuilder) -> WasmModuleMetadata? {
             tables.append(export.name)
         case "tag":
             tags.append(export.name)
+        case "memory":
+            memories.append(export.name)
         default:
             break
         }
     }
 
     let metadata = WasmModuleMetadata(
-        functions: functions, globals: globals, tables: tables, tags: tags)
+        functions: functions, globals: globals, tables: tables, tags: tags, memories: memories)
 
     // Emit the RawWasmModule operation
     let instance = b.rawWasmModule(bytes: [UInt8](wasmBytes), metadata: metadata)
