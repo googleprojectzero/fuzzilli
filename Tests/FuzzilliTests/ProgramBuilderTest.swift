@@ -3305,6 +3305,65 @@ struct ProgramBuilderTests {
         }
     }
 
+    @Test func testWasmArraySubtypeGeneration() {
+        let env = JavaScriptEnvironment()
+        let config = Configuration(logLevel: .error)
+        let fuzzer = makeMockFuzzer(config: config, environment: env)
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            b.wasmDefineTypeGroup {
+                let baseStruct = b.wasmDefineStructType(
+                    fields: [.init(type: .wasmi32, mutability: false)], indexTypes: [])
+                let subStruct = b.generateSubtype(for: baseStruct)
+
+                let baseArray = b.wasmDefineArrayType(
+                    elementType: ILType.wasmRef(.Index(), nullability: true), mutability: false,
+                    indexType: baseStruct)
+
+                let subArrays = (0..<20).map { _ in b.generateSubtype(for: baseArray) }
+                let subArraysTypeDescriptions = subArrays.map {
+                    b.type(of: $0).wasmTypeDefinition!.description as! WasmArrayTypeDescription
+                }
+
+                #expect(
+                    subArraysTypeDescriptions.allSatisfy {
+                        $0.concreteHeapSupertype
+                            == b.type(of: baseArray).wasmTypeDefinition?.description
+                    })
+                #expect(subArraysTypeDescriptions.allSatisfy { !$0.mutability })
+                #expect(
+                    subArraysTypeDescriptions.contains {
+                        $0.elementType.wasmReferenceType?.nullability == true
+                    })
+                #expect(
+                    subArraysTypeDescriptions.contains {
+                        $0.elementType.wasmReferenceType?.nullability == false
+                    })
+
+                let baseStructDesc = b.type(of: baseStruct).wasmTypeDefinition!.description!
+                let subStructDesc = b.type(of: subStruct).wasmTypeDefinition!.description!
+
+                #expect(
+                    subArraysTypeDescriptions.contains {
+                        if case .Index(let target) = $0.elementType.wasmReferenceType?.kind {
+                            return target.get() == subStructDesc
+                        }
+                        return false
+                    })
+                #expect(
+                    subArraysTypeDescriptions.contains {
+                        if case .Index(let target) = $0.elementType.wasmReferenceType?.kind {
+                            return target.get() == baseStructDesc
+                        }
+                        return false
+                    })
+
+                return [baseStruct, subStruct, baseArray] + subArrays
+            }
+        }
+    }
+
     @Test func testEmptyMemoryGenerateMemoryIndices() {
         let env = JavaScriptEnvironment()
         let config = Configuration(logLevel: .error)

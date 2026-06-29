@@ -6653,28 +6653,47 @@ public class ProgramBuilder {
 
         switch superTypeDesc {
         case let arrayDesc as WasmArrayTypeDescription:
-            // Generate a subtype as a copy of the super type
-            // TODO(bettscheider): Support non-identical subtype generation
-            let elementType = arrayDesc.elementType
+            var elementType = arrayDesc.elementType
+            var indexType: Variable? = nil
 
-            if case .Index = elementType.wasmReferenceType?.kind {
-                let indexType = self.getWasmTypeDef(for: elementType)
-                return self.wasmDefineArrayType(
-                    elementType: .wasmRef(
-                        .Index(), nullability: elementType.wasmReferenceType!.nullability),
-                    mutability: arrayDesc.mutability,
-                    indexType: indexType,
-                    superTypeDef: superType,
-                    isFinal: isFinal
-                )
-            } else {
-                return self.wasmDefineArrayType(
-                    elementType: elementType,
-                    mutability: arrayDesc.mutability,
-                    superTypeDef: superType,
-                    isFinal: isFinal
-                )
+            if let refType = elementType.wasmReferenceType {
+                let originalNullability = refType.nullability
+                // If the element is immutable, the subtype can refine the element type to be non-nullable.
+                let newNullability =
+                    (!arrayDesc.mutability && originalNullability)
+                    ? probability(0.5)
+                    : originalNullability
+
+                switch refType.kind {
+                case .Index:
+                    indexType = self.getWasmTypeDef(for: elementType)
+                    elementType = .wasmRef(
+                        .Index(), nullability: newNullability)
+
+                    let indexTypeDesc = type(of: indexType!).wasmTypeDefinition!.description!
+                    if !arrayDesc.mutability,
+                        !indexTypeDesc.hasUnresolvedSelfReferences(),
+                        !indexTypeDesc.isFinal
+                    {
+                        indexType = self.findVariable(satisfying: {
+                            guard let desc = self.type(of: $0).wasmTypeDefinition?.description
+                            else { return false }
+                            return indexTypeDesc.subsumes(desc)
+                        })!
+                    }
+                case .Abstract:
+                    // TODO(bettscheider): Support generating an index type as a subtype for abstract reference types.
+                    elementType = .wasmRef(refType.kind, nullability: newNullability)
+                }
             }
+
+            return self.wasmDefineArrayType(
+                elementType: elementType,
+                mutability: arrayDesc.mutability,
+                indexType: indexType,
+                superTypeDef: superType,
+                isFinal: isFinal
+            )
 
         // Generate a subtype as a copy of the super type
         // TODO(bettscheider): Support non-identical subtype generation
