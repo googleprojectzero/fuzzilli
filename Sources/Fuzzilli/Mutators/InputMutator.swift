@@ -63,12 +63,13 @@ public class InputMutator: BaseInstructionMutator {
         // closed by the instruction is currently still active.
         let replacement: Variable?
 
+        let type = b.type(of: inouts[selectedInput])
+
         // In wasm we need strict typing, so there is no notion of loose or aware.
+        // Also when the input type is not a JS variable, we cannot call randomJSVariable or randomVariable(forUseAs: ) as those might return any JS variable.
         if b.context.contains(.wasm) || b.context.contains(.wasmFunction)
-            || b.context.contains(.wasmTypeGroup) || instr.op is LoopContinue
-            || instr.op is LoopBreak || instr.op is BlockBreak
+            || b.context.contains(.wasmTypeGroup) || !type.MayBe(.jsAnything)
         {
-            let type = b.type(of: inouts[selectedInput])
             // TODO(mliedtke): For type definitions we need a lot of consistency. E.g. the signature
             // flowing into the block begin operation and the block end operation need to be in
             // sync.
@@ -79,7 +80,6 @@ public class InputMutator: BaseInstructionMutator {
             case .loose:
                 replacement = b.randomJsVariable()
             case .aware:
-                let type = b.type(of: inouts[selectedInput])
                 replacement = b.randomVariable(forUseAs: type)
             }
         }

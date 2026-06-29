@@ -2433,7 +2433,7 @@ final class LoopBreak: JsOperation {
 
     init(hasLabel: Bool = false) {
         super.init(
-            numInputs: hasLabel ? 1 : 0, attributes: [.isJump],
+            numInputs: hasLabel ? 1 : 0, attributes: [.isJump, .isNotInputMutable],
             requiredContext: [.javascript, .loop])
     }
 }
@@ -2443,7 +2443,7 @@ final class LoopContinue: JsOperation {
 
     init(hasLabel: Bool = false) {
         super.init(
-            numInputs: hasLabel ? 1 : 0, attributes: [.isJump],
+            numInputs: hasLabel ? 1 : 0, attributes: [.isJump, .isNotInputMutable],
             requiredContext: [.javascript, .loop])
     }
 }
@@ -2533,7 +2533,7 @@ final class BlockBreak: JsOperation {
     // Block break statements always need to reference a label. "break;" is not allowed here.
     init() {
         super.init(
-            numInputs: 1, attributes: [.isJump],
+            numInputs: 1, attributes: [.isJump, .isNotInputMutable],
             requiredContext: [.javascript])
     }
 }
