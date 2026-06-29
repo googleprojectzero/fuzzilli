@@ -828,6 +828,7 @@ for i in 1..<numJobs {
         staticCorpus: staticCorpus,
         tag: tag,
         isWasmEnabled: enableWasm,
+        wasmOptPath: wasmOptPath,
         generateBundle: generateBundle,
         storagePath: storagePath,
         corpusGenerationIterations: corpusGenerationIterations,
