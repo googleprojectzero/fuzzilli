@@ -253,11 +253,11 @@ public class Fuzzer {
     }
 
     /// Schedule work on this fuzzer's dispatch queue and wait for its completion.
-    public func sync<T>(do block: () -> T) -> T {
+    public func sync<T>(do block: () throws -> T) rethrows -> T {
         if Fuzzer.current === self {
-            block()
+            try block()
         } else {
-            queue.sync(execute: block)
+            try queue.sync(execute: block)
         }
     }
 

@@ -12,78 +12,78 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import XCTest
+import Testing
 
 @testable import Fuzzilli
 
-class RingBufferTests: XCTestCase {
-    func testBasicRingBufferBehaviour() {
+@Suite struct RingBufferTests {
+    @Test func testBasicRingBufferBehaviour() {
         var b = RingBuffer<Int>(maxSize: 3)
 
-        XCTAssertEqual(b.count, 0)
+        #expect(b.count == 0)
 
         b.append(0)
         b.append(1)
         b.append(2)
 
-        XCTAssertEqual(b.count, 3)
+        #expect(b.count == 3)
 
-        XCTAssertEqual(b[0], 0)
-        XCTAssertEqual(b[1], 1)
-        XCTAssertEqual(b[2], 2)
+        #expect(b[0] == 0)
+        #expect(b[1] == 1)
+        #expect(b[2] == 2)
 
         b.append(3)
 
-        XCTAssertEqual(b.count, 3)
+        #expect(b.count == 3)
 
-        XCTAssertEqual(b[0], 1)
-        XCTAssertEqual(b[1], 2)
-        XCTAssertEqual(b[2], 3)
+        #expect(b[0] == 1)
+        #expect(b[1] == 2)
+        #expect(b[2] == 3)
 
         b.append(4)
         b.append(5)
         b.append(6)
 
-        XCTAssertEqual(b.count, 3)
+        #expect(b.count == 3)
 
-        XCTAssertEqual(b[0], 4)
-        XCTAssertEqual(b[1], 5)
-        XCTAssertEqual(b[2], 6)
+        #expect(b[0] == 4)
+        #expect(b[1] == 5)
+        #expect(b[2] == 6)
     }
 
-    func testRingBufferElementWriteAccess() {
+    @Test func testRingBufferElementWriteAccess() {
         var b = RingBuffer<Int>(maxSize: 3)
 
         b.append(0)
-        XCTAssertEqual(b[0], 0)
+        #expect(b[0] == 0)
 
         b[0] = 42
-        XCTAssertEqual(b.count, 1)
-        XCTAssertEqual(b[0], 42)
+        #expect(b.count == 1)
+        #expect(b[0] == 42)
 
         b.append(1)
         b.append(2)
 
-        XCTAssertEqual(b.count, 3)
-        XCTAssertEqual(b[0], 42)
-        XCTAssertEqual(b[1], 1)
-        XCTAssertEqual(b[2], 2)
+        #expect(b.count == 3)
+        #expect(b[0] == 42)
+        #expect(b[1] == 1)
+        #expect(b[2] == 2)
 
         b[2] = 1337
-        XCTAssertEqual(b.count, 3)
-        XCTAssertEqual(b[0], 42)
-        XCTAssertEqual(b[1], 1)
-        XCTAssertEqual(b[2], 1337)
+        #expect(b.count == 3)
+        #expect(b[0] == 42)
+        #expect(b[1] == 1)
+        #expect(b[2] == 1337)
 
         b.append(3)
         b.append(4)
-        XCTAssertEqual(b.count, 3)
-        XCTAssertEqual(b[0], 1337)
-        XCTAssertEqual(b[1], 3)
-        XCTAssertEqual(b[2], 4)
+        #expect(b.count == 3)
+        #expect(b[0] == 1337)
+        #expect(b[1] == 3)
+        #expect(b[2] == 4)
     }
 
-    func testRingBufferElementRemoval() {
+    @Test func testRingBufferElementRemoval() {
         var b = RingBuffer<Int>(maxSize: 3)
         b.append(0)
         b.append(1)
@@ -91,17 +91,17 @@ class RingBufferTests: XCTestCase {
         b.append(3)
 
         b.removeAll()
-        XCTAssertEqual(b.count, 0)
+        #expect(b.count == 0)
 
         b.append(4)
         b.append(5)
 
-        XCTAssertEqual(b.count, 2)
-        XCTAssertEqual(b[0], 4)
-        XCTAssertEqual(b[1], 5)
+        #expect(b.count == 2)
+        #expect(b[0] == 4)
+        #expect(b[1] == 5)
     }
 
-    func testRingBufferIteration() {
+    @Test func testRingBufferIteration() {
         var b = RingBuffer<Int>(maxSize: 3)
         b.append(0)
         b.append(1)
@@ -112,9 +112,9 @@ class RingBufferTests: XCTestCase {
 
         var counter = 0
         for (i, e) in b.enumerated() {
-            XCTAssertEqual(e, i)
+            #expect(e == i)
             counter += 1
         }
-        XCTAssertEqual(counter, 3)
+        #expect(counter == 3)
     }
 }

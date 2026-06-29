@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import XCTest
+import Testing
 
 @testable import Fuzzilli
 
-class InstructionTests: XCTestCase {
-    func testDestructAndReassignTargetMapping() {
+@Suite struct InstructionTests {
+    @Test func testDestructAndReassignTargetMapping() {
         // Pattern: ({ [computedKey]: target1 = default1, "foo": target2, ...target3 } = obj);
         // Inputs will be:
         // [0] obj
@@ -38,24 +38,24 @@ class InstructionTests: XCTestCase {
 
         let op = DestructAndReassign(pattern: destructPattern, numInputs: 6)
 
-        XCTAssertEqual(op.isTarget.count, 6)
+        #expect(op.isTarget.count == 6)
 
         // input 0 is always the object, never a target
-        XCTAssertFalse(op.isTarget[0])
+        #expect(!op.isTarget[0])
 
         // input 1 is the computed key -> NOT a target
-        XCTAssertFalse(op.isTarget[1])
+        #expect(!op.isTarget[1])
 
         // input 2 is the flatBinding for computed key -> IS a target
-        XCTAssertTrue(op.isTarget[2])
+        #expect(op.isTarget[2])
 
         // input 3 is the default value -> NOT a target
-        XCTAssertFalse(op.isTarget[3])
+        #expect(!op.isTarget[3])
 
         // input 4 is the flatBinding for "foo" -> IS a target
-        XCTAssertTrue(op.isTarget[4])
+        #expect(op.isTarget[4])
 
         // input 5 is the rest element -> IS a target
-        XCTAssertTrue(op.isTarget[5])
+        #expect(op.isTarget[5])
     }
 }

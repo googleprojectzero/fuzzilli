@@ -12,22 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import XCTest
+import Testing
 
 @testable import Fuzzilli
 
-class EnvironmentTests: XCTestCase {
+@Suite struct EnvironmentTests {
 
-    func testJSEnvironmentConsistency() {
+    @Test func testJSEnvironmentConsistency() {
         // The constructor will already perform various consistency checks, so we don't repeat them here.
-        let _ = JavaScriptEnvironment(additionalBuiltins: [:], additionalObjectGroups: [])
+        _ = JavaScriptEnvironment(additionalBuiltins: [:], additionalObjectGroups: [])
     }
 
     /// Test all the builtin objects that are reachable from the global this.
     /// (This does not include anything that needs a constructor to be called.)
+    @Test(
+        .enabled(
+            if: JavaScriptExecutor(
+                type: .any, withArguments: ["--harmony", "--wasm-test-streaming", "--js-staging"])
+                != nil))
     func testJSEnvironmentLive() throws {
-        let runner = try GetJavaScriptExecutorOrSkipTest(
-            type: .any, withArguments: ["--harmony", "--wasm-test-streaming", "--js-staging"])
+        let runner = try #require(
+            JavaScriptExecutor(
+                type: .any, withArguments: ["--harmony", "--wasm-test-streaming", "--js-staging"]))
         let jsProg = buildAndLiftProgram(withLiftingOptions: [.includeComments]) { b in
             let jsEnvironment = b.fuzzer.environment
             var seenTypeGroups = Set<String>()
@@ -90,9 +96,9 @@ class EnvironmentTests: XCTestCase {
         return b.callMethod("join", on: hexArray, withArgs: [b.loadString("")])
     }
 
+    @Test(.enabled(if: JavaScriptExecutor(type: .any, withArguments: ["--js-base-64"]) != nil))
     func testBase64OptionsBag() throws {
-        let runner = try GetJavaScriptExecutorOrSkipTest(
-            type: .any, withArguments: ["--js-base-64"])
+        let runner = try #require(JavaScriptExecutor(type: .any, withArguments: ["--js-base-64"]))
         let jsProg = buildAndLiftProgram { b in
             let arrayConstructor = b.createNamedVariable(forBuiltin: "Uint8Array")
             // Whatever the options object looks like, it should construct something valid.
@@ -101,7 +107,7 @@ class EnvironmentTests: XCTestCase {
             let inputString = b.loadString("qxI0VniQq83v")
             let array = b.callMethod(
                 "fromBase64", on: arrayConstructor, withArgs: [inputString, options])
-            XCTAssert(b.type(of: array).Is(.object(ofGroup: "Uint8Array")))
+            #expect(b.type(of: array).Is(.object(ofGroup: "Uint8Array")))
             let outputFunc = b.createNamedVariable(forBuiltin: "output")
             b.callFunction(outputFunc, withArgs: [convertTypedArrayToHex(b, array)])
 

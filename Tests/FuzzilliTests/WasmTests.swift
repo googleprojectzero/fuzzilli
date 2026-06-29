@@ -15,7 +15,6 @@
 import Algorithms
 import Foundation
 import Testing
-import XCTest
 
 @testable import Fuzzilli
 
@@ -33,8 +32,6 @@ func testExecuteScript(program: String, runner: JavaScriptExecutor) -> JavaScrip
 func testForOutput(program: String, runner: JavaScriptExecutor, outputString: String) {
     let result = testExecuteScript(program: program, runner: runner)
     #expect(result.output == outputString, "Error Output:\n\(result.error)")
-    // TODO(mliedtke): Remove XCTest once the EnvironmentTest has been migrated.
-    XCTAssertEqual(result.output, outputString, "Error Output:\n" + result.error)
 }
 
 func testForOutputRegex(program: String, runner: JavaScriptExecutor, outputPattern: String) {

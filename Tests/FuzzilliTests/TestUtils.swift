@@ -88,7 +88,6 @@ func buildAndLiftProgram(withLiftingOptions: LiftingOptions, buildFunc: (Program
         let serializedBytes = try! prog.asProtobuf().serializedData()
         let deserialized = try! Program(
             from: Fuzzilli_Protobuf_Program(serializedBytes: serializedBytes))
-        XCTAssertEqual(prog, deserialized)
         #expect(prog == deserialized)
 
         return fuzzer.lifter.lift(prog, withOptions: withLiftingOptions)
@@ -99,17 +98,18 @@ func buildAndLiftProgram(buildFunc: (ProgramBuilder) -> Void) -> String {
     return buildAndLiftProgram(withLiftingOptions: [], buildFunc: buildFunc)
 }
 
-class TestUtilsTests: XCTestCase {
+@Suite struct TestUtilsTests {
 
     // Test that running a program via the JavaScriptExecutor that produces a large output succeeds.
     // (This test case exists because when using a raw Pipe() as stdout without any further
     // handling, the child process will be interrupted once the buffer size (64KB on Linux
     // apparently) is filled.)
+    @Test(.enabled(if: JavaScriptExecutor() != nil))
     func testJavaScriptExecutorLargeOutput() throws {
         let jsProg = "console.log(JSON.stringify(Array(50000).fill(1)))"
-        let runner = try GetJavaScriptExecutorOrSkipTest()
+        let runner = try #require(JavaScriptExecutor())
         let result = try runner.executeScript(jsProg, withTimeout: 10)
-        XCTAssert(result.isSuccess, "\(result.output)\n\(result.error)")
-        XCTAssertGreaterThan(result.output.count, 100_000)
+        #expect(result.isSuccess, "\(result.output)\n\(result.error)")
+        #expect(result.output.count > 100_000)
     }
 }
