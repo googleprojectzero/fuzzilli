@@ -93,6 +93,7 @@ class LiveTests: XCTestCase {
                     minPages: 2, maxPages: probability(0.5) ? nil : 5, isMemory64: probability(0.5))
                 let signature = b.randomWasmSignature()
                 module.addWasmFunction(with: signature) { function, label, args in
+                    b.buildPrefix()
                     b.build(n: 40)
                     return signature.outputTypes.map {
                         b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)!
@@ -139,6 +140,7 @@ class LiveTests: XCTestCase {
                 module.addMemory(
                     minPages: 2, maxPages: probability(0.5) ? nil : 5, isMemory64: probability(0.5))
                 module.addWasmFunction(with: wasmSignature) { function, label, args in
+                    b.buildPrefix()
                     b.build(n: 40)
                     return wasmSignature.outputTypes.map {
                         b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)!

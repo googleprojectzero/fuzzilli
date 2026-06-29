@@ -69,6 +69,13 @@ private struct GeneratorAdapter4Args: GeneratorAdapter {
 }
 
 public class GeneratorStub: Contributor {
+    /// Whether this code generator is a value generator. A value generator will create at least one new variable containing
+    /// a newly created value (e.g. a primitive value or some kind of object). Further, value generators must be able to
+    /// run even if there are no existing variables. This way, they can be used to "bootstrap" code generation.
+    public var isValueStub: Bool {
+        self.inputs.isEmpty && !self.produces.isEmpty
+    }
+
     /// How many different values of the same type ValueGenerators should aim to generate.
     public static let numberOfValuesToGenerateByValueGenerators = 3
 
@@ -407,22 +414,9 @@ public class CodeGenerator {
     // Here, I think we might have different Contexts that each yield point could provide, e.g. [.javascript | .subroutine, .wasmFunction]. Unsure if there is a situation where this matters? instead of having .javascript | .subroutine | .wasmFunction?
     public let providedContexts: [Context]
 
-    // Whether this code generator shall be used for creating values when bootstrapping code generation.
-    public let useInPrefix: Bool
-
-    public init(_ name: String, useInPrefix: Bool = false, _ generators: [GeneratorStub]) {
+    public init(_ name: String, _ generators: [GeneratorStub]) {
         self.parts = generators
         self.name = name
-        self.useInPrefix = useInPrefix
-
-        if useInPrefix {
-            assert(
-                generators.first!.inputs.isEmpty,
-                "CodeGenerators used in the prefix must not require any inputs")
-            assert(
-                generators.contains { !$0.produces.isEmpty },
-                "CodeGenerators used in the prefix must produce at least one value")
-        }
 
         // Calculate all contexts provided at any time by this CodeGenerator.
         var ctxSet = Set<Context>()
@@ -433,6 +427,12 @@ public class CodeGenerator {
         }
 
         self.providedContexts = Array(ctxSet)
+    }
+
+    // This essentially means that all stubs have no requirements.
+    // Usually there is only a single element in the CodeGenerator if it is a ValueGenerator.
+    public var isValueGenerator: Bool {
+        return self.parts.allSatisfy { $0.isValueStub }
     }
 
     // This is the context required by the first part of the CodeGenerator.
@@ -469,12 +469,10 @@ public class CodeGenerator {
 
     public convenience init(
         _ name: String, inContext context: GeneratorStub.ContextRequirement = .single(.javascript),
-        produces: [ILType] = [], provides: [Context] = [], useInPrefix: Bool = false,
-        _ f: @escaping GeneratorFuncNoArgs
+        produces: [ILType] = [], provides: [Context] = [], _ f: @escaping GeneratorFuncNoArgs
     ) {
         self.init(
             name,
-            useInPrefix: useInPrefix,
             [
                 GeneratorStub(
                     name: name, inputs: .none, produces: produces, context: context,
@@ -485,12 +483,10 @@ public class CodeGenerator {
     public convenience init(
         _ name: String, inContext context: GeneratorStub.ContextRequirement = .single(.javascript),
         producesComplex: [GeneratorStub.Constraint], provides: [Context] = [],
-        useInPrefix: Bool = false,
         _ f: @escaping GeneratorFuncNoArgs
     ) {
         self.init(
             name,
-            useInPrefix: useInPrefix,
             [
                 GeneratorStub(
                     name: name, inputs: .none, produces: producesComplex, context: context,
@@ -501,13 +497,11 @@ public class CodeGenerator {
     public convenience init(
         _ name: String, inContext context: GeneratorStub.ContextRequirement = .single(.javascript),
         inputs: GeneratorStub.Inputs, produces: [ILType] = [], provides: [Context] = [],
-        useInPrefix: Bool = false,
         _ f: @escaping GeneratorFunc1Arg
     ) {
         assert(inputs.count == 1)
         self.init(
             name,
-            useInPrefix: useInPrefix,
             [
                 GeneratorStub(
                     name: name, inputs: inputs, produces: produces, context: context,
@@ -518,12 +512,11 @@ public class CodeGenerator {
     public convenience init(
         _ name: String, inContext context: GeneratorStub.ContextRequirement = .single(.javascript),
         inputs: GeneratorStub.Inputs, producesComplex: [GeneratorStub.Constraint],
-        provides: [Context] = [], useInPrefix: Bool = false, _ f: @escaping GeneratorFunc1Arg
+        provides: [Context] = [], _ f: @escaping GeneratorFunc1Arg
     ) {
         assert(inputs.count == 1)
         self.init(
             name,
-            useInPrefix: useInPrefix,
             [
                 GeneratorStub(
                     name: name, inputs: inputs, produces: producesComplex, context: context,
@@ -534,13 +527,11 @@ public class CodeGenerator {
     public convenience init(
         _ name: String, inContext context: GeneratorStub.ContextRequirement = .single(.javascript),
         inputs: GeneratorStub.Inputs, produces: [ILType] = [], provides: [Context] = [],
-        useInPrefix: Bool = false,
         _ f: @escaping GeneratorFunc2Args
     ) {
         assert(inputs.count == 2)
         self.init(
             name,
-            useInPrefix: useInPrefix,
             [
                 GeneratorStub(
                     name: name, inputs: inputs, produces: produces, context: context,
@@ -551,13 +542,11 @@ public class CodeGenerator {
     public convenience init(
         _ name: String, inContext context: GeneratorStub.ContextRequirement = .single(.javascript),
         inputs: GeneratorStub.Inputs, produces: [ILType] = [], provides: [Context] = [],
-        useInPrefix: Bool = false,
         _ f: @escaping GeneratorFunc3Args
     ) {
         assert(inputs.count == 3)
         self.init(
             name,
-            useInPrefix: useInPrefix,
             [
                 GeneratorStub(
                     name: name, inputs: inputs, produces: produces, context: context,
@@ -568,13 +557,11 @@ public class CodeGenerator {
     public convenience init(
         _ name: String, inContext context: GeneratorStub.ContextRequirement = .single(.javascript),
         inputs: GeneratorStub.Inputs, produces: [ILType] = [], provides: [Context] = [],
-        useInPrefix: Bool = false,
         _ f: @escaping GeneratorFunc4Args
     ) {
         assert(inputs.count == 4)
         self.init(
             name,
-            useInPrefix: useInPrefix,
             [
                 GeneratorStub(
                     name: name, inputs: inputs, produces: produces, context: context,

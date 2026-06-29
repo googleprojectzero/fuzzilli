@@ -258,7 +258,12 @@ func makeObjectDestructForOfLoopGenerator(
 // These insert one or more instructions into a program.
 //
 public let CodeGenerators: [CodeGenerator] = [
-    // Code generators with useInPrefix: true are used to "bootstrap" code generation by creating some initial variables
+    //
+    // Value Generators: Code Generators that generate one or more new values, i.e. they have a `produces` annotation.
+    //
+    // These behave like any other CodeGenerator in that they will be randomly chosen to generate code
+    // and have a weight assigned to them to determine how frequently they are selected, but in addition
+    // ValueGenerators are also used to "bootstrap" code generation by creating some initial variables
     // that following code can then operate on.
     //
     // These:
@@ -268,19 +273,19 @@ public let CodeGenerators: [CodeGenerator] = [
     //  - Should generate |n| different values of the same type, but may generate fewer.
     //  - May be recursive, for example to fill bodies of newly created blocks.
     //
-    CodeGenerator("IntegerGenerator", produces: [.integer], useInPrefix: true) { b in
+    CodeGenerator("IntegerGenerator", produces: [.integer]) { b in
         b.loadInt(b.randomInt())
     },
 
-    CodeGenerator("BigIntGenerator", produces: [.bigint], useInPrefix: true) { b in
+    CodeGenerator("BigIntGenerator", produces: [.bigint]) { b in
         b.loadBigInt(b.randomInt())
     },
 
-    CodeGenerator("FloatGenerator", produces: [.float], useInPrefix: true) { b in
+    CodeGenerator("FloatGenerator", produces: [.float]) { b in
         b.loadFloat(b.randomFloat())
     },
 
-    CodeGenerator("StringGenerator", produces: [.string], useInPrefix: true) { b in
+    CodeGenerator("StringGenerator", produces: [.string]) { b in
         b.loadString(b.randomString())
     },
 
@@ -301,22 +306,22 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("BooleanGenerator", produces: [.boolean], useInPrefix: true) { b in
+    CodeGenerator("BooleanGenerator", produces: [.boolean]) { b in
         // It's probably not too useful to generate multiple boolean values here.
         b.loadBool(Bool.random())
     },
 
-    CodeGenerator("UndefinedGenerator", produces: [.undefined], useInPrefix: true) { b in
+    CodeGenerator("UndefinedGenerator", produces: [.undefined]) { b in
         // There is only one 'undefined' value, so don't generate it multiple times.
         b.loadUndefined()
     },
 
-    CodeGenerator("NullGenerator", produces: [.undefined], useInPrefix: true) { b in
+    CodeGenerator("NullGenerator", produces: [.undefined]) { b in
         // There is only one 'null' value, so don't generate it multiple times.
         b.loadNull()
     },
 
-    CodeGenerator("ArrayGenerator", produces: [.jsArray], useInPrefix: true) { b in
+    CodeGenerator("ArrayGenerator", produces: [.jsArray]) { b in
         // If we can only generate empty arrays, then only create one such array.
         if !b.hasVisibleJsVariables {
             b.createArray(with: [])
@@ -328,12 +333,12 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("IntArrayGenerator", produces: [.jsArray], useInPrefix: true) { b in
+    CodeGenerator("IntArrayGenerator", produces: [.jsArray]) { b in
         let values = (0..<Int.random(in: 1...10)).map({ _ in b.randomInt() })
         b.createIntArray(with: values)
     },
 
-    CodeGenerator("FloatArrayGenerator", produces: [.jsArray], useInPrefix: true) { b in
+    CodeGenerator("FloatArrayGenerator", produces: [.jsArray]) { b in
         let values = (0..<Int.random(in: 1...10)).map({ _ in b.randomFloat() })
         b.createFloatArray(with: values)
     },
@@ -381,7 +386,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.callMethod(transitionMethod, on: Object, withArgs: [obj])
     },
 
-    CodeGenerator("BuiltinObjectInstanceGenerator", produces: [.object()], useInPrefix: true) {
+    CodeGenerator("BuiltinObjectInstanceGenerator", produces: [.object()]) {
         b in
         let builtin = chooseUniform(from: [
             "Array", "Map", "WeakMap", "Set", "WeakSet", "Date",
@@ -438,7 +443,7 @@ public let CodeGenerators: [CodeGenerator] = [
             b.constructTemporalDate, b.constructTemporalDateTime, b.constructTemporalZonedDateTime,
         ])()
     },
-    CodeGenerator("TypedArrayGenerator", produces: [.object()], useInPrefix: true) { b in
+    CodeGenerator("TypedArrayGenerator", produces: [.object()]) { b in
         let size = b.loadInt(b.randomSize(upTo: 0x1000))
         let constructor = b.createNamedVariable(
             forBuiltin: chooseUniform(
@@ -614,7 +619,7 @@ public let CodeGenerators: [CodeGenerator] = [
         )
     },
 
-    CodeGenerator("RegExpGenerator", produces: [.jsRegExp], useInPrefix: true) { b in
+    CodeGenerator("RegExpGenerator", produces: [.jsRegExp]) { b in
         let (regexpPattern, flags) = b.randomRegExpPatternAndFlags()
         b.loadRegExp(regexpPattern, flags)
     },
@@ -658,7 +663,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("ObjectConstructorGenerator", produces: [.constructor()], useInPrefix: true) {
+    CodeGenerator("ObjectConstructorGenerator", produces: [.constructor()]) {
         b in
         let maxProperties = 3
         assert(b.fuzzer.environment.customProperties.count >= maxProperties)
@@ -740,7 +745,7 @@ public let CodeGenerators: [CodeGenerator] = [
         ]
     ),
 
-    CodeGenerator("TrivialFunctionGenerator", produces: [.function()], useInPrefix: true) { b in
+    CodeGenerator("TrivialFunctionGenerator", produces: [.function()]) { b in
         // Generating more than one function has a fairly high probability of generating
         // essentially identical functions, so we just generate one.
         let maybeReturnValue =
@@ -1603,7 +1608,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
     CodeGenerator(
         "StringNormalizeGenerator",
-        produces: [.jsString], useInPrefix: true
+        produces: [.jsString]
     ) { b in
         let form = b.loadString(
             chooseUniform(
@@ -3366,8 +3371,7 @@ public let CodeGenerators: [CodeGenerator] = [
         // assert(b.type(of: imitation) == b.type(of: orig))
     },
 
-    CodeGenerator("ResizableArrayBufferGenerator", produces: [.jsArrayBuffer], useInPrefix: true) {
-        b in
+    CodeGenerator("ResizableArrayBufferGenerator", produces: [.jsArrayBuffer]) { b in
         let size = b.randomSize(upTo: 0x1000)
         var maxSize = b.randomSize()
         if maxSize < size {
@@ -3392,9 +3396,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.construct(View, withArgs: [ab])
     },
 
-    CodeGenerator(
-        "GrowableSharedArrayBufferGenerator", produces: [.jsSharedArrayBuffer], useInPrefix: true
-    ) { b in
+    CodeGenerator("GrowableSharedArrayBufferGenerator", produces: [.jsSharedArrayBuffer]) { b in
         let size = b.randomSize(upTo: 0x1000)
         var maxSize = b.randomSize()
         if maxSize < size {
@@ -3467,7 +3469,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("IteratorGenerator", produces: [.iterable()], useInPrefix: true) { b in
+    CodeGenerator("IteratorGenerator", produces: [.iterable()]) { b in
         let iteratorSymbol = b.createSymbolProperty("iterator")
         b.hide(iteratorSymbol)
         let iterableObject = b.buildObjectLiteral { obj in
@@ -3494,7 +3496,7 @@ public let CodeGenerators: [CodeGenerator] = [
         b.setType(ofVariable: iterableObject, to: .iterable() + .object())
     },
 
-    CodeGenerator("DisposableGenerator", produces: [.disposable()], useInPrefix: true) { b in
+    CodeGenerator("DisposableGenerator", produces: [.disposable()]) { b in
         let disposeSymbol = b.createSymbolProperty("dispose")
         b.hide(disposeSymbol)
         b.buildObjectLiteral { obj in
@@ -3503,8 +3505,7 @@ public let CodeGenerators: [CodeGenerator] = [
         }
     },
 
-    CodeGenerator("AsyncDisposableGenerator", produces: [.asyncDisposable()], useInPrefix: true) {
-        b in
+    CodeGenerator("AsyncDisposableGenerator", produces: [.asyncDisposable()]) { b in
         let asyncDisposeSymbol = b.createSymbolProperty("asyncDispose")
         b.hide(asyncDisposeSymbol)
         b.buildObjectLiteral { obj in

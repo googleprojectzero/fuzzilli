@@ -263,9 +263,8 @@ public class Fuzzer {
 
     /// Set the CodeGenerators (and their respecitve weight) to use when generating new code.
     public func setCodeGenerators(_ generators: WeightedList<CodeGenerator>) {
-        guard generators.contains(where: { $0.useInPrefix }) else {
-            fatalError(
-                "Code generators must contain at least one generator to be used in the prefix")
+        guard generators.contains(where: { $0.isValueGenerator }) else {
+            fatalError("Code generators must contain at least one value generator")
         }
         // This builds a graph that we need later for scheduling generators.
         self.contextGraph = ContextGraph(
