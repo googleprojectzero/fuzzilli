@@ -510,4 +510,22 @@ class MutatorTests: XCTestCase {
             actual.range(of: expectedPattern, options: .regularExpression),
             "Lifted program did not match expected pattern. Actual:\n\(actual)")
     }
+
+    func testInputMutatorPendingBundleModule() {
+        let env = JavaScriptEnvironment()
+        let config = Configuration(logLevel: .error, generateBundle: true)
+        let fuzzer = makeMockFuzzer(config: config, environment: env)
+        let b = fuzzer.makeBuilder()
+
+        let moduleVariable = b.declarePendingBundleModule(name: "testModule", exportNames: [])
+        b.buildPendingBundleModule(moduleVariable: moduleVariable) {
+        }
+
+        let prog = b.finalize()
+        let inputMutator = InputMutator(typeAwareness: .loose)
+
+        let mutatedProg = inputMutator.mutate(prog, using: fuzzer.makeBuilder(), for: fuzzer)
+        // Can't mutate the program:
+        XCTAssertNil(mutatedProg)
+    }
 }

@@ -3067,7 +3067,7 @@ final class BeginPendingBundleModule: JsOperation {
     init() {
         super.init(
             numInputs: 1,
-            attributes: .isBlockStart, requiredContext: [.bundle],
+            attributes: [.isBlockStart, .isNotInputMutable], requiredContext: [.bundle],
             contextOpened: [.moduleTopLevel, .javascript, .async])
     }
 }
