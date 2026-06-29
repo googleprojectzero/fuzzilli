@@ -343,7 +343,9 @@ public let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b in
     }
 
     // Temporarily overwrite the active code generators with the following generators...
-    let primitiveCodeGenerator = CodeGenerator("PrimitiveValue", produces: [.primitive]) { b in
+    let primitiveCodeGenerator = CodeGenerator(
+        "PrimitiveValue", produces: [.primitive], useInPrefix: true
+    ) { b in
         // These should roughly correspond to the supported property representations of the engine.
         withEqualProbability(
             {
@@ -356,7 +358,9 @@ public let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b in
                 b.loadString(b.randomString())
             })
     }
-    let createObjectGenerator = CodeGenerator("CreateObject", produces: [.object()]) { b in
+    let createObjectGenerator = CodeGenerator(
+        "CreateObject", produces: [.object()], useInPrefix: true
+    ) { b in
         let (properties, values) = randomProperties(in: b)
         let obj = b.createObject(with: Dictionary(uniqueKeysWithValues: zip(properties, values)))
         assert(b.type(of: obj).Is(objType))

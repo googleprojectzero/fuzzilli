@@ -15,7 +15,9 @@
 // This value generator inserts Hole leaks into the program.  Use this if you
 // want to fuzz for Memory Corruption using holes, this should be used in
 // conjunction with the --hole-fuzzing runtime flag.
-private let HoleLeakGenerator = CodeGenerator("HoleLeakGenerator", produces: [.jsAnything]) { b in
+private let HoleLeakGenerator = CodeGenerator(
+    "HoleLeakGenerator", produces: [.jsAnything], useInPrefix: true
+) { b in
     b.eval("%LeakHole()", hasOutput: true)
 }
 
