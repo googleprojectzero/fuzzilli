@@ -1198,10 +1198,6 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
     }
 
     if probability(0.2) {
-        args.append("--no-wasm-async-compilation")
-    }
-
-    if probability(0.2) {
         args.append("--no-wasm-native-module-cache")
     }
 
