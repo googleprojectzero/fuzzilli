@@ -509,7 +509,7 @@ public class WasmLifter {
         try self.buildDataCountSection()
 
         // The actual bytecode of the functions.
-        try self.buildCodeSection(self.instructionBuffer)
+        try self.buildCodeSection()
 
         try self.buildDataSection()
 
@@ -957,7 +957,7 @@ public class WasmLifter {
         }
     }
 
-    private func buildCodeSection(_ instructions: Code) throws {
+    private func buildCodeSection() throws {
         let functionCount = self.exports.count { $0.isFunction }
         if functionCount == 0 {
             return

@@ -27,7 +27,7 @@ public class GenerativeEngine: FuzzEngine {
     }
 
     /// Perform one round of fuzzing: simply generate a new program and execute it
-    public override func fuzzOne(_ group: DispatchGroup) {
+    public override func fuzzOne() {
         let b = fuzzer.makeBuilder()
 
         if generateBundle {

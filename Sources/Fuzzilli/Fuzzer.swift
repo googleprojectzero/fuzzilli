@@ -488,7 +488,7 @@ public class Fuzzer {
 
         case .differential:
             processDifferential(
-                program, withStderr: execution.stderr, withStdout: execution.stdout, origin: origin)
+                program, withStderr: execution.stderr, origin: origin)
 
         case .succeeded:
             if let aspects = evaluator.evaluate(execution) {
@@ -687,7 +687,7 @@ public class Fuzzer {
     /// needs to be executed and possibly minimized). During corpus import, the current progress can be
     /// obtained from corpusImportProgress().
     public func scheduleCorpusImport(
-        _ corpus: [Program], importMode: CorpusImportMode, enableDropout: Bool = false
+        _ corpus: [Program], importMode: CorpusImportMode
     ) {
         dispatchPrecondition(condition: .onQueue(queue))
         // Currently we only allow corpus import when the fuzzer is still uninitialized.
@@ -745,7 +745,7 @@ public class Fuzzer {
             && execution.outcome == .succeeded
         {
             return executeDifferentialIfNeeded(
-                execution, program, script, withTimeout: timeout ?? config.timeout)
+                execution, script, withTimeout: timeout ?? config.timeout)
         }
 
         return execution
@@ -895,7 +895,7 @@ public class Fuzzer {
 
     /// Process a program that causes difference between optimized and unoptimized executions
     func processDifferential(
-        _ program: Program, withStderr stderr: String, withStdout stdout: String,
+        _ program: Program, withStderr stderr: String,
         origin: ProgramOrigin
     ) {
         func processCommon(_ program: Program) {
@@ -1061,7 +1061,7 @@ public class Fuzzer {
             assert(!config.staticCorpus)
 
             iterations += 1
-            corpusGenerationEngine.fuzzOne(fuzzGroup)
+            corpusGenerationEngine.fuzzOne()
 
             // Perform initial corpus generation until we haven't found a new interesting sample in the last N
             // iterations. The rough order of magnitude of N has been determined experimentally: run two instances with
@@ -1081,7 +1081,7 @@ public class Fuzzer {
 
         case .fuzzing:
             iterations += 1
-            engine.fuzzOne(fuzzGroup)
+            engine.fuzzOne()
         }
 
         // Perform the next iteration as soon as all tasks related to the current iteration are finished.
@@ -1274,7 +1274,7 @@ public class Fuzzer {
     }
 
     private func executeDifferentialIfNeeded(
-        _ execution: Execution, _ program: Program, _ script: String, withTimeout timeout: UInt32
+        _ execution: Execution, _ script: String, withTimeout timeout: UInt32
     ) -> Execution {
         do {
             let optPath = config.diffConfig!.getDumpFilename(isOptimized: true)

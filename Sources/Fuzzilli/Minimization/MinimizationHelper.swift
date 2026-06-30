@@ -282,7 +282,8 @@ class MinimizationHelper {
         for index in indices {
             replacements.append((index, nop(for: code[index])))
         }
-        return tryReplacements(replacements, expectCodeToBeValid: false, allowRemoving: flags)
+        return tryReplacements(
+            replacements, expectCodeToBeValid: expectCodeToBeValid, allowRemoving: flags)
     }
 
     /// Create a Nop instruction for replacing the given instruction with.

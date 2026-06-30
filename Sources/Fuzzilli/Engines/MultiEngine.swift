@@ -46,8 +46,8 @@ public class MultiEngine: FuzzEngine {
         }
     }
 
-    public override func fuzzOne(_ group: DispatchGroup) {
-        activeEngine.fuzzOne(group)
+    public override func fuzzOne() {
+        activeEngine.fuzzOne()
         currentIteration += 1
         if currentIteration % iterationsPerEngine == 0 {
             let nextEngine = engines.randomElement()!

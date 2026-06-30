@@ -611,7 +611,7 @@ public let ProgramTemplates = [
         b.build(n: 10)
 
         // 4. Build a loop of mixed Wasm and JS operations.
-        b.buildRepeatLoop(n: 15) { i in
+        b.buildRepeatLoop(n: 15) { _ in
             b.build(n: 5)
 
             // Call the Wasm function, which may modify the memory.

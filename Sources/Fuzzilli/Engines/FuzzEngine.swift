@@ -28,7 +28,7 @@ public class FuzzEngine: ComponentBase {
     }
 
     // Performs a single round of fuzzing using the engine.
-    public func fuzzOne(_ group: DispatchGroup) {
+    public func fuzzOne() {
         fatalError("Must be implemented by child classes")
     }
 
@@ -59,7 +59,7 @@ public class FuzzEngine: ComponentBase {
 
         case .differential:
             fuzzer.processDifferential(
-                program, withStderr: execution.stderr, withStdout: execution.stdout, origin: .local)
+                program, withStderr: execution.stderr, origin: .local)
             program.contributors.generatedDifferentialSample()
 
         case .succeeded:

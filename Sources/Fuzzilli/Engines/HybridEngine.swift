@@ -106,7 +106,7 @@ public class HybridEngine: FuzzEngine {
         return program
     }
 
-    public override func fuzzOne(_ group: DispatchGroup) {
+    public override func fuzzOne() {
         let template = fuzzer.programTemplates.randomElement()!
 
         let generatedProgram = generateTemplateProgram(template: template)

@@ -124,7 +124,6 @@ public struct Configuration {
         startupTests: [(String, ExpectedStartupTestResult)] = [],
         minimizationLimit: Double = 0.0,
         dropoutRate: Double = 0,
-        collectRuntimeTypes: Bool = false,
         enableDiagnostics: Bool = false,
         enableInspection: Bool = false,
         staticCorpus: Bool = false,
