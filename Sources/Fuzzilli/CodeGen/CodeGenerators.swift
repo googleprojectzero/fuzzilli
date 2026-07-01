@@ -146,11 +146,11 @@ func makeForInOfLoopGenerator(
     let context: GeneratorStub.ContextRequirement =
         (isAsyncIteration || requiresAsyncContext) ? .single(.async) : .single(.javascript)
 
-    let inputs: GeneratorStub.Inputs
+    let requiredType: ILType
     switch type {
     case .forIn:
         assert(!isAsyncIteration, "async for in is invalid")
-        inputs = .preferred(.object())
+        requiredType = .object()
     case .forOf:
         let elementType: ILType =
             switch usingType {
@@ -163,9 +163,9 @@ func makeForInOfLoopGenerator(
             }
 
         if isAsyncIteration {
-            inputs = .preferred(.asyncIterable(ofElementType: elementType))
+            requiredType = .asyncIterable(ofElementType: elementType)
         } else {
-            inputs = .preferred(.iterable(ofElementType: elementType))
+            requiredType = .iterable(ofElementType: elementType)
         }
     }
 
@@ -175,9 +175,13 @@ func makeForInOfLoopGenerator(
             GeneratorStub(
                 beginStubName,
                 inContext: context,
-                inputs: inputs,
                 provides: [.loop, .javascript]
-            ) { b, obj in
+            ) { b in
+                // TODO(rherouart): Remove this workaround.
+                // It ensures loop variables have the correct inner type.
+                // Ex: "for(using x of array)" will throw if any non-disposable type is in the array
+                // Ultimately createRequiredInputVariables should be recursive.
+                let obj = b.findOrGenerateType(requiredType)
                 body(b, obj)
             },
             GeneratorStub(
