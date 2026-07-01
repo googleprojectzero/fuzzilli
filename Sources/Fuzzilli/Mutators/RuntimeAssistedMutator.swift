@@ -141,6 +141,7 @@ public class RuntimeAssistedMutator: Mutator {
         // This check is also active in release builds as an invalid program here
         // usually indicates a bug in a previous mutator or the fuzzer engine.
         guard program.code.isStaticallyValid() else {
+            print(fuzzer.lifter.lift(program, withOptions: .includeComments))
             fatalError("Input program for \(name) is statically invalid:\n\(program.description)")
         }
 
