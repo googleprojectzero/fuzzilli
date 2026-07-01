@@ -146,4 +146,192 @@ class RuntimeAssistedMutatorTests: XCTestCase {
         waitForExpectations(timeout: 5, handler: nil)
     }
 
+    /// Extracts the generated portion from an instrumented program without
+    /// prefix code and with non-deterministic seeds replaced to avoid
+    /// flakiness.
+    private func extractCodeToVerify(from actual: String) -> String {
+        let sentinel = "// END_OF_EXPLORATION_PREFIX"
+        let range = actual.range(of: sentinel)!
+        return String(actual[range.upperBound...]).replacingOccurrences(
+            of: ", \\d+\\);", with: ", 123);", options: .regularExpression)
+    }
+
+    private func runExplorationInstrumentationTest(
+        varSelector: @escaping ([Variable], [Variable]) -> [Variable],
+        argSelector: @escaping (ProgramBuilder) -> [Variable],
+        build: (ProgramBuilder) -> Void,
+        expected: String
+    ) {
+        let config = Configuration(forDifferentialFuzzing: true)
+        let fuzzer = makeMockFuzzer(config: config)
+        let mutator = ExplorationMutator()
+
+        mutator.varSelector = varSelector
+        mutator.argSelector = argSelector
+
+        let b = fuzzer.makeBuilder()
+        build(b)
+        let program = b.finalize()
+
+        guard let instrumented = mutator.instrument(program, for: fuzzer) else {
+            XCTFail("Failed to instrument program")
+            return
+        }
+
+        let actual = fuzzer.lifter.lift(instrumented, withOptions: .includeComments)
+        let actualWithoutPrefix = extractCodeToVerify(from: actual)
+        XCTAssertEqual(actualWithoutPrefix, expected)
+    }
+
+    func testExplorationMutatorInstrumentation() {
+        runExplorationInstrumentationTest(
+            varSelector: { untyped, typed in
+                // Only explore the first untyped variable
+                XCTAssertEqual(untyped.count, 1)
+                return untyped
+            },
+
+            argSelector: { b in
+                // Use the first two available variables as arguments
+                return Array(
+                    b.visibleVariables.filter({ b.type(of: $0).Is(.jsAnything) }).prefix(2))
+            },
+
+            build: { b in
+                // We need 3 visible variables for exploration to trigger in the instrumenter loop.
+                _ = b.loadInt(42)
+                _ = b.loadString("foo")
+                _ = b.loadFloat(13.37)
+                // eval output is .jsAnything, so it will be in untypedVariables
+                _ = b.eval("42", hasOutput: true)
+            },
+            expected: """
+
+                const v3 = 42;
+                explore("v3", v3, this, [42, "foo"], 123);
+
+                """
+        )
+    }
+
+    func testExplorationMutatorInstrumentationVisibility() {
+        runExplorationInstrumentationTest(
+            varSelector: { untyped, typed in
+                // Only explore the untyped variable
+                return untyped
+            },
+            argSelector: { b in
+                // Use all currently visible variables as arguments
+                return b.visibleVariables.filter({ b.type(of: $0).Is(.jsAnything) })
+            },
+            build: { b in
+                _ = b.loadInt(42)
+                _ = b.loadInt(43)
+                _ = b.loadInt(44)
+                // This variable will be explored.
+                _ = b.eval("early", hasOutput: true)
+                // Add one more variable that should NOT be visible at the point of the early variable's exploration
+                _ = b.loadInt(45)
+            },
+            expected: """
+
+                const v3 = early;
+                explore("v3", v3, this, [42, 43, 44, v3], 123);
+
+                """
+        )
+    }
+
+    private func runExplorationProcessingTest(
+        build: (ProgramBuilder) -> Void,
+        actions: [RuntimeAssistedMutator.Action],
+        expected: String
+    ) {
+        let config = Configuration(forDifferentialFuzzing: true)
+        let fuzzer = makeMockFuzzer(config: config)
+        let mutator = ExplorationMutator()
+        let b = fuzzer.makeBuilder()
+
+        build(b)
+        let instrumentedProgram = b.finalize()
+
+        let encoder = JSONEncoder()
+        var output = ""
+        for action in actions {
+            let actionJson = String(data: try! encoder.encode(action), encoding: .utf8)!
+            output += "EXPLORE_ACTION: \(actionJson)\n"
+        }
+
+        let (processedMaybe, outcome) = mutator.process(
+            output, ofInstrumentedProgram: instrumentedProgram, using: fuzzer.makeBuilder())
+        XCTAssertEqual(outcome, .success)
+        guard let processed = processedMaybe else {
+            XCTFail("Failed to process instrumented program")
+            return
+        }
+
+        let actual = fuzzer.lifter.lift(processed)
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testExplorationMutatorProcessing() {
+        runExplorationProcessingTest(
+            build: { b in
+                // Create an instrumented program manually for testing process()
+                let v0 = b.loadInt(42)
+                let v1 = b.loadString("foo")
+                // Explore v0
+                b.explore(v0, id: "v0", withArgs: [v1])
+                _ = b.binary(v0, v1, with: .Add)
+            },
+            actions: [
+                // Mock output from exploration
+                // Action: GET_PROPERTY "bar" on v0
+                RuntimeAssistedMutator.Action(
+                    id: "v0",
+                    operation: .GetProperty,
+                    inputs: [.special(name: "exploredValue"), .string(value: "bar")],
+                    isGuarded: false
+                )
+            ],
+            expected: """
+                const v2 = (42).bar;
+                const v3 = 42 + "foo";
+
+                """
+        )
+    }
+
+    func testExplorationMutatorProcessingComplex() {
+        runExplorationProcessingTest(
+            build: { b in
+                // Create an instrumented program
+                let v0 = b.loadInt(42)
+                let v1 = b.loadString("foo")
+                let v2 = b.createNamedVariable(forBuiltin: "func")
+                // Explore v2 with args [v0, v1]
+                b.explore(v2, id: "v2", withArgs: [v0, v1])
+                // Explore v0 with no resulting action
+                b.explore(v0, id: "v0", withArgs: [v1])
+                _ = b.binary(v0, v1, with: .Add)
+            },
+            actions: [
+                // Action for v2: CALL_FUNCTION v2 with args [v0, v1]
+                // No action for v0 (it will be skipped)
+                RuntimeAssistedMutator.Action(
+                    id: "v2",
+                    operation: .CallFunction,
+                    inputs: [
+                        .special(name: "exploredValue"), .argument(index: 0), .argument(index: 1),
+                    ],
+                    isGuarded: false
+                )
+            ],
+            expected: """
+                const v3 = func(42, "foo");
+                const v4 = 42 + "foo";
+
+                """
+        )
+    }
 }

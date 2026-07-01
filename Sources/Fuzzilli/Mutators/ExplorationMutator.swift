@@ -39,6 +39,19 @@ public class ExplorationMutator: RuntimeAssistedMutator {
     // If true, this mutator will log detailed statistics like how often each type of operation was performend.
     private static let verbose = true
 
+    // The selectors used to select variables to explore and arguments for exploration.
+    // Overwritten in tests to make the mutator deterministic.
+    var varSelector: (_ untypedVariables: [Variable], _ typedVariables: [Variable]) -> [Variable] =
+        { untyped, typed in
+            let numUntypedToExplore = Int((Double(untyped.count) * 0.5).rounded(.up))
+            let numTypedToExplore = Int((Double(typed.count) * 0.25).rounded(.up))
+            return Array(untyped.shuffled().prefix(numUntypedToExplore))
+                + Array(typed.shuffled().prefix(numTypedToExplore))
+        }
+    var argSelector: (_ b: ProgramBuilder) -> [Variable] = { b in
+        return b.randomJsVariables(upTo: 5)
+    }
+
     // How often each of the possible actions was performed during exploration, used only in verbose mode.
     private var actionUsageCounts = [ActionOperation: Int]()
 
@@ -83,14 +96,8 @@ public class ExplorationMutator: RuntimeAssistedMutator {
             }
         }
 
-        // Select a number of random variables to explore. Prefer to explore variables whose type is unknown.
-        let numUntypedVariablesToExplore = Int((Double(untypedVariables.count) * 0.5).rounded(.up))
-        // TODO probably we only rarely want to explore known variables (e.g. only 10% of them or even fewer). But currently, the JSTyper and JavaScriptEnvironment still often set the type to something like .object() or so, which isn't very useful (it's basically a "unknownObject" type). We should maybe stop doing that...
-        let numTypedVariablesToExplore = Int((Double(typedVariables.count) * 0.25).rounded(.up))
-        let untypedVariablesToExplore = untypedVariables.shuffled().prefix(
-            numUntypedVariablesToExplore)
-        let typedVariablesToExplore = typedVariables.shuffled().prefix(numTypedVariablesToExplore)
-        let variablesToExplore = VariableSet(untypedVariablesToExplore + typedVariablesToExplore)
+        let selectedVariables = varSelector(untypedVariables, typedVariables)
+        let variablesToExplore = VariableSet(selectedVariables)
         guard !variablesToExplore.isEmpty else {
             return nil
         }
@@ -100,7 +107,7 @@ public class ExplorationMutator: RuntimeAssistedMutator {
 
         // Helper function for inserting the Explore operation.
         func explore(_ v: Variable) {
-            let args = b.randomJsVariables(upTo: 5)
+            let args = argSelector(b)
             assert(args.count > 0)
             b.explore(v, id: v.identifier, withArgs: args)
         }

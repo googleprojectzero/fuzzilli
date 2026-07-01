@@ -486,7 +486,7 @@ struct JavaScriptExploreLifting {
 
             return exploreWithErrorHandling;
         })();
-
+        // END_OF_EXPLORATION_PREFIX
         """
 
     static let exploreFunc = "explore"
