@@ -30,6 +30,10 @@ jobs:
         run: jsvu --os=default --engines=v8
       - name: d8 version
         run: ~/.jsvu/engines/v8/v8 --version
+      - name: Install Binaryen
+        run: |
+          Tools/bootstrap-binaryen.sh ~/.binaryen
+          echo "$HOME/.binaryen/bin" >> $GITHUB_PATH
       - name: Install Node.js dependencies for Compiler/Parser tests
         working-directory: ./Sources/Fuzzilli/Compiler/Parser
         run: npm install
@@ -66,6 +70,10 @@ jobs:
         run: jsvu --os=default --engines=v8
       - name: d8 version
         run: ~/.jsvu/engines/v8/v8 --version
+      - name: Install Binaryen
+        run: |
+          Tools/bootstrap-binaryen.sh ~/.binaryen
+          echo "$HOME/.binaryen/bin" >> $GITHUB_PATH
       - name: Swift Version
         run: swift --version
       - name: Install LLVM
