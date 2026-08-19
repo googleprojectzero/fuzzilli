@@ -4,6 +4,9 @@ testWideArithmetics()
 testCmpxchgOrdering()
 testRMWOrdering()
 testMemoryOrdering()
-# Emits both wide arithmetics and relaxed atomics
+# Emit both wide arithmetics and relaxed atomics instructions
 testWasmCodeGenerationAndCompilation()
 testWasmCodeGenerationAndCompilationAndExecution()
+testBinaryenWasmCodeGenerationAndCompilation()
+testBinaryenWasmCodeGenerationAndCompilationAndExecution()
+testBinaryenWasmMutator()
