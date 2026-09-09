@@ -13,3 +13,7 @@ testBinaryenWasmMutator()
 # Custom descriptors not yet available
 testGenerateSubtypeOnDescriptor()
 testGlobalIndexExactTyped()
+testBranchOnCastDescEq()
+testBranchOnCastDescEqFail()
+testRefCastDescEq()
+testRefCastDescEqNullTraps()
