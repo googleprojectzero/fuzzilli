@@ -726,6 +726,16 @@ public class WasmLifter {
         }
     }
 
+    private func encodeDescriptorReferenceType(
+        _ refType: WasmReferenceType, instr: Instruction, descriptorInput: Int
+    ) throws -> Data {
+        let descriptorDesc =
+            typer.getTypeDescription(of: instr.input(descriptorInput)) as! WasmStructTypeDescription
+        let targetDesc = descriptorDesc.describes!
+        let encodedTypeIndex = try encodeWasmGCType(targetDesc)
+        return refType.kind.isExact ? Data([0x62]) + encodedTypeIndex : encodedTypeIndex
+    }
+
     private func buildTypeEntry(for desc: WasmTypeDescription, data: inout Data) throws {
         if let supertype = desc.concreteHeapSupertype {
             data += [desc.isFinal ? 0x4F : 0x50, 0x01]
@@ -2010,6 +2020,38 @@ public class WasmLifter {
         return self.currentFunction!.variableAnalyzer.wasmBranchDepth - labelDepth - 1
     }
 
+    private func liftBranchOnCast(
+        _ instr: Instruction,
+        parameterCount: Int,
+        targetType: ILType,
+        gcOpcode: UInt8,
+        isDescriptor: Bool = false
+    ) throws -> Data {
+        let branchDepth = try branchDepthFor(label: instr.input(0))
+        let refInputIndex = 1 + parameterCount
+        let targetTypeInputIndex = refInputIndex + 1
+
+        let actualSourceType = typer.type(of: instr.input(refInputIndex)).wasmReferenceType!
+        let targetRefType = targetType.wasmReferenceType!
+
+        // actualSourceType and targetRefType may be nullable or non-nullable independently of each other.
+        // For br_on_cast* to be valid: targetRefType.nullability => actualSourceType.nullability
+        var flags: UInt8 = 0
+        if actualSourceType.nullability || targetRefType.nullability { flags |= 0x01 }
+        if targetRefType.nullability { flags |= 0x02 }
+
+        // To ensure br_on_cast* validation succeeds (target <= source), we use the top type of the hierarchy as the source type.
+        let sourceData = try encodeHeapType(actualSourceType.kind.topType())
+        let targetData =
+            isDescriptor
+            ? try encodeDescriptorReferenceType(
+                targetRefType, instr: instr, descriptorInput: targetTypeInputIndex)
+            : try encodeReferenceType(
+                targetRefType, instr: instr, typeInput: targetTypeInputIndex)
+        return Data([Prefix.GC.rawValue, gcOpcode, flags]) + Leb128.unsignedEncode(branchDepth)
+            + sourceData + targetData
+    }
+
     /// Returns the Bytes that correspond to this instruction.
     /// This will also automatically add bytes that are necessary based on the state of the Lifter.
     /// Example: LoadGlobal with an input variable will resolve the input variable to a concrete global index.
@@ -2414,97 +2456,21 @@ public class WasmLifter {
             let branchDepth = try branchDepthFor(label: wasmInstruction.input(0))
             return Data([0xD5]) + Leb128.unsignedEncode(branchDepth)
         case .wasmBranchOnCast(let op):
-            let branchDepth = try branchDepthFor(label: wasmInstruction.input(0))
-            let refInputIndex = 1 + op.parameterCount
-            let targetTypeInputIndex = refInputIndex + 1
-
-            let actualSourceType = typer.type(
-                of: wasmInstruction.input(refInputIndex)
-            )
-            .wasmReferenceType!
-            let targetRefType = op.targetType.wasmReferenceType!
-
-            // actualSourceType and targetRefType may be nullable or non-nullable independently of each other.
-            // For br_on_cast to be valid: targetRefType.nullability => actualSourceType.nullability
-            var flags: UInt8 = 0
-            if actualSourceType.nullability || targetRefType.nullability { flags |= 0x01 }
-            if targetRefType.nullability { flags |= 0x02 }
-
-            // To ensure br_on_cast validation succeeds (target <= source), we use the top type of the hierarchy as the source type.
-            let sourceData = try encodeHeapType(actualSourceType.kind.topType())
-            let targetData = try encodeReferenceType(
-                targetRefType, instr: wasmInstruction, typeInput: targetTypeInputIndex)
-            return Data([Prefix.GC.rawValue, 0x18, flags]) + Leb128.unsignedEncode(branchDepth)
-                + sourceData + targetData
-        case .wasmBranchOnCastDescEq(let op):
-            let branchDepth = try branchDepthFor(label: wasmInstruction.input(0))
-            let structRefInputIndex = 1 + op.parameterCount
-            let descriptorRefInputIndex = structRefInputIndex + 1
-
-            let actualSourceType = typer.type(
-                of: wasmInstruction.input(structRefInputIndex)
-            ).wasmReferenceType!
-            let targetRefType = op.targetType.wasmReferenceType!
-
-            var flags: UInt8 = 0
-            if actualSourceType.nullability || targetRefType.nullability { flags |= 0x01 }
-            if targetRefType.nullability { flags |= 0x02 }
-
-            let sourceData = try encodeHeapType(actualSourceType.kind.topType())
-            let descriptorDesc =
-                typer.getTypeDescription(of: wasmInstruction.input(descriptorRefInputIndex))
-                as! WasmStructTypeDescription
-            let targetDesc = descriptorDesc.describes!
-            let encodedTypeIndex = try encodeWasmGCType(targetDesc)
-            let isExact = targetRefType.kind.isExact
-            let targetData = isExact ? Data([0x62]) + encodedTypeIndex : encodedTypeIndex
-            return Data([Prefix.GC.rawValue, 0x25, flags]) + Leb128.unsignedEncode(branchDepth)
-                + sourceData + targetData
-        case .wasmBranchOnCastDescEqFail(let op):
-            let branchDepth = try branchDepthFor(label: wasmInstruction.input(0))
-            let structRefInputIndex = 1 + op.parameterCount
-            let descriptorRefInputIndex = structRefInputIndex + 1
-
-            let actualSourceType = typer.type(
-                of: wasmInstruction.input(structRefInputIndex)
-            ).wasmReferenceType!
-            let targetRefType = op.targetType.wasmReferenceType!
-
-            var flags: UInt8 = 0
-            if actualSourceType.nullability || targetRefType.nullability { flags |= 0x01 }
-            if targetRefType.nullability { flags |= 0x02 }
-
-            let sourceData = try encodeHeapType(actualSourceType.kind.topType())
-            let descriptorDesc =
-                typer.getTypeDescription(of: wasmInstruction.input(descriptorRefInputIndex))
-                as! WasmStructTypeDescription
-            let targetDesc = descriptorDesc.describes!
-            let encodedTypeIndex = try encodeWasmGCType(targetDesc)
-            let isExact = targetRefType.kind.isExact
-            let targetData = isExact ? Data([0x62]) + encodedTypeIndex : encodedTypeIndex
-            return Data([Prefix.GC.rawValue, 0x26, flags]) + Leb128.unsignedEncode(branchDepth)
-                + sourceData + targetData
+            return try liftBranchOnCast(
+                wasmInstruction, parameterCount: op.parameterCount, targetType: op.targetType,
+                gcOpcode: 0x18)
         case .wasmBranchOnCastFail(let op):
-            let branchDepth = try branchDepthFor(label: wasmInstruction.input(0))
-            let refInputIndex = 1 + op.parameterCount
-            let targetTypeInputIndex = refInputIndex + 1
-
-            let actualSourceType = typer.type(of: wasmInstruction.input(refInputIndex))
-                .wasmReferenceType!
-            let targetRefType = op.targetType.wasmReferenceType!
-
-            // actualSourceType and targetRefType may be nullable or non-nullable independently of each other.
-            // For br_on_cast_fail to be valid: targetRefType.nullability => actualSourceType.nullability
-            var flags: UInt8 = 0
-            if actualSourceType.nullability || targetRefType.nullability { flags |= 0x01 }
-            if targetRefType.nullability { flags |= 0x02 }
-
-            // To ensure br_on_cast_fail validation succeeds (target <= source), we use the top type of the hierarchy as the source type.
-            let sourceData = try encodeHeapType(actualSourceType.kind.topType())
-            let targetData = try encodeReferenceType(
-                targetRefType, instr: wasmInstruction, typeInput: targetTypeInputIndex)
-            return Data([Prefix.GC.rawValue, 0x19, flags]) + Leb128.unsignedEncode(branchDepth)
-                + sourceData + targetData
+            return try liftBranchOnCast(
+                wasmInstruction, parameterCount: op.parameterCount, targetType: op.targetType,
+                gcOpcode: 0x19)
+        case .wasmBranchOnCastDescEq(let op):
+            return try liftBranchOnCast(
+                wasmInstruction, parameterCount: op.parameterCount, targetType: op.targetType,
+                gcOpcode: 0x25, isDescriptor: true)
+        case .wasmBranchOnCastDescEqFail(let op):
+            return try liftBranchOnCast(
+                wasmInstruction, parameterCount: op.parameterCount, targetType: op.targetType,
+                gcOpcode: 0x26, isDescriptor: true)
         case .wasmBranchOnNonNull(_):
             let branchDepth = try branchDepthFor(label: wasmInstruction.input(0))
             return Data([0xD6]) + Leb128.unsignedEncode(branchDepth)
@@ -2826,12 +2792,8 @@ public class WasmLifter {
         case .wasmRefCastDescEq(let op):
             let refType = op.type.wasmReferenceType!
             let opCode: UInt8 = refType.nullability ? 0x24 : 0x23
-            let descriptorDesc =
-                typer.getTypeDescription(of: wasmInstruction.input(1)) as! WasmStructTypeDescription
-            let targetDesc = descriptorDesc.describes!
-            let encodedTypeIndex = try encodeWasmGCType(targetDesc)
-            let isExact = refType.kind.isExact
-            let typeData = isExact ? Data([0x62]) + encodedTypeIndex : encodedTypeIndex
+            let typeData = try encodeDescriptorReferenceType(
+                refType, instr: wasmInstruction, descriptorInput: 1)
             return Data([Prefix.GC.rawValue, opCode]) + typeData
         case .wasmDefineAdHocSignatureType(_):
             // Nothing to do here, types are defined inside the typegroups, not inside a wasm
