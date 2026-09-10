@@ -678,4 +678,47 @@ struct WasmCustomDescriptorsTests {
         }
         testForOutput(program: jsProg, runner: runner, outputString: "226\n")
     }
+
+    @Test func testSplicingCustomDescriptorSubtypeIntoTypeGroup() throws {
+        let fuzzer = makeMockFuzzer(config: config, environment: JavaScriptEnvironment())
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            var splicePoint = -1
+
+            b.wasmDefineTypeGroup {
+                let described = b.wasmDefineStructType(
+                    fields: [WasmStructTypeDescription.Field(type: .wasmi32, mutability: true)]
+                )
+                let descriptor = b.wasmDefineStructType(
+                    fields: [WasmStructTypeDescription.Field(type: .wasmi32, mutability: true)],
+                    describes: described
+                )
+
+                splicePoint = b.indexOfNextInstruction()
+                let describedSub = b.wasmDefineStructType(
+                    fields: [
+                        WasmStructTypeDescription.Field(type: .wasmi32, mutability: true),
+                        WasmStructTypeDescription.Field(
+                            type: .wasmRef(.Index(), nullability: true), mutability: false),
+                    ],
+                    indexTypes: [descriptor],
+                    superTypeDef: described
+                )
+                let descriptorSub = b.wasmDefineStructType(
+                    fields: [WasmStructTypeDescription.Field(type: .wasmi32, mutability: true)],
+                    superTypeDef: descriptor,
+                    describes: describedSub
+                )
+                return [described, descriptor, describedSub, descriptorSub]
+            }
+
+            let donor = b.finalize()
+
+            let hostBuilder = fuzzer.makeBuilder()
+            hostBuilder.wasmDefineTypeGroup(recursiveGenerator: {
+                #expect(hostBuilder.splice(from: donor, at: splicePoint, mergeDataFlow: false))
+            })
+            _ = hostBuilder.finalize()
+        }
+    }
 }

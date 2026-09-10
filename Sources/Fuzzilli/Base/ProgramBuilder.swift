@@ -1851,6 +1851,8 @@ public class ProgramBuilder {
         var remappedVariables = VariableMap<Variable>()
         // All instructions that can be included in the slice.
         var candidates = Set<Int>()
+        // Maps WasmTypeDescriptions to the variable and instruction index where they were defined.
+        var typeDescToDef = [WasmTypeDescription: (variable: Variable, index: Int)]()
 
         // Helper functions for step (2).
         func tryRemapVariables(_ variables: ArraySlice<Variable>, of instr: Instruction) {
@@ -1904,6 +1906,12 @@ public class ProgramBuilder {
         for instr in program.code {
             // Compute variable types to be able to find compatible replacement variables in the host program if necessary.
             typer.analyze(instr)
+
+            if instr.hasOneOutput,
+                let desc = typer.type(of: instr.output).wasmTypeDefinition?.description
+            {
+                typeDescToDef[desc] = (instr.output, instr.index)
+            }
 
             // Maybe remap the outputs of this instruction to existing and "compatible" (because of their type) variables in the host program.
             maybeRemapVariables(
@@ -1990,6 +1998,21 @@ public class ProgramBuilder {
                 let newlyRequiredVariables = instr.inputs.filter({ !remappedVariables.contains($0) }
                 )
                 requiredVariables.formUnion(newlyRequiredVariables)
+
+                // If a Wasm struct has a custom descriptor, require its descriptor variable as well.
+                for output in instr.allOutputs {
+                    if let structDesc = typer.type(of: output).wasmTypeDefinition?.description
+                        as? WasmStructTypeDescription,
+                        let descriptorDesc = structDesc.descriptor,
+                        let (descriptorVar, descriptorIndex) = typeDescToDef[descriptorDesc],
+                        !slice.contains(descriptorIndex)
+                    {
+                        guard candidates.contains(descriptorIndex) else { return false }
+                        requiredVariables.insert(descriptorVar)
+                        assert(descriptorIndex > index)
+                        index = descriptorIndex + 1
+                    }
+                }
 
                 if !shouldIncludeCurrentBlock && instr.isBlock {
                     // We're including a block instruction due to its outputs. We now need to ensure that we include the full block with it.
