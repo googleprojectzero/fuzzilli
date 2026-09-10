@@ -20,7 +20,6 @@ public class JavaScriptEnvironment: ComponentBase {
         "undefined", "boolean", "number", "string", "symbol", "function", "object", "bigint",
     ]
 
-    // TODO: use it in all places where it can be used.
     public static let typedArrayConstructors = [
         "Uint8Array", "Int8Array", "Uint16Array", "Int16Array",
         "Uint32Array", "Int32Array", "Float16Array", "Float32Array", "Float64Array",
@@ -416,11 +415,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerObjectGroup(.jsAsyncDisposableStackConstructor)
         registerObjectGroup(.jsArrayBuffers)
         registerObjectGroup(.jsSharedArrayBuffers)
-        for variant in [
-            "Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array",
-            "Float16Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array",
-            "BigUint64Array",
-        ] {
+        for variant in JavaScriptEnvironment.typedArrayConstructors {
             registerObjectGroup(.jsTypedArrays(variant))
             registerObjectGroup(.jsTypedArrayPrototype(variant))
             registerObjectGroup(.jsTypedArrayConstructor(variant))
@@ -737,11 +732,7 @@ public class JavaScriptEnvironment: ComponentBase {
         }
         registerBuiltin("ArrayBuffer", ofType: .jsArrayBufferConstructor)
         registerBuiltin("SharedArrayBuffer", ofType: .jsSharedArrayBufferConstructor)
-        for variant in [
-            "Uint8Array", "Int8Array", "Uint16Array", "Int16Array", "Uint32Array", "Int32Array",
-            "Float16Array", "Float32Array", "Float64Array", "Uint8ClampedArray", "BigInt64Array",
-            "BigUint64Array",
-        ] {
+        for variant in JavaScriptEnvironment.typedArrayConstructors {
             registerBuiltin(variant, ofType: .jsTypedArrayConstructor(variant))
         }
         registerBuiltin("DataView", ofType: .jsDataViewConstructor)

@@ -451,11 +451,7 @@ public let CodeGenerators: [CodeGenerator] = [
         let size = b.loadInt(b.randomSize(upTo: 0x1000))
         let constructor = b.createNamedVariable(
             forBuiltin: chooseUniform(
-                from: [
-                    "Uint8Array", "Int8Array", "Uint16Array", "Int16Array",
-                    "Uint32Array", "Int32Array", "Float32Array", "Float64Array",
-                    "Uint8ClampedArray", "BigInt64Array", "BigUint64Array",
-                ]
+                from: JavaScriptEnvironment.typedArrayConstructors
             )
         )
         b.construct(constructor, withArgs: [size])
@@ -3481,12 +3477,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
         let View = b.createNamedVariable(
             forBuiltin: chooseUniform(
-                from: [
-                    "Uint8Array", "Int8Array", "Uint16Array", "Int16Array",
-                    "Uint32Array", "Int32Array", "Float32Array", "Float64Array",
-                    "Uint8ClampedArray", "BigInt64Array", "BigUint64Array",
-                    "DataView",
-                ]
+                from: JavaScriptEnvironment.typedArrayConstructors
             )
         )
         b.construct(View, withArgs: [ab])
@@ -3508,12 +3499,7 @@ public let CodeGenerators: [CodeGenerator] = [
 
         let View = b.createNamedVariable(
             forBuiltin: chooseUniform(
-                from: [
-                    "Uint8Array", "Int8Array", "Uint16Array", "Int16Array",
-                    "Uint32Array", "Int32Array", "Float32Array", "Float64Array",
-                    "Uint8ClampedArray", "BigInt64Array", "BigUint64Array",
-                    "DataView",
-                ]
+                from: JavaScriptEnvironment.typedArrayConstructors
             )
         )
         b.construct(View, withArgs: [ab])
