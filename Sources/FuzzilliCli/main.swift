@@ -39,6 +39,8 @@ if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 
             --logLevel=level             : The log level to use. Valid values: "verbose", "info", "warning", "error", "fatal" (default: "info").
             --maxIterations=n            : Run for the specified number of iterations (default: unlimited).
             --maxRuntimeInHours=n        : Run for the specified number of hours (default: unlimited).
+            --maxRuntime=n<s>|<m>|<h>    : Run for the specified amount of time.
+                                           E.g. 30s for 30 seconds, 15m for 15 minutes, 1h for 1 hour.
             --timeout=n                  : Timeout in ms after which to interrupt execution of programs (default depends
                                            on the profile). Or provide an interval like --timeout=200,400. The actual
                                            timeout in this interval will be determined by the start-up tests.
@@ -146,6 +148,19 @@ let engineName = args["--engine"] ?? "mutation"
 let corpusName = args["--corpus"] ?? "basic"
 let maxIterations = args.int(for: "--maxIterations") ?? -1
 let maxRuntimeInHours = args.int(for: "--maxRuntimeInHours") ?? -1
+var maxRuntime = -1.0
+if let val = args["--maxRuntime"] {
+    if val.hasSuffix("s") {
+        maxRuntime = Double(val.dropLast()) ?? -1.0
+    } else if val.hasSuffix("m") {
+        maxRuntime = (Double(val.dropLast()) ?? -1.0) * Minutes
+    } else if val.hasSuffix("h") {
+        maxRuntime = (Double(val.dropLast()) ?? -1.0) * Hours
+    }
+    if maxRuntime <= 0 {
+        configError("Invalid value for --maxRuntime: \(val)")
+    }
+}
 let minMutationsPerSample = args.int(for: "--minMutationsPerSample") ?? 25
 let minCorpusSize = args.int(for: "--minCorpusSize") ?? 1000
 let maxCorpusSize = args.int(for: "--maxCorpusSize") ?? Int.max
@@ -215,13 +230,21 @@ guard numJobs >= 1 else {
 }
 
 var exitCondition = Fuzzer.ExitCondition.none
-guard maxIterations == -1 || maxRuntimeInHours == -1 else {
-    configError("Must only specify one of --maxIterations and --maxRuntimeInHours")
+var numExitConditions = 0
+if maxIterations != -1 { numExitConditions += 1 }
+if maxRuntimeInHours != -1 { numExitConditions += 1 }
+if maxRuntime != -1.0 { numExitConditions += 1 }
+
+if numExitConditions > 1 {
+    configError("Must only specify one of --maxIterations, --maxRuntimeInHours, and --maxRuntime")
 }
+
 if maxIterations != -1 {
     exitCondition = .iterationsPerformed(maxIterations)
 } else if maxRuntimeInHours != -1 {
     exitCondition = .timeFuzzed(Double(maxRuntimeInHours) * Hours)
+} else if maxRuntime != -1.0 {
+    exitCondition = .timeFuzzed(maxRuntime)
 }
 
 let logLevelByName: [String: LogLevel] = [
