@@ -69,6 +69,8 @@ if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 
                                            Requires --storagePath.
             --statisticsExportInterval=n : Interval in minutes for saving fuzzing statistics to disk (default: 10).
                                            Requires --exportStatistics.
+            --shutdownAfterImport        : Terminate the fuzzer after the initial corpus import is complete.
+                                           Requires --resume or --importCorpus.
             --importCorpus=path          : Imports an existing corpus of FuzzIL programs to build the initial corpus for fuzzing.
                                            The provided path must point to a directory, and all .fzil files in that directory will be imported.
             --corpusImportMode=mode      : The corpus import mode. Possible values:
@@ -174,6 +176,7 @@ let overwrite = args.has("--overwrite")
 let staticCorpus = args.has("--staticCorpus")
 let exportStatistics = args.has("--exportStatistics")
 let statisticsExportInterval = args.uint(for: "--statisticsExportInterval") ?? 10
+let shutdownAfterImport = args.has("--shutdownAfterImport")
 let corpusImportPath = args["--importCorpus"]
 let corpusImportModeName = args["--corpusImportMode"] ?? "default"
 let instanceType = args["--instanceType"] ?? "standalone"
@@ -283,6 +286,10 @@ if corpusName == "markov"
 
 if (resume || overwrite) && storagePath == nil {
     configError("--resume and --overwrite require --storagePath")
+}
+
+if shutdownAfterImport && !resume && corpusImportPath == nil {
+    configError("--shutdownAfterImport requires --resume or --importCorpus")
 }
 
 if corpusName == "markov" && staticCorpus {
@@ -850,6 +857,12 @@ fuzzer.sync {
             logger.info(
                 "Corpus import after resume took \((String(format: "%.0f", duration)))s (\(humanReadableDuration))."
             )
+
+            if shutdownAfterImport {
+                fuzzer.async {
+                    fuzzer.shutdown(reason: .finished)
+                }
+            }
         }
 
         fuzzer.scheduleCorpusImport(corpus, importMode: .interestingOnly(shouldMinimize: false))  // We assume that the programs are already minimized
@@ -874,6 +887,12 @@ fuzzer.sync {
             logger.info(
                 "Existing corpus import took \((String(format: "%.0f", duration)))s (\(humanReadableDuration))."
             )
+
+            if shutdownAfterImport {
+                fuzzer.async {
+                    fuzzer.shutdown(reason: .finished)
+                }
+            }
         }
 
         fuzzer.scheduleCorpusImport(corpus, importMode: corpusImportMode)
