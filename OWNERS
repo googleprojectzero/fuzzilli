@@ -9,3 +9,4 @@ saelo@google.com
 tacet@google.com
 
 per-file WHITESPACE=*
+per-file binaryen_commit.txt=chromium-internal-autoroll@skia-corp.google.com.iam.gserviceaccount.com
