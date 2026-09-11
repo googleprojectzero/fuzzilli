@@ -2000,17 +2000,19 @@ public class ProgramBuilder {
                 requiredVariables.formUnion(newlyRequiredVariables)
 
                 // If a Wasm struct has a custom descriptor, require its descriptor variable as well.
-                for output in instr.allOutputs {
-                    if let structDesc = typer.type(of: output).wasmTypeDefinition?.description
-                        as? WasmStructTypeDescription,
-                        let descriptorDesc = structDesc.descriptor,
-                        let (descriptorVar, descriptorIndex) = typeDescToDef[descriptorDesc],
-                        !slice.contains(descriptorIndex)
-                    {
-                        guard candidates.contains(descriptorIndex) else { return false }
-                        requiredVariables.insert(descriptorVar)
-                        assert(descriptorIndex > index)
-                        index = descriptorIndex + 1
+                if instr.op is WasmDefineStructType {
+                    for output in instr.allOutputs {
+                        if let structDesc = typer.type(of: output).wasmTypeDefinition?.description
+                            as? WasmStructTypeDescription,
+                            let descriptorDesc = structDesc.descriptor,
+                            let (descriptorVar, descriptorIndex) = typeDescToDef[descriptorDesc],
+                            !slice.contains(descriptorIndex)
+                        {
+                            guard candidates.contains(descriptorIndex) else { return false }
+                            requiredVariables.insert(descriptorVar)
+                            assert(descriptorIndex > index)
+                            index = descriptorIndex + 1
+                        }
                     }
                 }
 

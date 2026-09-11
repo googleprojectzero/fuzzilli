@@ -721,4 +721,38 @@ struct WasmCustomDescriptorsTests {
             _ = hostBuilder.finalize()
         }
     }
+
+    @Test func testSplicingDownstreamConsumerOfCustomDescriptor() throws {
+        let fuzzer = makeMockFuzzer(config: config, environment: JavaScriptEnvironment())
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            let types = b.wasmDefineTypeGroup {
+                let described = b.wasmDefineStructType(
+                    fields: [WasmStructTypeDescription.Field(type: .wasmi32, mutability: true)]
+                )
+                let descriptor = b.wasmDefineStructType(
+                    fields: [WasmStructTypeDescription.Field(type: .wasmi32, mutability: true)],
+                    describes: described
+                )
+                return [described, descriptor]
+            }
+
+            b.buildWasmModule { wasmModule in
+                _ = wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _, _ in
+                    let i32 = function.consti32(42)
+                    let descriptorInst = function.wasmStructNew(structType: types[1], fields: [i32])
+                    _ = function.wasmStructNewDesc(
+                        structType: types[0], descriptor: descriptorInst, fields: [i32])
+                    return [i32]
+                }
+            }
+            let splicePoint = b.indexOfNextInstruction() - 1
+
+            let donor = b.finalize()
+
+            let hostBuilder = fuzzer.makeBuilder()
+            #expect(hostBuilder.splice(from: donor, at: splicePoint))
+            _ = hostBuilder.finalize()
+        }
+    }
 }
