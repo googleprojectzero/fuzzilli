@@ -65,16 +65,15 @@ public class InputMutator: BaseInstructionMutator {
 
         let type = b.type(of: inouts[selectedInput])
 
-        // In wasm we need strict typing, so there is no notion of loose or aware.
-        // Also when the input type is not a JS variable, we cannot call randomJSVariable or randomVariable(forUseAs: ) as those might return any JS variable.
+        // In Wasm we need strict typing, so there is no notion of loose or aware.
         if b.context.contains(.wasm) || b.context.contains(.wasmFunction)
-            || b.context.contains(.wasmTypeGroup) || !type.MayBe(.jsAnything)
+            || b.context.contains(.wasmTypeGroup)
         {
-            // TODO(mliedtke): For type definitions we need a lot of consistency. E.g. the signature
-            // flowing into the block begin operation and the block end operation need to be in
-            // sync.
-            replacement =
-                type.Is(.wasmTypeDef()) ? inouts[selectedInput] : b.randomVariable(ofType: type)
+            replacement = findWasmReplacement(
+                forInput: selectedInput, of: instr, in: inouts, b)
+        } else if !type.MayBe(.jsAnything) {
+            // When the input type is not a JS variable, we cannot call randomJSVariable or randomVariable(forUseAs: ) as those might return any JS variable.
+            replacement = b.randomVariable(ofType: type)
         } else {
             switch self.typeAwareness {
             case .loose:
@@ -94,5 +93,60 @@ public class InputMutator: BaseInstructionMutator {
         // If we add flags, remove this assert and change the code below.
         assert(instr.flags == .empty)
         b.append(Instruction(instr.op, inouts: inouts))
+    }
+
+    private func findWasmReplacement(
+        forInput selectedInput: Int,
+        of instr: Instruction,
+        in inouts: [Variable],
+        _ b: ProgramBuilder
+    ) -> Variable? {
+        let type = b.type(of: inouts[selectedInput])
+
+        // TODO(mliedtke): For type definitions we need a lot of consistency. E.g. the signature
+        // flowing into the block begin operation and the block end operation need to be in
+        // sync.
+        if type.Is(.wasmTypeDef()) {
+            return inouts[selectedInput]
+        }
+
+        // Try instruction-specific mutations first.
+        if let replacement = findInstructionSpecificWasmReplacement(
+            forInput: selectedInput, of: instr, in: inouts, b)
+        {
+            return replacement
+        }
+
+        return b.randomVariable(ofType: type)
+    }
+
+    private func findInstructionSpecificWasmReplacement(
+        forInput selectedInput: Int,
+        of instr: Instruction,
+        in inouts: [Variable],
+        _ b: ProgramBuilder
+    ) -> Variable? {
+        switch instr.op.opcode {
+        case .wasmRefGetDesc,
+            .wasmStructGet,
+            .wasmStructSet,
+            .wasmArrayGet,
+            .wasmArraySet:
+            // Input 0 is always the target struct or array reference.
+            guard selectedInput == 0 else { return nil }
+            let currentType = b.type(of: inouts[selectedInput])
+            guard case .Index(let desc, let wasExact) = currentType.wasmReferenceType!.kind else {
+                fatalError("Expected index reference type for \(inouts[selectedInput])")
+            }
+            // Possibly replace the (possibly non-nullable) index ref with a nullable one,
+            // preserving exactness if the original input was exact.
+            let typeDesc = desc.get()!
+            let nullableType = ILType.wasmIndexRef(typeDesc, nullability: true, isExact: wasExact)
+            return b.randomVariable(ofType: nullableType)
+        case .wasmArrayLen:
+            return b.randomVariable(ofType: .wasmArrayRef())
+        default:
+            return nil
+        }
     }
 }
