@@ -66,6 +66,7 @@ public let v8Profile = Profile(
         (V8GcGenerator, 5),
         (V8AllocationTimeoutGenerator, 5),
         (V8MajorGcGenerator, 5),
+        (V8SimulateNewspaceFullGenerator, 5),
 
         (WasmStructGenerator, 15),
         (WasmArrayGenerator, 15),

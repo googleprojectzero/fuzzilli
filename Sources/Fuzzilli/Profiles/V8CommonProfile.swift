@@ -112,6 +112,12 @@ public let V8MajorGcGenerator = CodeGenerator("MajorGcGenerator") { b in
     b.eval("%MajorGCForCompilerTesting()")
 }
 
+// Simulates young generation (New Space) exhaustion, forcing subsequent allocations onto
+// the runtime allocation slow path and triggering a scavenge (minor GC).
+public let V8SimulateNewspaceFullGenerator = CodeGenerator("SimulateNewspaceFullGenerator") { b in
+    b.eval("%SimulateNewspaceFull()")
+}
+
 public let ForceJITCompilationThroughLoopGenerator = CodeGenerator(
     "ForceJITCompilationThroughLoopGenerator", inputs: .required(.function())
 ) { b, f in

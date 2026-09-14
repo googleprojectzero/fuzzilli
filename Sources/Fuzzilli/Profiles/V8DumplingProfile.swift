@@ -129,6 +129,7 @@ let v8DumplingProfile = Profile(
         (TurbofanVerifyTypeGenerator, 10),
 
         (V8GcGenerator, 10),
+        (V8SimulateNewspaceFullGenerator, 5),
     ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([

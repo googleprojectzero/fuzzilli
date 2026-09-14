@@ -555,6 +555,7 @@ let v8SandboxProfile = Profile(
         (ForceMaglevCompilationGenerator, 5),
         (ForceOsrGenerator, 5),
         (V8GcGenerator, 10),
+        (V8SimulateNewspaceFullGenerator, 5),
         (WasmStructGenerator, 5),
         (WasmArrayGenerator, 5),
         (SharedObjectGenerator, 5),
