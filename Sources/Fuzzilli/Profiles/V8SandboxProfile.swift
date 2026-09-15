@@ -563,7 +563,6 @@ let v8SandboxProfile = Profile(
         (HoleNanGenerator, 5),
         (UndefinedNanGenerator, 5),
         (StringShapeGenerator, 5),
-        (SpecialObjectGenerator, 5),
     ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([
@@ -576,7 +575,7 @@ let v8SandboxProfile = Profile(
 
     additionalBuiltins: [
         "gc": .function([.opt(gcOptions.instanceType)] => (.undefined | .jsPromise())),
-        "d8": .jsD8,
+        "d8": .object(),
         "Worker": .constructor(
             [.jsAnything, .object()] => .object(withMethods: ["postMessage", "getMessage"])),
     ],

@@ -18,10 +18,7 @@ extension ILType {
     public static let jsD8 = ILType.object(ofGroup: "D8", withProperties: ["test"], withMethods: [])
 
     public static let jsD8Test = ILType.object(
-        ofGroup: "D8Test", withProperties: ["FastCAPI"],
-        withMethods: [
-            "createInterceptorObject", "createAccessCheckedObject", "createSpecialObject",
-        ])
+        ofGroup: "D8Test", withProperties: ["FastCAPI"], withMethods: [])
 
     public static let jsD8FastCAPI = ILType.object(
         ofGroup: "D8FastCAPI", withProperties: [],
@@ -316,44 +313,6 @@ public let StringShapeGenerator = CodeGenerator("StringShapeGenerator") { b in
                 Bool.random() ? "Long enough 1-byte string" : "Long enoµgh 2-byte string")
             b.hide(str)
             b.eval("%ConstructThinString(%@)", with: [str], hasOutput: true)
-        }
-    )
-}
-
-public let SpecialObjectGenerator = CodeGenerator("SpecialObjectGenerator") { b in
-    let d8 = b.createNamedVariable(forBuiltin: "d8")
-    let d8Test = b.getProperty("test", of: d8)
-
-    func buildCallback() -> Variable {
-        b.buildPlainFunction(with: ProgramBuilder.SubroutineDescriptor.parameters(n: 1)) { _ in
-            b.build(n: Int.random(in: 1...5))
-            b.doReturn(b.randomJsVariable())
-        }
-    }
-
-    withEqualProbability(
-        {
-            let callback = buildCallback()
-            b.callMethod("createInterceptorObject", on: d8Test, withArgs: [callback])
-        },
-        {
-            let callback = buildCallback()
-            b.callMethod("createAccessCheckedObject", on: d8Test, withArgs: [callback])
-        },
-        {
-            var properties: OrderedDictionary<String, Variable> = [:]
-            let emitBoth = probability(0.5)
-            let emitInterceptor = emitBoth || probability(0.5)
-            let emitAccessCheck = emitBoth || !emitInterceptor
-
-            if emitInterceptor {
-                properties["interceptor"] = buildCallback()
-            }
-            if emitAccessCheck {
-                properties["accessCheck"] = buildCallback()
-            }
-            let options = b.createObject(with: properties)
-            b.callMethod("createSpecialObject", on: d8Test, withArgs: [options])
         }
     )
 }
@@ -1026,12 +985,7 @@ public let jsD8 = ObjectGroup(
 
 public let jsD8Test = ObjectGroup(
     name: "D8Test", instanceType: .jsD8Test, properties: ["FastCAPI": .jsD8FastCAPIConstructor],
-    methods: [
-        "createInterceptorObject": [.function()] => .object(),
-        "createAccessCheckedObject": [.function()] => .object(),
-        "createSpecialObject": [.object(withProperties: ["interceptor", "accessCheck"])]
-            => .object(),
-    ])
+    methods: [:])
 
 public let jsD8FastCAPI = ObjectGroup(
     name: "D8FastCAPI", instanceType: .jsD8FastCAPI, properties: [:],
