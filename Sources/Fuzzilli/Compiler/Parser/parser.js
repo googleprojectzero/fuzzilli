@@ -256,6 +256,8 @@ function parse(script, proto) {
                 body.index = member.key.value;
             } else if (member.key.type === 'StringLiteral') {
                 body.name = member.key.value;
+            } else if (member.key.type === 'BigIntLiteral') {
+                body.name = member.key.value;
             } else if (member.key.type === 'PrivateName') {
                 assert(member.key.id.type === 'Identifier', "Expected private name ID to be an Identifier");
                 body.privateName = member.key.id.name;
