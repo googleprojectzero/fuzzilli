@@ -38,7 +38,6 @@ if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 
             --corpus=name                : The corpus scheduler to use. Available schedulers: "basic" (default), "markov"
             --logLevel=level             : The log level to use. Valid values: "verbose", "info", "warning", "error", "fatal" (default: "info").
             --maxIterations=n            : Run for the specified number of iterations (default: unlimited).
-            --maxRuntimeInHours=n        : Run for the specified number of hours (default: unlimited).
             --maxRuntime=n<s>|<m>|<h>    : Run for the specified amount of time.
                                            E.g. 30s for 30 seconds, 15m for 15 minutes, 1h for 1 hour.
             --timeout=n                  : Timeout in ms after which to interrupt execution of programs (default depends
@@ -147,6 +146,9 @@ let engineName = args["--engine"] ?? "mutation"
 let corpusName = args["--corpus"] ?? "basic"
 let maxIterations = args.int(for: "--maxIterations") ?? -1
 let maxRuntimeInHours = args.int(for: "--maxRuntimeInHours") ?? -1
+if maxRuntimeInHours != -1 {
+    print("Warning: --maxRuntimeInHours is deprecated, please use --maxRuntime instead")
+}
 var maxRuntime = -1.0
 if let val = args["--maxRuntime"] {
     if val.hasSuffix("s") {
