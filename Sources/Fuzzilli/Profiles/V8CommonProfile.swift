@@ -210,6 +210,13 @@ public let TurbofanVerifyTypeGenerator = CodeGenerator("TurbofanVerifyTypeGenera
     b.eval("%VerifyType(%@)", with: [v])
 }
 
+// Marks a function so that V8's optimizing compilers will never optimize it.
+public let NeverOptimizeFunctionGenerator = CodeGenerator(
+    "NeverOptimizeFunctionGenerator", inputs: .required(.function())
+) { b, f in
+    b.eval("%NeverOptimizeFunction(%@)", with: [f])
+}
+
 public let WorkerGenerator = CodeGenerator("WorkerGenerator") { b in
     let workerSignature = Signature(withParameterCount: Int.random(in: 0...3))
 
