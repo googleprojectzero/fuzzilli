@@ -2672,9 +2672,7 @@ public class ProgramBuilder {
                 let usableGenerators = fuzzer.codeGenerators.filter {
                     $0.requiredContext.isSubset(of: context)
                         && $0.produces.contains(where: requirement.fulfilled)
-                        && $0.parts.first!.inputs.constraints.allSatisfy { requirement in
-                            findVariable { requirement.fulfilled(by: self.type(of: $0)) } != nil
-                        }
+                        && self.missingInputs(generator: $0).isEmpty
                 }
 
                 // Cannot build type here.
