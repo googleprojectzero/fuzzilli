@@ -5967,9 +5967,7 @@ struct LifterTests {
         }
     }
 
-    @Test(
-        .enabled(if: findWasmOptInPath() != nil, "wasm-opt required in PATH"),
-        .disabled("Flaky, see https://crbug.com/562311753"))
+    @Test(.enabled(if: findWasmOptInPath() != nil, "wasm-opt required in PATH"))
     func testBinaryenWasmGenerator() throws {
         let fuzzer = makeMockFuzzer()
         fuzzer.sync {

@@ -66,7 +66,7 @@ public struct BinaryenRunner {
         setupConcurrentRead(from: stderrPipe, into: stderrDataBuffer, group: readGroup)
 
         let timedOut = Atomic<Bool>(false)
-        let timeout: TimeInterval = 1.0
+        let timeout: TimeInterval = 2 * Seconds
         let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global())
         timer.schedule(deadline: .now() + timeout)
         timer.setEventHandler {
