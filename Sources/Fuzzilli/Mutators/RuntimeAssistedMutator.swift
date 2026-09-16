@@ -88,7 +88,7 @@ public class RuntimeAssistedMutator: Mutator {
     // Lift the instrumented program to JS and try to transpile it back to FuzzIL.
     // If we can convert the instrumented program including its additional JS code to IL, the crash
     // reporting can perform proper minimization on it.
-    private func tryRoundtripTranspileInstrumentedProgramToFuzzIL(
+    func tryRoundtripTranspileInstrumentedProgramToFuzzIL(
         _ fuzzer: Fuzzer, _ instrumentedProgram: Program, expectedSignal: Int
     )
         -> Program?

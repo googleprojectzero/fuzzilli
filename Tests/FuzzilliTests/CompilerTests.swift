@@ -104,6 +104,19 @@ struct CompilerTests {
         #expect(message2.contains("SyntaxError"))
     }
 
+    @Test func testArrayExceedingMaxElementsThrows() throws {
+        // Array literals with more elements than can fit in FuzzIL (> UInt16.max)
+        // must throw CompilerError rather than crashing with a runtime integer overflow.
+        // Store the element in a JS variable so each array element reuses the same
+        // FuzzIL variable instead of emitting a LoadInteger instruction per element.
+        let script =
+            "const v = 0; const a = [" + Array(repeating: "v", count: 65536).joined(separator: ", ")
+            + "];"
+        #expect(throws: JavaScriptCompiler.CompilerError.self) {
+            try compile(script: script)
+        }
+    }
+
     private func compile(script: String) throws -> Program {
         let tempDir = FileManager.default.temporaryDirectory
         let tempFile = tempDir.appendingPathComponent(UUID().uuidString + ".js")

@@ -71,10 +71,26 @@ public class JavaScriptCompiler {
         return v
     }
 
+    /// Checks that the compiler hasn't exceeded the maximum number of variables or instructions that FuzzIL can represent.
+    private func checkCapacity() throws {
+        // Leave a safety margin so that AST nodes emitting multiple instructions or variables
+        // do not overflow UInt16 mid-node before the next capacity check.
+        let safetyMargin = 100
+        guard
+            nextVariable < Code.maxNumberOfVariables - safetyMargin
+                && code.count < Int(UInt16.max) - safetyMargin
+        else {
+            throw CompilerError.unsupportedFeatureError(
+                "Program exceeds maximum instruction or variable limit supported by FuzzIL"
+            )
+        }
+    }
+
     @discardableResult
     private func compileClass(
         _ name: String, superClass: ExpressionNode?, fields: [ClassFieldNode], isExpression: Bool
     ) throws -> Variable {
+        try checkCapacity()
         // The expressions for property values, computed properties and method default parameters need to be emitted before the class declaration is opened.
         var propertyValues = [Variable]()
         var computedKeys = [Variable]()
@@ -349,6 +365,7 @@ public class JavaScriptCompiler {
     }
 
     private func compileStatement(_ node: StatementNode, pendingLabel: String? = nil) throws {
+        try checkCapacity()
         guard let stmt = node.statement else {
             throw CompilerError.invalidASTError("missing concrete statement in statement node")
         }
@@ -1078,6 +1095,7 @@ public class JavaScriptCompiler {
 
     @discardableResult
     private func compileExpression(_ node: ExpressionNode) throws -> Variable {
+        try checkCapacity()
         guard let expr = node.expression else {
             throw CompilerError.invalidASTError("missing concrete expression in expression node")
         }
@@ -1209,6 +1227,11 @@ public class JavaScriptCompiler {
             return rhs
 
         case .objectExpression(let objectExpression):
+            guard objectExpression.fields.count <= UInt16.max else {
+                throw CompilerError.unsupportedFeatureError(
+                    "Object expression exceeds maximum supported properties: \(objectExpression.fields.count) (maximum is \(UInt16.max))"
+                )
+            }
             // The expressions for property values, computed properties and method default parameters need to be emitted before the object literal is opened.
             var propertyValues = [Variable]()
             var computedKeys = [Variable]()
@@ -1390,6 +1413,11 @@ public class JavaScriptCompiler {
             return emit(EndObjectLiteral()).output
 
         case .arrayExpression(let arrayExpression):
+            guard arrayExpression.elements.count <= UInt16.max else {
+                throw CompilerError.unsupportedFeatureError(
+                    "Array expression exceeds maximum supported elements: \(arrayExpression.elements.count) (maximum is \(UInt16.max))"
+                )
+            }
             var elements = [Variable]()
             var undefined: Variable? = nil
             var spreads = [Bool]()
@@ -2082,6 +2110,11 @@ public class JavaScriptCompiler {
     }
 
     private func compileCallArguments(_ args: [ExpressionNode]) throws -> ([Variable], [Bool]) {
+        guard args.count <= UInt16.max else {
+            throw CompilerError.unsupportedFeatureError(
+                "Call expression exceeds maximum supported arguments: \(args.count) (maximum is \(UInt16.max))"
+            )
+        }
         var variables = [Variable]()
         var spreads = [Bool]()
 

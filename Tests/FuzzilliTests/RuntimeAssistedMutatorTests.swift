@@ -330,4 +330,23 @@ struct RuntimeAssistedMutatorTests {
                 """
         )
     }
+
+    @Test(.enabled(if: shouldRunCompilerTests()))
+    func testRoundtripTranspilationHandlesLargeArrayGracefully() throws {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            b.eval(
+                "const v = 0; [" + Array(repeating: "v", count: 65536).joined(separator: ", ") + "]"
+            )
+            let program = b.finalize()
+
+            let mutator = CrashingInstrumentationMutator(shouldProcessedProgramCrash: false)
+            let result = mutator.tryRoundtripTranspileInstrumentedProgramToFuzzIL(
+                fuzzer, program, expectedSignal: 9
+            )
+
+            #expect(result == nil)
+        }
+    }
 }
