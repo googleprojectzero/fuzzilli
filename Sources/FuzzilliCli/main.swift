@@ -856,7 +856,10 @@ fuzzer.sync {
             }
         }
 
-        fuzzer.scheduleCorpusImport(corpus, importMode: .interestingOnly(shouldMinimize: false))  // We assume that the programs are already minimized
+        // Assume that the programs are already minimized unless explicitly requested otherwise.
+        let defaultResumeImportMode = CorpusImportMode.interestingOnly(shouldMinimize: false)
+        let mode = args.has("--corpusImportMode") ? corpusImportMode : defaultResumeImportMode
+        fuzzer.scheduleCorpusImport(corpus, importMode: mode)
     }
 
     // ... or import an existing corpus.

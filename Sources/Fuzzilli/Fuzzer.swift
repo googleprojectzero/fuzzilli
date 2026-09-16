@@ -1042,6 +1042,9 @@ public class Fuzzer {
                     "    Of which \(currentCorpusImportJob.numberOfProgramsThatWereImport) programs were added to the corpus"
                 )
                 logger.info(
+                    "    Of which \(currentCorpusImportJob.numberOfProgramsNotImportedBecauseUninteresting) programs were not interesting (e.g. lack of coverage)"
+                )
+                logger.info(
                     "\(currentCorpusImportJob.numberOfProgramsThatNeededFixup)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs needed fixup during import"
                 )
                 logger.info(
@@ -1361,7 +1364,7 @@ public class Fuzzer {
     }
 
     /// A pending corpus import job together with some statistics.
-    private struct CorpusImportJob {
+    struct CorpusImportJob {
         private var corpusToImport: [Program]
 
         let importMode: CorpusImportMode
@@ -1373,6 +1376,7 @@ public class Fuzzer {
         private(set) var numberOfProgramsProcessedSoFar = 0
         private(set) var numberOfProgramsThatExecutedSuccessfullyDuringImport = 0
         private(set) var numberOfProgramsThatWereImport = 0
+        private(set) var numberOfProgramsNotImportedBecauseUninteresting = 0
         private(set) var numberOfProgramsThatFailedDuringImport = 0
         private(set) var numberOfProgramsThatTimedOutDuringImport = 0
         private(set) var numberOfProgramsThatNeededOneFixupAttempt = 0
@@ -1426,13 +1430,17 @@ public class Fuzzer {
                 numberOfProgramsRequiringBundlesButDisabled += 1
             case .failed(let outcome):
                 switch outcome {
-                case .crashed, .succeeded, .differential:
-                    // This is unexpected so we don't track these.
-                    break
+                case .succeeded:
+                    // The execution succeeded, but the program was not imported (e.g. because it was not interesting).
+                    numberOfProgramsThatExecutedSuccessfullyDuringImport += 1
+                    numberOfProgramsNotImportedBecauseUninteresting += 1
                 case .failed:
                     numberOfProgramsThatFailedDuringImport += 1
                 case .timedOut:
                     numberOfProgramsThatTimedOutDuringImport += 1
+                case .crashed, .differential:
+                    // This is unexpected during corpus import (unless it's a crash/differential corpus), so we don't track these.
+                    break
                 }
             }
         }
