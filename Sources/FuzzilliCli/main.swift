@@ -55,9 +55,6 @@ if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 
             --consecutiveMutations=n     : Perform this many consecutive mutations on each sample (default: 5).
             --corpusGenerationIterations=n : Switch from corpus generation to the main fuzzing phase after this many
                                            iterations without finding a new interesting sample (default: 100).
-            --minimizationLimit=p        : When minimizing interesting programs, keep at least this percentage of the original instructions
-                                           regardless of whether they are needed to trigger the interesting behaviour or not.
-                                           See Minimizer.swift for an overview of this feature (default: 0.0).
             --storagePath=path           : Path at which to store output files (crashes, corpus, etc.) to.
             --resume                     : If storage path exists, import the programs from the corpus/ subdirectory
             --overwrite                  : If storage path exists, delete all data in it and start a fresh fuzzing session
@@ -169,7 +166,6 @@ let maxCorpusSize = args.int(for: "--maxCorpusSize") ?? Int.max
 let markovDropoutRate = args.double(for: "--markovDropoutRate") ?? 0.10
 let consecutiveMutations = args.int(for: "--consecutiveMutations") ?? 5
 let corpusGenerationIterations = args.int(for: "--corpusGenerationIterations") ?? 100
-let minimizationLimit = args.double(for: "--minimizationLimit") ?? 0.0
 let storagePath = args["--storagePath"]
 var resume = args.has("--resume")
 let overwrite = args.has("--overwrite")
@@ -327,10 +323,6 @@ if minCorpusSize < 1 {
 
 if maxCorpusSize < minCorpusSize {
     configError("--maxCorpusSize must be larger than --minCorpusSize")
-}
-
-if minimizationLimit < 0 || minimizationLimit > 1 {
-    configError("--minimizationLimit must be between 0 and 1")
 }
 
 let corpusImportModeByName: [String: CorpusImportMode] = [
@@ -688,7 +680,6 @@ let mainConfig = Configuration(
     timeout: timeout.maxTimeout(),
     logLevel: logLevel,
     startupTests: profile.startupTests,
-    minimizationLimit: minimizationLimit,
     enableDiagnostics: diagnostics,
     enableInspection: inspect,
     staticCorpus: staticCorpus,
@@ -914,7 +905,6 @@ for i in 1..<numJobs {
         timeout: timeout.maxTimeout(),
         logLevel: .warning,
         startupTests: profile.startupTests,
-        minimizationLimit: minimizationLimit,
         enableDiagnostics: false,
         enableInspection: inspect,
         staticCorpus: staticCorpus,

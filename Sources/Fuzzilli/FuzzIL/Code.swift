@@ -65,8 +65,7 @@ public struct Code: Collection {
             return instructions[i]
         }
         set {
-            instructions[i] = Instruction(
-                newValue.op, inouts: newValue.inouts, index: i, flags: newValue.flags)
+            instructions[i] = Instruction(newValue.op, inouts: newValue.inouts, index: i)
             return
         }
     }
@@ -114,7 +113,7 @@ public struct Code: Collection {
     /// The inserted instruction will now also contain its index in this code.
     @discardableResult
     public mutating func append(_ instr: Instruction) -> Instruction {
-        let instr = Instruction(instr.op, inouts: instr.inouts, index: count, flags: instr.flags)
+        let instr = Instruction(instr.op, inouts: instr.inouts, index: count)
         instructions.append(instr)
         return instr
     }
@@ -179,7 +178,7 @@ public struct Code: Collection {
                 numVariables += 1
             }
             let inouts = instr.inouts.map({ varMap[$0]! })
-            self[idx] = Instruction(instr.op, inouts: inouts, flags: instr.flags)
+            self[idx] = Instruction(instr.op, inouts: inouts)
         }
     }
 
@@ -340,19 +339,6 @@ public struct Code: Collection {
                 fatalError("Code is invalid: \(error)\n\(FuzzILLifter().lift(self))")
             }
         #endif
-    }
-
-    public func countIntructionsWith(flags: Instruction.Flags) -> Int {
-        self.filter { instr in
-            instr.flags.contains(flags)
-        }.count
-    }
-
-    /// This is used in the minimizer to clear flags that have been set during minimization.
-    public mutating func clearFlags() {
-        for idx in 0..<self.count {
-            self[idx].flags = .empty
-        }
     }
 
     //

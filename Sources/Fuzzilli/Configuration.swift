@@ -59,13 +59,6 @@ public struct Configuration {
     ///   - Check that known-safe crashes are ignored (with `.shouldNotCrash`)
     public let startupTests: [(String, ExpectedStartupTestResult)]
 
-    /// The fraction of instruction to keep from the original program when minimizing.
-    /// This setting is useful to avoid "over-minimization", which can negatively impact the fuzzer's
-    /// performance if program features are removed that could later be mutated to trigger new
-    /// interesting behaviour or crashes.
-    /// See Minimizer.swift for the exact algorithm used to implement this.
-    public let minimizationLimit: Double
-
     /// When receiving programs from another node during distributed fuzzing, discard this percentage of samples.
     ///
     /// Dropout can provide a way to make multiple instances less "similar" to each
@@ -125,7 +118,6 @@ public struct Configuration {
         skipStartupTests: Bool = false,
         logLevel: LogLevel = .info,
         startupTests: [(String, ExpectedStartupTestResult)] = [],
-        minimizationLimit: Double = 0.0,
         dropoutRate: Double = 0,
         enableDiagnostics: Bool = false,
         enableInspection: Bool = false,
@@ -146,7 +138,6 @@ public struct Configuration {
         self.logLevel = logLevel
         self.startupTests = startupTests
         self.dropoutRate = dropoutRate
-        self.minimizationLimit = minimizationLimit
         self.enableDiagnostics = enableDiagnostics
         // If we have enabledDiagnostics we should also enable inspection.
         self.enableInspection = enableDiagnostics || enableInspection

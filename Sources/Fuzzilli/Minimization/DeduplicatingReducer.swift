@@ -37,7 +37,7 @@ struct DeduplicatingReducer: Reducer {
             let newInouts = oldInouts.map({ deduplicatedVariables[$0] ?? $0 })
             if oldInouts != newInouts {
                 replacements.append(
-                    (instr.index, Instruction(instr.op, inouts: newInouts, flags: instr.flags)))
+                    (instr.index, Instruction(instr.op, inouts: newInouts)))
             }
 
             // Scope management.

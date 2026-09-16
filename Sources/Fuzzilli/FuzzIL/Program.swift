@@ -75,8 +75,6 @@ public final class Program: CustomStringConvertible {
         code: Code, parent: Program? = nil, comments: ProgramComments = ProgramComments(),
         contributors: Contributors = Contributors()
     ) {
-        // We should never see instructions with set flags here, as Flags are currently only used temporarily (e.g. Minimizer)
-        assert(code.allSatisfy { instr in instr.flags == Instruction.Flags.empty })
         self.init(with: code)
         self.comments = comments
         self.contributors = contributors

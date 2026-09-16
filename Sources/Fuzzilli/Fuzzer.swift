@@ -614,7 +614,7 @@ public class Fuzzer {
                     let inouts = instr.inouts.map({
                         variablesToReplaceWithDummy.contains($0) ? dummy : b.adopt($0)
                     })
-                    let newInstr = Instruction(instr.op, inouts: inouts, flags: instr.flags)
+                    let newInstr = Instruction(instr.op, inouts: inouts)
                     b.append(newInstr)
                 }
             }
@@ -689,7 +689,7 @@ public class Fuzzer {
                     newOp = op.withCallOptionalState(true)
                 }
             }
-            b.append(Instruction(newOp, inouts: instr.inouts, flags: instr.flags))
+            b.append(Instruction(newOp, inouts: instr.inouts))
         }
         program = b.finalize()
         if let result = currentCorpusImportJob.fixupMutator.mutate(program, for: self) {
@@ -859,9 +859,7 @@ public class Fuzzer {
             // Minimization should be performed as part of the fuzzing dispatch group. This way, the next fuzzing iteration
             // will only start once the curent sample has been fully processed and inserted into the corpus.
             fuzzGroup.enter()
-            minimizer.withMinimizedCopy(
-                program, withAspects: aspects, limit: config.minimizationLimit
-            ) { minimizedProgram in
+            minimizer.withMinimizedCopy(program, withAspects: aspects) { minimizedProgram in
                 self.fuzzGroup.leave()
                 finishProcessing(minimizedProgram)
             }

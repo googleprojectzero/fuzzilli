@@ -23,12 +23,6 @@ import Foundation
 ///   - Minimization must only remove program features that can be added back through mutations later on.
 ///     For example, variadic inputs to instructions can be removed because the OperationMutator can add them back.
 ///   - Minimization should generally strive to be as powerful as possible, i.e. be able to find the smallest possible programs.
-///     To counter "over-minimization" (i.e. programs becoming too small, making mutations less effective), there should
-///     be a configurable limit to minimization which keeps some random instructions alive, so that those are uniformly
-///     distributed and not biased to a certain type of instruction or instruction sequence.
-///
-/// We *cannot* store any information as indices as they are invalidated as soon as any reducer moves instructions around.
-/// Therefore, also every reducer needs to preserve flags when they operate on an instruction or operation.
 public class Minimizer: ComponentBase {
 
     /// DispatchQueue on which program minimization happens.
@@ -44,11 +38,11 @@ public class Minimizer: ComponentBase {
     /// Once minimization is finished, the passed block will be invoked on the fuzzer's queue with the minimized program.
     func withMinimizedCopy(
         _ program: Program, withAspects aspects: ProgramAspects,
-        limit minimizationLimit: Double = 0.0, block: @escaping (Program) -> Void
+        block: @escaping (Program) -> Void
     ) {
         minimizationQueue.async {
             let minimizedCode = self.internalMinimize(
-                program, withAspects: aspects, limit: minimizationLimit,
+                program, withAspects: aspects,
                 performPostprocessing: true, runningSynchronously: false)
             self.fuzzer.async {
                 let minimizedProgram: Program
@@ -68,27 +62,21 @@ public class Minimizer: ComponentBase {
     /// Synchronous version of withMinimizedCopy. Should only be used for tests since it otherwise blocks the fuzzer queue.
     func minimize(
         _ program: Program, withAspects aspects: ProgramAspects,
-        limit minimizationLimit: Double = 0.0, performPostprocessing: Bool = true
+        performPostprocessing: Bool = true
     ) -> Program {
         let minimizedCode = internalMinimize(
-            program, withAspects: aspects, limit: minimizationLimit,
+            program, withAspects: aspects,
             performPostprocessing: performPostprocessing, runningSynchronously: true)
         return Program(code: minimizedCode, parent: program, contributors: program.contributors)
     }
 
     private func internalMinimize(
-        _ program: Program, withAspects aspects: ProgramAspects, limit minimizationLimit: Double,
+        _ program: Program, withAspects aspects: ProgramAspects,
         performPostprocessing: Bool, runningSynchronously: Bool
     ) -> Code {
-        assert(program.code.countIntructionsWith(flags: .notRemovable) == 0)
-
         let helper = MinimizationHelper(
             for: aspects, forCode: program.code, of: fuzzer,
             runningOnFuzzerQueue: runningSynchronously)
-
-        helper.applyMinimizationLimit(limit: minimizationLimit)
-
-        assert(helper.code.countIntructionsWith(flags: .notRemovable) >= helper.numKeptInstructions)
 
         var iterations = 0
         repeat {
@@ -112,12 +100,6 @@ public class Minimizer: ComponentBase {
             ]
             for reducer in reducers {
                 reducer.reduce(with: helper)
-                // The reducers should not remove any instructions that we want to keep unconditionally.
-                // The code might have more non-removable instructions due to other analyzers marking them as non-removable
-                // but it should be at least more than we have seen at the start.
-                assert(
-                    helper.code.countIntructionsWith(flags: .notRemovable)
-                        >= helper.numKeptInstructions)
                 helper.code.assertIsStaticallyValid()
             }
             iterations += 1
@@ -133,12 +115,8 @@ public class Minimizer: ComponentBase {
         // Most reducers replace instructions with NOPs instead of deleting them. Remove those NOPs now.
         helper.removeNops()
 
-        assert(helper.code.countIntructionsWith(flags: .notRemovable) >= helper.numKeptInstructions)
-        helper.clearFlags()
-
         // Post-process the sample after minimization. This step adds certain features back to the program that may have been minimized away but are typically helpful for future mutations.
         // Currently we run this regardless of whether we're processing a crash or an interesting sample. If we wanted to, we could only run this for interesting samples (that will be mutated again), but its fine to also run it for crashes.
-        // Adding instructions will invalidate the keptInstructions array. Since we're not removing any more instructions, clear that array now.
         // We allow tests to skip post-processing as it can cause non-determinism (e.g. when selecting random return values).
         if performPostprocessing {
             let postProcessor = MinimizationPostProcessor()

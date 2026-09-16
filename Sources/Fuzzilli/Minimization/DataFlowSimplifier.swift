@@ -124,7 +124,7 @@ struct DataFlowSimplifier: Reducer {
                 } else {
                     // Keep this instruction but update the inputs if they got replaced.
                     let newInouts = instr.inouts.map({ replacements[$0] ?? $0 })
-                    let newInstr = Instruction(instr.op, inouts: newInouts, flags: instr.flags)
+                    let newInstr = Instruction(instr.op, inouts: newInouts)
                     newCode.append(newInstr)
                 }
             }

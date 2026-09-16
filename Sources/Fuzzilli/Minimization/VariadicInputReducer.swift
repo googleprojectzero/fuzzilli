@@ -139,7 +139,7 @@ struct VariadicInputReducer: Reducer {
                 }
 
                 let inouts = instr.inputs.dropLast() + instr.outputs + instr.innerOutputs
-                instr = Instruction(newOp, inouts: inouts, flags: instr.flags)
+                instr = Instruction(newOp, inouts: inouts)
             } while helper.tryReplacing(instructionAt: index, with: instr)
         }
     }

@@ -981,10 +981,6 @@ public class OperationMutator: BaseInstructionMutator {
             fatalError("Unexpected operation \(instr.op.opcode), marked as \(mutability)")
         }
 
-        // This assert is here to prevent subtle bugs if we ever decide to add flags that are "alive" during program building / mutation.
-        // If we add flags, remove this assert and change the code below.
-        assert(instr.flags == .empty)
-
         var modifiedOp = newOp
         if let optionalOp = modifiedOp as? ReceiverOptionalOperation, probability(0.1) {
             modifiedOp = optionalOp.withReceiverOptionalState(!optionalOp.isReceiverOptional)
@@ -1146,9 +1142,6 @@ public class OperationMutator: BaseInstructionMutator {
         assert(inputs.count != instr.inputs.count)
         let inouts = inputs + instr.outputs + instr.innerOutputs
 
-        // This assert is here to prevent subtle bugs if we ever decide to add flags that are "alive" during program building / mutation.
-        // If we add flags, remove this assert and change the code below.
-        assert(instr.flags == .empty)
         return Instruction(newOp, inouts: inouts)
     }
 

@@ -1694,7 +1694,7 @@ public class ProgramBuilder {
 
     /// Adopts an instruction from the program that is currently configured for adoption into the program being constructed.
     public func adopt(_ instr: Instruction) {
-        internalAppend(Instruction(instr.op, inouts: adopt(instr.inouts), flags: instr.flags))
+        internalAppend(Instruction(instr.op, inouts: adopt(instr.inouts)))
     }
 
     /// Append an instruction at the current position.
@@ -2043,7 +2043,7 @@ public class ProgramBuilder {
                 variableMap[output] = nextVariable()
             }
             let inouts = instr.inouts.map({ variableMap[$0]! })
-            append(Instruction(instr.op, inouts: inouts, flags: instr.flags))
+            append(Instruction(instr.op, inouts: inouts))
         }
 
         trace("Splicing done")
@@ -2434,7 +2434,7 @@ public class ProgramBuilder {
                 nextVariable()
             }
 
-        append(Instruction(newOp, inouts: Array(newInputs) + newOutputs, flags: instr.flags))
+        append(Instruction(newOp, inouts: Array(newInputs) + newOutputs))
     }
 
     // This function knows its own budget, and splits it to its yield points.

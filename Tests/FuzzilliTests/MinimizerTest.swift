@@ -19,25 +19,6 @@ import Testing
 
 struct MinimizerTests {
 
-    @Test func testMinimizationLimit() {
-        let evaluator = EvaluatorForMinimizationTests()
-        let fuzzer = makeMockFuzzer(evaluator: evaluator)
-        fuzzer.sync {
-            let b = fuzzer.makeBuilder()
-
-            for _ in 0..<10 {
-                b.buildPrefix()
-                b.build(n: 70)
-
-                let preMinimization = b.finalize()
-                let limit = 0.1
-
-                let result = minimize(preMinimization, with: fuzzer, limit: limit)
-                #expect(result.size >= Int(Double(preMinimization.size) * limit))
-            }
-        }
-    }
-
     @Test func testInstructionSimplifierGuardedOperation() {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)
@@ -3061,7 +3042,7 @@ struct MinimizerTests {
 
     // Helper function to perform the minimization.
     func minimize(
-        _ program: Program, with fuzzer: Fuzzer, limit: Double = 0.0,
+        _ program: Program, with fuzzer: Fuzzer,
         performPostprocessing: Bool = true
     ) -> Program {
         guard let evaluator = fuzzer.evaluator as? EvaluatorForMinimizationTests else {
@@ -3070,7 +3051,7 @@ struct MinimizerTests {
         evaluator.setOriginalProgram(program)
         let dummyAspects = ProgramAspects(outcome: .succeeded)
         return fuzzer.minimizer.minimize(
-            program, withAspects: dummyAspects, limit: limit,
+            program, withAspects: dummyAspects,
             performPostprocessing: performPostprocessing)
     }
 

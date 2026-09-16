@@ -34,9 +34,6 @@ public struct Instruction {
     /// limited by the fact that variables are UInt16 internally.
     private var indexValue: UInt16 = UInt16.max
 
-    /// The flags associated with this instruction, right now these are mainly used during minimization.
-    public var flags: Self.Flags
-
     /// The number of input variables of this instruction.
     public var numInputs: Int {
         return op.numInputs
@@ -250,7 +247,7 @@ public struct Instruction {
     }
 
     public init<Variables: Collection>(
-        _ op: Operation, inouts: Variables, index: Int? = nil, flags: Self.Flags = .empty
+        _ op: Operation, inouts: Variables, index: Int? = nil
     ) where Variables.Element == Variable {
         assert(op.numInputs + op.numOutputs + op.numInnerOutputs == inouts.count)
         self.op = op
@@ -258,7 +255,6 @@ public struct Instruction {
         if let idx = index {
             self.indexValue = UInt16(idx)
         }
-        self.flags = flags
     }
 
     public init(_ op: Operation, output: Variable) {
@@ -290,21 +286,6 @@ public struct Instruction {
         assert(op.numOutputs + op.numInnerOutputs == 0)
         assert(op.numInputs == 0)
         self.init(op, inouts: [])
-    }
-
-    /// Flags associated with an Instruction.
-    /// This can be useful to mark instructions in some way, for example during minimization.
-    public struct Flags: OptionSet, CaseIterable {
-        public static var allCases: [Instruction.Flags] = [.notRemovable]
-
-        public let rawValue: UInt16
-
-        public init(rawValue: UInt16) {
-            self.rawValue = rawValue
-        }
-        /// If this is set, the minimizer cannot remove this instruction.
-        public static let notRemovable = Self(rawValue: 1 << 0)
-        public static let empty = Self([])
     }
 }
 

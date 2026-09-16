@@ -468,8 +468,6 @@ would build up over time, for example when splicing function calls and definitio
 
 As can be imagined, minimization is very expensive, frequently requiring over a hundred executions. However, while the minimization overhead dominates in the early stages of fuzzing (when interesting samples are frequently found), it approaches zero in the later stages of fuzzing when new, interesting programs are rarely found.
 
-It is possible to tune the minimizer to remove code less aggressively through the `--minimizationLimit=N` CLI flag. With that, it is possible to force the minimizer to keep minimized programs above a given number of instructions. This can help retain some additional code fragments which might facilitate future mutations. This can also speed up minimization a bit since less instructions need to be removed. However, setting this value too high will likely result in the same kinds of problems that the minimizer attempts to solve in the first place.
-
 Besides removing instructions, the Minimizer also tries to simplify programs in other ways. For example, it attempts to convert guarded operations into unguarded ones, remove unecessary arguments to function calls, merge variables containing the same values, and turns some complex instructions into simpler ones (e.g. spread calls into regular calls).
 
 ### Corpus

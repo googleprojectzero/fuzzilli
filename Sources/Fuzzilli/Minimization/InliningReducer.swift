@@ -232,7 +232,7 @@ struct InliningReducer: Reducer {
         var functionDefinitionDepth = 0
         for instr in functionBody {
             let newInouts = instr.inouts.map { arguments[$0] ?? $0 }
-            let newInstr = Instruction(instr.op, inouts: newInouts, flags: instr.flags)
+            let newInstr = Instruction(instr.op, inouts: newInouts)
 
             // Returns (from the function being inlined) are converted to assignments to the return value.
             if instr.op is Return && functionDefinitionDepth == 0 {
