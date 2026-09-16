@@ -4027,6 +4027,40 @@ struct ProgramBuilderTests {
             let _ = gen.head.run(in: b, with: [f])
         }
     }
+
+    // A CodeGenerator may declare that it produces a type but still be unable to run
+    // because its required inputs cannot be satisfied in the current context (e.g.
+    // DynamicImportGenerator produces a .jsPromise() but needs a .jsModule(), which is
+    // only available in .bundle context). findOrGenerateType must not pick such a
+    // generator, otherwise it ends up with no value of the requested type.
+    @Test func testFindOrGenerateTypeIgnoresGeneratorsWithUnsatisfiableInputs() {
+        // A type that nothing in the environment can produce, so that the generator
+        // below is the only candidate for producing it.
+        let producedType = ILType.object(withProperties: ["myProperty"])
+        // An input type that no CodeGenerator produces, so this generator can never run.
+        let unsatisfiableInputType = ILType.object(ofGroup: "ThisGroupDoesNotExist")
+
+        let generatorWithUnsatisfiableInputs = CodeGenerator(
+            "UnrunnableGeneratorForTesting",
+            inputs: .required(unsatisfiableInputType),
+            produces: [producedType]
+        ) { b, _ in
+            Issue.record("this generator shouldn't be called, its input cannot be produced")
+        }
+
+        let fuzzer = makeMockFuzzer(codeGenerators: [(generatorWithUnsatisfiableInputs, 1)])
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            b.loadInt(42)
+
+            #expect(b.randomVariable(ofType: unsatisfiableInputType) == nil)
+
+            let v = b.findOrGenerateType(producedType)
+            // The fallback produced a generic object with the wanted property, without invoking the
+            // generator.
+            #expect(b.type(of: v).Is(producedType))
+        }
+    }
 }
 
 struct ProgramBuilderRuntimeDataTests {

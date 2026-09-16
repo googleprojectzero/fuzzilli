@@ -1000,6 +1000,10 @@ public class ProgramBuilder {
                             && $0.parts.last!.produces.contains(where: { produces in
                                 produces.type.Is(type)
                             })
+                            // Only consider generators whose inputs we can actually satisfy.
+                            // This check is conservative; it's possible complete() could generate
+                            // some of the missing inputs on the fly, but we cannot know it here.
+                            && self.missingInputs(generator: $0).isEmpty
                     })
 
                     func useGenerator() -> Variable {
@@ -2587,6 +2591,15 @@ public class ProgramBuilder {
         }
     }
 
+    // Calculate missing inputs (not satisfied by existing variables) for a generator.
+    private func missingInputs(generator: CodeGenerator) -> [GeneratorStub.Constraint] {
+        return generator.parts.flatMap { $0.inputs.constraints }.filter {
+            nestedRequirement in
+            findVariable(satisfying: { nestedRequirement.fulfilled(by: self.type(of: $0)) })
+                == nil
+        }
+    }
+
     private func findGeneratorSequence(for targetRequirement: GeneratorStub.Constraint)
         -> [CodeGenerator]?
     {
@@ -2635,14 +2648,7 @@ public class ProgramBuilder {
             }
 
             for generator in usableGenerators {
-
-                // Calculate missing inputs (not satisfied by existing variables)
-                let missingInputs = generator.parts.flatMap { $0.inputs.constraints }.filter {
-                    nestedRequirement in
-                    findVariable(satisfying: { nestedRequirement.fulfilled(by: self.type(of: $0)) })
-                        == nil
-                }
-
+                let missingInputs = missingInputs(generator: generator)
                 priorityQueue.insert(
                     SearchState(
                         sequence: state.sequence + [generator],
