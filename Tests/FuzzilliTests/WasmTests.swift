@@ -6316,6 +6316,52 @@ struct WasmFoundationTests {
         testForOutput(program: jsProg, runner: runner, outputString: "-321\n123\n")
     }
 
+    @Test func testSelectUnionType() throws {
+        let runner = JavaScriptExecutor()!
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let jsProg = fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            let arrayi32 = b.wasmDefineTypeGroup {
+                [b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)]
+            }[0]
+
+            let module = b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmArrayRef()]) {
+                    function, _, args in
+                    // The two selected values have different types: the first one has the concrete
+                    // (indexed) array type, the second one the more generic abstract arrayref. The
+                    // select needs to be typed and lifted with the union of both input types, as
+                    // the emitted type annotation has to subsume both of its inputs, otherwise the
+                    // module fails validation.
+                    let indexTypedArray = function.wasmArrayNewFixed(
+                        arrayType: arrayi32, elements: [function.consti32(42)])
+                    let abstractTypedNull = function.wasmRefNull(type: .wasmArrayRef())
+                    let selected = function.wasmSelect(
+                        on: args[0], trueValue: indexTypedArray, falseValue: abstractTypedNull)
+                    #expect(b.type(of: selected) == .wasmArrayRef())
+                    return [selected]
+                }
+            }
+
+            let exports = module.loadExports()
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+            let resArray = b.callMethod(
+                module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(1)])
+            b.callFunction(
+                outputFunc,
+                withArgs: [b.compare(resArray, with: b.loadNull(), using: .strictNotEqual)])
+            let resNull = b.callMethod(
+                module.getExportedMethod(at: 0), on: exports, withArgs: [b.loadInt(0)])
+            b.callFunction(outputFunc, withArgs: [resNull])
+
+            let prog = b.finalize()
+            return fuzzer.lifter.lift(prog)
+        }
+        testForOutput(program: jsProg, runner: runner, outputString: "true\nnull\n")
+    }
+
     // This test covers a bug where imported functions were not accounted for correctly when
     // lifting a direct call to a non-imported wasm function.
     @Test func testCallDirectJSCall() throws {

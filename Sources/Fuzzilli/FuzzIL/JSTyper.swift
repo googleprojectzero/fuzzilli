@@ -1212,7 +1212,7 @@ public struct JSTyper: Analyzer {
                 withSignature: ProgramBuilder.convertWasmSignatureToJsSignature(signature),
                 forDefinition: instr, forVariable: instr.output)
         case .wasmSelect(_):
-            setType(of: instr.output, to: type(of: instr.input(0)))
+            setType(of: instr.output, to: type(of: instr.input(0)) | type(of: instr.input(1)))
         case .wasmBeginBlock(_):
             let signature = type(of: instr.input(0)).wasmFunctionSignatureDefSignature
             wasmTypeBeginBlock(instr, signature)

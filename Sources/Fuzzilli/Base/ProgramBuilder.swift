@@ -6346,10 +6346,11 @@ public class ProgramBuilder {
         public func wasmSelect(on condition: Variable, trueValue: Variable, falseValue: Variable)
             -> Variable
         {
-            let lhsType = b.type(of: trueValue)
+            let type = b.type(of: trueValue) | b.type(of: falseValue)
+            assert(type.Is(.wasmAnything))
             return b.emit(
                 WasmSelect(), withInputs: [trueValue, falseValue, condition],
-                types: [lhsType, lhsType, .wasmi32]
+                types: [type, type, .wasmi32]
             ).output
         }
 

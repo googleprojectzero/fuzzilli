@@ -2528,7 +2528,7 @@ public class WasmLifter {
         case .wasmUnreachable(_):
             return Data([0x00])
         case .wasmSelect(_):
-            return try Data([0x1c, 0x01]) + encodeType(typer.type(of: wasmInstruction.input(0)))
+            return try Data([0x1c, 0x01]) + encodeType(typer.type(of: wasmInstruction.output))
         case .constSimd128(let op):
             return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(12) + Data(op.value)
         case .wasmSimd128IntegerUnOp(let op):
