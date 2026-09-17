@@ -1601,8 +1601,10 @@ struct MinimizerTests {
         fuzzer.sync {
             let b = fuzzer.makeBuilder()
 
-            // Build input program to be minimized.
-            var o = b.createNamedVariable(forBuiltin: "TheArray")
+            // Build input program to be minimized. The source has to be a real array as array
+            // destructuring is only simplified into GetElement operations if the source is
+            // statically known to be an array, see testDestructuringSimplificationOfUnknownIterable.
+            var o = b.createArray(with: [])
             let vars = b.destruct(o, selecting: [0, 3, 4])
             var print = b.createNamedVariable(forBuiltin: "print")
             evaluator.nextInstructionIsImportant(in: b)
@@ -1611,7 +1613,7 @@ struct MinimizerTests {
             let originalProgram = b.finalize()
 
             // Build expected output program.
-            o = b.createNamedVariable(forBuiltin: "TheArray")
+            o = b.createArray(with: [])
             let val0 = b.getElement(0, of: o)
             let val3 = b.getElement(3, of: o)
             let val4 = b.getElement(4, of: o)
@@ -1633,39 +1635,226 @@ struct MinimizerTests {
         }
     }
 
-    @Test func testDestructuringSimplificationWithRest() {
-        let evaluator = EvaluatorForMinimizationTests()
-        let fuzzer = makeMockFuzzer(evaluator: evaluator)
-        fuzzer.sync {
-            let b = fuzzer.makeBuilder()
+    @Test func testDestructuringSimplificationWithArrayRest() {
+        // A rest element is not equivalent to element loads: Array.prototype.slice preserves holes
+        // and respects Symbol.species:
+        //   const a = [1, , 3];
+        //   let [x, ...r] = a;  =/=  const x = a[0]; const r = a.slice(1);
+        testMultiInstructionSimplification(of: { b in
+            b.destruct(b.createArray(with: []), selecting: [0, 2], lastIsRest: true)
+        })
+    }
 
-            // Build input program to be minimized.
-            var o = b.createNamedVariable(forBuiltin: "TheArray")
-            let vars = b.destruct(o, selecting: [0, 2], lastIsRest: true)
+    @Test func testDestructuringSimplificationOfUnknownIterable() {
+        // Array destructuring uses the iterator protocol while GetElement performs an indexed load:
+        //   const theSet = new Set([42]);
+        //   let [v] = theSet;  =/=  const v = theSet[0];
+        testMultiInstructionSimplification(of: { b in
+            b.destruct(b.createNamedVariable(forBuiltin: "TheIterable"), selecting: [0, 1])
+        })
+    }
 
-            var print = b.createNamedVariable(forBuiltin: "print")
-            evaluator.nextInstructionIsImportant(in: b)
-            b.callFunction(print, withArgs: [vars[0], vars[1]])
+    @Test func testDestructuringSimplificationWithObjectRest() {
+        // A rest element copies every own enumerable property except the ones named by the pattern:
+        //   let {"foo": v1, ...v2} = o;  =/=  const v1 = o.foo; let {...v2} = o;
+        testMultiInstructionSimplification(of: { b in
+            b.destruct(
+                b.createNamedVariable(forBuiltin: "TheObject"), selecting: ["foo"],
+                hasRestElement: true)
+        })
+    }
 
-            let originalProgram = b.finalize()
+    @Test func testDestructuringSimplificationWithDefaultValue() {
+        // let {"foo": v = 42} = o; The default value is only used if the loaded value is undefined,
+        // which would require branching.
+        let pattern = objectPattern([("foo", .flatBinding)], hasDefaultValue: true)
+        testMultiInstructionSimplification(of: { b in
+            let o = b.createNamedVariable(forBuiltin: "TheObject")
+            b.destruct(o, using: pattern, defaultValues: [b.loadInt(42)])
+        })
+    }
 
-            // Build expected output program.
-            o = b.createNamedVariable(forBuiltin: "TheArray")
-            let e0 = b.getElement(0, of: o)
-            let restVars = b.destruct(o, selecting: [2], lastIsRest: true)
+    @Test func testDestructuringSimplificationOfNestedPattern() {
+        // let {"foo": {"bar": v}} = o;
+        let pattern = objectPattern([("foo", .pattern(objectPattern([("bar", .flatBinding)])))])
+        testMultiInstructionSimplification(
+            of: { b in
+                b.destruct(b.createNamedVariable(forBuiltin: "TheObject"), using: pattern)
+            },
+            into: { b in
+                let o = b.createNamedVariable(forBuiltin: "TheObject")
+                b.getProperty("bar", of: b.getProperty("foo", of: o))
+            })
+    }
 
-            print = b.createNamedVariable(forBuiltin: "print")
-            b.callFunction(print, withArgs: [e0, restVars[0]])
+    @Test func testDestructSimplificationOfArray() {
+        // The source has to be a real array, see testDestructuringSimplificationOfUnknownIterable.
+        testMultiInstructionSimplification(
+            of: { b in
+                let a = b.createArray(with: [])
+                b.destruct(a, selecting: [0, 1])
+            },
+            into: { b in
+                let a = b.createArray(with: [])
+                b.getElement(0, of: a)
+                b.getElement(1, of: a)
+            })
+    }
 
-            let expectedProgram = b.finalize()
+    @Test func testDestructAndReassignSimplification() {
+        testMultiInstructionSimplification(
+            of: { b in
+                let o = b.createNamedVariable(forBuiltin: "TheObject")
+                b.destruct(o, selecting: ["foo", "bar"], into: [b.loadInt(42), b.loadInt(43)])
+            },
+            into: { b in
+                let o = b.createNamedVariable(forBuiltin: "TheObject")
+                let v1 = b.loadInt(42)
+                let v2 = b.loadInt(43)
+                b.reassign(variable: v1, value: b.getProperty("foo", of: o))
+                b.reassign(variable: v2, value: b.getProperty("bar", of: o))
+            })
+    }
 
-            // See testDestructuringSimplification2 for why these are marked important.
-            evaluator.operationIsImportant(Destruct.self)
-            evaluator.operationIsImportant(GetElement.self)
+    @Test func testDestructAndReassignSimplificationWithObjectRest() {
+        // See testDestructuringSimplificationWithObjectRest.
+        testMultiInstructionSimplification(of: { b in
+            let o = b.createNamedVariable(forBuiltin: "TheObject")
+            b.destruct(
+                o, selecting: ["foo"], into: [b.loadInt(42), b.loadInt(43)], hasRestElement: true)
+        })
+    }
 
-            let actualProgram = minimize(originalProgram, with: fuzzer)
-            #expect(actualProgram == expectedProgram)
-        }
+    @Test func testDestructAndReassignSimplificationWithArrayRest() {
+        // See testDestructuringSimplificationWithArrayRest.
+        testMultiInstructionSimplification(of: { b in
+            let a = b.createArray(with: [])
+            b.destruct(
+                a, selecting: [0, 2], into: [b.loadInt(42), b.loadInt(43)], lastIsRest: true)
+        })
+    }
+
+    @Test func testDestructAndReassignSimplificationOfArray() {
+        // The source has to be a real array, see testDestructuringSimplificationOfUnknownIterable.
+        testMultiInstructionSimplification(
+            of: { b in
+                let a = b.createArray(with: [])
+                b.destruct(a, selecting: [0, 1], into: [b.loadInt(42), b.loadInt(43)])
+            },
+            into: { b in
+                let a = b.createArray(with: [])
+                let v1 = b.loadInt(42)
+                let v2 = b.loadInt(43)
+                b.reassign(variable: v1, value: b.getElement(0, of: a))
+                b.reassign(variable: v2, value: b.getElement(1, of: a))
+            })
+    }
+
+    @Test func testDestructAndReassignSimplificationOfNestedPattern() {
+        // ({"foo": {"bar": v}} = o);
+        let pattern = objectPattern([("foo", .pattern(objectPattern([("bar", .flatBinding)])))])
+        testMultiInstructionSimplification(
+            of: { b in
+                let o = b.createNamedVariable(forBuiltin: "TheObject")
+                b.destruct(o, using: pattern, into: [b.loadInt(42)])
+            },
+            into: { b in
+                let o = b.createNamedVariable(forBuiltin: "TheObject")
+                let v = b.loadInt(42)
+                b.reassign(
+                    variable: v, value: b.getProperty("bar", of: b.getProperty("foo", of: o)))
+            })
+    }
+
+    @Test func testDestructAndReassignSimplificationWithMemberTarget() {
+        // ({"foo": obj.p, "bar": v} = o). `obj.p` is assigned before `o.bar` is loaded, which is
+        // observable if `obj.p` is a setter or if `o` has getters.
+        let pattern = objectPattern([("foo", .property("p")), ("bar", .flatBinding)])
+        testMultiInstructionSimplification(
+            of: { b in
+                let o = b.createNamedVariable(forBuiltin: "TheObject")
+                let obj = b.createNamedVariable(forBuiltin: "TheTarget")
+                b.destruct(o, using: pattern, into: [obj, b.loadInt(42)])
+            },
+            into: { b in
+                let o = b.createNamedVariable(forBuiltin: "TheObject")
+                let obj = b.createNamedVariable(forBuiltin: "TheTarget")
+                let v = b.loadInt(42)
+                b.setProperty("p", of: obj, to: b.getProperty("foo", of: o))
+                b.reassign(variable: v, value: b.getProperty("bar", of: o))
+            })
+    }
+
+    @Test func testDestructAndReassignSimplificationWithComputedAndElementTargets() {
+        // ({"foo": obj[k], "bar": arr[0]} = o);
+        let pattern = objectPattern([("foo", .computedProperty), ("bar", .element(0))])
+        testMultiInstructionSimplification(
+            of: { b in
+                let o = b.createNamedVariable(forBuiltin: "TheObject")
+                let obj = b.createNamedVariable(forBuiltin: "TheTarget")
+                let k = b.loadString("prop")
+                let arr = b.createArray(with: [])
+                b.destruct(o, using: pattern, into: [obj, k, arr])
+            },
+            into: { b in
+                let o = b.createNamedVariable(forBuiltin: "TheObject")
+                let obj = b.createNamedVariable(forBuiltin: "TheTarget")
+                let k = b.loadString("prop")
+                let arr = b.createArray(with: [])
+                b.setComputedProperty(k, of: obj, to: b.getProperty("foo", of: o))
+                b.setElement(0, of: arr, to: b.getProperty("bar", of: o))
+            })
+    }
+
+    @Test func testDestructAndReassignSimplificationWithPrivateAndSuperTargets() {
+        // ({"foo": this.#p, "bar": super.p, "baz": super[k]} = o);
+        let pattern = objectPattern([
+            ("foo", .privateProperty("p")),
+            ("bar", .superProperty("p")),
+            ("baz", .superComputedProperty),
+        ])
+        testMultiInstructionSimplification(
+            of: { b in
+                let o = b.createNamedVariable(forBuiltin: "TheObject")
+                let k = b.loadString("prop")
+                b.buildClassDefinition { cls in
+                    cls.addPrivateInstanceProperty("p")
+                    cls.addInstanceMethod("m", with: .parameters(n: 0)) { args in
+                        b.destruct(o, using: pattern, into: [args[0], k])
+                    }
+                }
+            },
+            into: { b in
+                let o = b.createNamedVariable(forBuiltin: "TheObject")
+                let k = b.loadString("prop")
+                b.buildClassDefinition { cls in
+                    cls.addPrivateInstanceProperty("p")
+                    cls.addInstanceMethod("m", with: .parameters(n: 0)) { args in
+                        b.setPrivateProperty("p", of: args[0], to: b.getProperty("foo", of: o))
+                        b.setSuperProperty("p", to: b.getProperty("bar", of: o))
+                        b.setComputedSuperProperty(k, to: b.getProperty("baz", of: o))
+                    }
+                }
+            })
+    }
+
+    @Test func testDestructAndReassignSimplificationOfSourceTarget() {
+        // ({"foo": o, "bar": v, "baz": o} = o). The operation evaluates its source only once, so a
+        // copy is needed: subsequent loads must read from the copy rather than the reassigned `o`,
+        // while all reassignments still write to the original `o`.
+        testMultiInstructionSimplification(
+            of: { b in
+                let o = b.createNamedVariable(forBuiltin: "TheObject")
+                b.destruct(o, selecting: ["foo", "bar", "baz"], into: [o, b.loadInt(42), o])
+            },
+            into: { b in
+                let o = b.createNamedVariable(forBuiltin: "TheObject")
+                let v = b.loadInt(42)
+                let source = b.dup(o)
+                b.reassign(variable: o, value: b.getProperty("foo", of: source))
+                b.reassign(variable: v, value: b.getProperty("bar", of: source))
+                b.reassign(variable: o, value: b.getProperty("baz", of: source))
+            })
     }
 
     @Test func testVariableDeduplication() {
@@ -3681,6 +3870,48 @@ struct MinimizerTests {
 
             let reducer = GenericInstructionReducer()
             reducer.reduce(with: helper)
+        }
+    }
+
+    /// An `.object` pattern with one property per (key, target) pair.
+    private func objectPattern(
+        _ properties: [(String, DestructuringPattern.Target)], hasDefaultValue: Bool = false
+    ) -> DestructuringPattern {
+        return .object(
+            .init(
+                properties: properties.map {
+                    .init(key: .string($0.0), target: $0.1, hasDefaultValue: hasDefaultValue)
+                }, hasRestElement: false))
+    }
+
+    /// Runs `simplifyMultiInstructions` on the program built by `build` and compares the result
+    /// against the program built by `expected`. A nil `expected` means the program must not change.
+    private func testMultiInstructionSimplification(
+        of build: (ProgramBuilder) -> Void, into expected: ((ProgramBuilder) -> Void)? = nil
+    ) {
+        let fuzzer = makeMockFuzzer(evaluator: AlwaysAcceptingEvaluator())
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            build(b)
+            let originalProgram = b.finalize()
+
+            var expectedProgram = originalProgram
+            if let expected {
+                expected(b)
+                expectedProgram = b.finalize()
+            }
+
+            let helper = MinimizationHelper(
+                for: ProgramAspects(outcome: .succeeded), forCode: originalProgram.code, of: fuzzer,
+                runningOnFuzzerQueue: true)
+            InstructionSimplifier().simplifyMultiInstructions(with: helper)
+            let actualProgram = Program(with: helper.finalize())
+
+            #expect(helper.didReduce == (expected != nil))
+            #expect(
+                expectedProgram == actualProgram,
+                "Expected:\n\(FuzzILLifter().lift(expectedProgram))Actual:\n\(FuzzILLifter().lift(actualProgram))"
+            )
         }
     }
 }

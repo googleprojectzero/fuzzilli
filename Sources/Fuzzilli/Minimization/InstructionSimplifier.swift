@@ -155,117 +155,205 @@ struct InstructionSimplifier: Reducer {
 
     /// Simplify instructions that can be replaced by a sequence of simpler instructions.
     func simplifyMultiInstructions(with helper: MinimizationHelper) {
-        // This will:
-        //  - convert destructuring operations into simple property or element loads
-        //
-        // All simplifications are performed at once to keep this logic simple.
-        // This logic needs to be somewhat careful not to perform no-op replacements as
-        // these would cause the fixpoint iteration to not terminate.
+        // Lowers destructuring operations into atomic load/store, respecting tc39 evaluation order.
+        // This is all-or-nothing: partially lowering a pattern would leave a residual destructuring
+        // operation that runs out-of-order.
         var newCode = Code(isBundle: helper.code.isBundle)
         var numCopiedInstructions = 0
+
+        // Temporaries are allocated at the end of the variable space, so the code has to be
+        // renumbered afterwards to make the variable numbers continuous again.
+        var nextFreeVariable = helper.code.nextFreeVariable()
+        var didAllocateVariables = false
+        func allocateVariable() -> Variable {
+            defer { nextFreeVariable = Variable(number: nextFreeVariable.number + 1) }
+            didAllocateVariables = true
+            return nextFreeVariable
+        }
+
+        var typer = JSTyper(for: helper.fuzzer.environment, isBundle: helper.code.isBundle)
+        func isKnownArray(_ v: Variable) -> Bool {
+            let type = typer.type(of: v)
+            if type.Is(.object(ofGroup: "Array")) { return true }
+            return JavaScriptEnvironment.typedArrayConstructors.contains {
+                type.Is(.object(ofGroup: $0))
+            }
+        }
+
+        /// Whether the given pattern can be lowered into an equivalent sequence of loads and
+        /// stores. Rejected patterns keep their destructuring operation.
+        /// `source` is the variable being destructured, or nil for a nested pattern
+        func canBeLowered(_ pattern: DestructuringPattern, source: Variable?) -> Bool {
+            func canLowerTarget(_ target: DestructuringPattern.Target?) -> Bool {
+                switch target {
+                // An elision in an array pattern, which doesn't assign anything.
+                case nil:
+                    return true
+                case .flatBinding, .property, .element, .computedProperty, .privateProperty,
+                    .superProperty, .superComputedProperty:
+                    return true
+                // This would require a "SetSuperElement" operation, which doesn't exist.
+                case .superElement:
+                    return false
+                // Lowered recursively, with the loaded value as the source of the nested
+                // pattern. That value has no known type, so nested array patterns are rejected.
+                // Note: If an inner pattern cannot be lowered (e.g. `let {foo: {bar: x, ...y}} = o`),
+                // we reject the whole pattern rather than partially lowering the outer pattern into
+                // a temporary variable (`let tmp = o.foo; let {bar: x, ...y} = tmp;`).
+                case .pattern(let pattern):
+                    return canBeLowered(pattern, source: nil)
+                }
+            }
+
+            switch pattern {
+            case .object(let obj):
+                // TODO(rherouart): "const {} = null" does throw, but lowering it to no instruction won't
+                guard !obj.properties.isEmpty else { return false }
+                // An object rest element (...rest) copies all remaining own enumerable properties into a
+                // fresh object at runtime, which cannot be lowered to static GetProperty loads.
+                guard !obj.hasRestElement else { return false }
+                // A default value would require branching on `undefined`.
+                return obj.properties.allSatisfy {
+                    !$0.hasDefaultValue && canLowerTarget($0.target)
+                }
+            case .array(let arr):
+                guard let source, isKnownArray(source) else { return false }
+                // TODO(rherouart):
+                // An empty pattern still requests an iterator from the source, so it can throw.
+                // Lowering it to no instruction won't throw
+                guard !arr.elements.isEmpty else { return false }
+                // TODO(rherouart): Array.prototype.slice is not equivalent to a rest element: it preserves holes
+                guard arr.restTarget == nil else { return false }
+                return arr.elements.allSatisfy { !$0.hasDefaultValue && canLowerTarget($0.target) }
+            }
+        }
+
+        /// Lowers the given pattern into a sequence of loads and stores.
+        ///
+        /// `nextInput` provides the inputs of the operation (excluding the source) in the order in
+        /// which they appear in the pattern, `nextOutput` the outputs of a Destruct operation. For
+        /// a DestructAndReassign operation, which declares no new variables, `nextOutput` is nil.
+        func lower(
+            _ pattern: DestructuringPattern, of source: Variable,
+            nextInput: () -> Variable, nextOutput: (() -> Variable)?
+        ) {
+            /// Loads one value from the source (via `emitLoad`) and assigns it to `target`.
+            func assign(_ target: DestructuringPattern.Target?, emitLoad: (Variable) -> Void) {
+                // An elision, which only advances the iterator.
+                guard let target else { return }
+
+                // When declaring new variables, the loaded value is the new binding, so neither a
+                // temporary variable nor a separate store instruction is needed.
+                if case .flatBinding = target, let nextOutput {
+                    return emitLoad(nextOutput())
+                }
+
+                let value = allocateVariable()
+                emitLoad(value)
+
+                switch target {
+                case .flatBinding:
+                    newCode.append(Instruction(Reassign(), inputs: [nextInput(), value]))
+                case .property(let propertyName):
+                    newCode.append(
+                        Instruction(
+                            SetProperty(propertyName: propertyName, isGuarded: false),
+                            inputs: [nextInput(), value]))
+                case .element(let index):
+                    newCode.append(
+                        Instruction(SetElement(index: index), inputs: [nextInput(), value]))
+                case .computedProperty:
+                    let object = nextInput()
+                    let key = nextInput()
+                    newCode.append(
+                        Instruction(SetComputedProperty(), inputs: [object, key, value]))
+                case .privateProperty(let propertyName):
+                    newCode.append(
+                        Instruction(
+                            SetPrivateProperty(propertyName: propertyName, isGuarded: false),
+                            inputs: [nextInput(), value]))
+                case .superProperty(let propertyName):
+                    newCode.append(
+                        Instruction(SetSuperProperty(propertyName: propertyName), inputs: [value]))
+                case .superComputedProperty:
+                    newCode.append(
+                        Instruction(SetComputedSuperProperty(), inputs: [nextInput(), value]))
+                case .pattern(let pattern):
+                    lower(pattern, of: value, nextInput: nextInput, nextOutput: nextOutput)
+                case .superElement:
+                    assert(false, "Excluded by canBeLowered")
+                    break
+                }
+            }
+
+            switch pattern {
+            case .object(let obj):
+                for property in obj.properties {
+                    switch property.key {
+                    case .string(let propertyName):
+                        assign(property.target) { output in
+                            newCode.append(
+                                Instruction(
+                                    GetProperty(propertyName: propertyName), output: output,
+                                    inputs: [source]))
+                        }
+                    case .computed:
+                        // The key is evaluated before the load, which is not observable here.
+                        let key = nextInput()
+                        assign(property.target) { output in
+                            newCode.append(
+                                Instruction(
+                                    GetComputedProperty(), output: output, inputs: [source, key]))
+                        }
+                    }
+                }
+            case .array(let arr):
+                for (index, element) in arr.elements.enumerated() {
+                    assign(element.target) { output in
+                        newCode.append(
+                            Instruction(
+                                GetElement(index: Int64(index)), output: output, inputs: [source]))
+                    }
+                }
+            }
+        }
+
         for instr in helper.code {
+            typer.analyze(instr)
+
             var keepInstruction = true
             switch instr.op.opcode {
 
-            // TODO(rherouart): Also simplify DestructAndReassign in a similar way (by converting flat targets into individual assignment operations).
-            // TODO(rherouart): Consider a secondary simplification step that tries to drop default values.
+            // TODO(rherouart): Add a pass that drops unused rest elements and default values so more patterns can be lowered.
             case .destruct(let op):
-                guard !op.pattern.hasNestedDestructuring else { break }
-                guard
-                    instr.outputs.count > 1
-                        || (instr.outputs.count == 1 && !op.pattern.hasRestElement)
-                else { break }
+                let source = instr.input(0)
+                guard canBeLowered(op.pattern, source: source) else { break }
 
+                var inputs = instr.inputs.dropFirst().makeIterator()
                 var outputs = instr.outputs.makeIterator()
+                lower(
+                    op.pattern, of: source, nextInput: { inputs.next()! },
+                    nextOutput: { outputs.next()! })
+                assert(inputs.next() == nil && outputs.next() == nil)
+                keepInstruction = false
 
-                switch op.pattern {
-                case .object(let obj):
-                    var leftOverProperties: [DestructuringPattern.ObjectProperty] = []
-                    var leftOverOutputs: [Variable] = []
-                    var simplifiedAny = false
+            case .destructAndReassign(let op):
+                var source = instr.input(0)
+                guard canBeLowered(op.pattern, source: source) else { break }
 
-                    for property in obj.properties {
-                        let output = outputs.next()!
-                        if case .string(let propertyName) = property.key, !property.hasDefaultValue
-                        {
-                            newCode.append(
-                                Instruction(
-                                    GetProperty(propertyName: propertyName),
-                                    output: output, inputs: [instr.input(0)]))
-                            simplifiedAny = true
-                        } else {
-                            leftOverProperties.append(property)
-                            leftOverOutputs.append(output)
-                        }
-                    }
-
-                    if obj.hasRestElement {
-                        leftOverOutputs.append(outputs.next()!)
-                    }
-
-                    if simplifiedAny {
-                        if !leftOverProperties.isEmpty || obj.hasRestElement {
-                            newCode.append(
-                                Instruction(
-                                    Destruct(
-                                        pattern: DestructuringPattern.object(
-                                            DestructuringPattern.ObjectPattern(
-                                                properties: leftOverProperties,
-                                                hasRestElement: obj.hasRestElement)),
-                                        numInputs: instr.inputs.count,
-                                        numOutputs: leftOverOutputs.count),
-                                    inouts: Array(instr.inputs) + leftOverOutputs))
-                        }
-                        keepInstruction = false
-                    }
-
-                case .array(let arr):
-                    var leftOverElements: [DestructuringPattern.ArrayElement] = []
-                    var leftOverOutputs: [Variable] = []
-                    var currentIndex = 0
-                    var simplifiedAny = false
-
-                    for element in arr.elements {
-                        if case .flatBinding = element.target, !element.hasDefaultValue {
-                            let output = outputs.next()!
-                            newCode.append(
-                                Instruction(
-                                    GetElement(index: Int64(currentIndex)),
-                                    output: output, inputs: [instr.input(0)]))
-                            leftOverElements.append(
-                                DestructuringPattern.ArrayElement(target: nil))
-                            simplifiedAny = true
-                        } else {
-                            if element.target == nil {
-                                // No output variable for elisions
-                            } else {
-                                leftOverOutputs.append(outputs.next()!)
-                            }
-                            leftOverElements.append(element)
-                        }
-                        currentIndex += 1
-                    }
-
-                    if arr.restTarget != .none {
-                        leftOverOutputs.append(outputs.next()!)
-                    }
-
-                    if simplifiedAny {
-                        if !leftOverOutputs.isEmpty {
-                            newCode.append(
-                                Instruction(
-                                    Destruct(
-                                        pattern: DestructuringPattern.array(
-                                            DestructuringPattern.ArrayPattern(
-                                                elements: leftOverElements,
-                                                restTarget: arr.restTarget)),
-                                        numInputs: instr.inputs.count,
-                                        numOutputs: leftOverOutputs.count),
-                                    inouts: Array(instr.inputs) + leftOverOutputs))
-                        }
-                        keepInstruction = false
-                    }
+                // The lowering reads the source once per part, so if the source is also a
+                // target we need to keep a copy of its original value.
+                if instr.inputs.dropFirst().contains(source) {
+                    let copy = allocateVariable()
+                    newCode.append(Instruction(Dup(), output: copy, inputs: [source]))
+                    source = copy
                 }
+
+                var inputs = instr.inputs.dropFirst().makeIterator()
+                lower(op.pattern, of: source, nextInput: { inputs.next()! }, nextOutput: nil)
+                assert(inputs.next() == nil)
+                keepInstruction = false
+
             default:
                 break
             }
@@ -278,6 +366,9 @@ struct InstructionSimplifier: Reducer {
 
         let didMakeChanges = numCopiedInstructions != helper.code.count
         if didMakeChanges {
+            if didAllocateVariables {
+                newCode.renumberVariables()
+            }
             helper.testAndCommit(newCode)
         }
     }

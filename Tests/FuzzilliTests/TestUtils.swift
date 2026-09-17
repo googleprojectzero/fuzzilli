@@ -87,6 +87,16 @@ func shouldRunCompilerTests() -> Bool {
     return true
 }
 
+/// A ProgramEvaluator that accepts every reduction.
+///
+/// During minimization a reduction is only kept if the program still has the aspects we are
+/// interested in. This applies them unconditionally instead.
+final class AlwaysAcceptingEvaluator: MockEvaluator {
+    override func hasAspects(_ execution: Execution, _ aspects: ProgramAspects) -> Bool {
+        return true
+    }
+}
+
 @Suite struct TestUtilsTests {
 
     // Test that running a program via the JavaScriptExecutor that produces a large output succeeds.
