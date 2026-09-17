@@ -4061,118 +4061,6 @@ struct ProgramBuilderTests {
             #expect(b.type(of: v).Is(producedType))
         }
     }
-}
-
-struct ProgramBuilderRuntimeDataTests {
-    func runFuzzerWithGenerator(_ generator: CodeGenerator) -> String {
-        let fuzzer = makeMockFuzzer(overwriteGenerators: WeightedList([(generator, 1)]))
-        return fuzzer.sync {
-            let b = fuzzer.makeBuilder()
-
-            let syntheticGenerator = b.assembleSyntheticGenerator(for: generator)
-            #expect(syntheticGenerator != nil)
-            let numInstructions = b.complete(generator: syntheticGenerator!, withBudget: 3)
-            #expect(numInstructions > 0)
-
-            let program = b.finalize()
-            return fuzzer.lifter.lift(program)
-        }
-    }
-
-    @Test func testNested() {
-        let loopGenerator = CodeGenerator(
-            "TestDoWhileLoop",
-            [
-                GeneratorStub("BeginLoop") { b in
-                    let loopVar = b.loadInt(0)
-                    b.runtimeData.push("loopVar", loopVar)
-                    b.emit(BeginDoWhileLoopBody())
-                },
-                GeneratorStub("EndLoop") { b in
-                    let loopVar = b.runtimeData.pop("loopVar")
-                    b.unary(.PreInc, loopVar)
-                    b.emit(BeginDoWhileLoopHeader())
-                    let cond = b.compare(loopVar, with: b.loadInt(3), using: .lessThan)
-                    b.emit(EndDoWhileLoop(), withInputs: [cond])
-                },
-            ])
-        let expected = """
-            let v0 = 0;
-            do {
-                let v2 = 0;
-                do {
-                    ++v2;
-                } while (v2 < 3)
-                ++v0;
-            } while (v0 < 3)
-
-            """
-        #expect(runFuzzerWithGenerator(loopGenerator) == expected)
-    }
-
-    @Test func testMultiLabel() {
-        var counter: Int64 = 0
-        let defineAndAddGenerator = CodeGenerator(
-            "TestMultiLabel",
-            [
-                GeneratorStub("Define") { b in
-                    b.runtimeData.push("first", b.loadInt(counter))
-                    counter += 1
-                    b.runtimeData.push("second", b.loadInt(counter))
-                    counter += 1
-                    b.runtimeData.push("third", b.loadInt(counter))
-                    counter += 1
-                },
-                GeneratorStub("Add") { b in
-                    // The order in which the different lables are popped doesn't matter.
-                    let third = b.runtimeData.pop("third")
-                    let first = b.runtimeData.pop("first")
-                    let second = b.runtimeData.pop("second")
-                    b.binary(b.binary(first, second, with: .Add), third, with: .Add)
-                },
-            ])
-        let expected = """
-            (3 + 4) + 5;
-            (0 + 1) + 2;
-
-            """
-        #expect(runFuzzerWithGenerator(defineAndAddGenerator) == expected)
-    }
-
-    @Test func testPassOn() {
-        var counter: Int64 = 10
-        let defineAndAddGenerator = CodeGenerator(
-            "TestPassOn",
-            [
-                GeneratorStub("Define") { b in
-                    let value = b.loadInt(counter)
-                    b.runtimeData.push("value", value)
-                    b.binary(value, b.loadInt(0), with: .Add)
-                    counter += 1
-                },
-                GeneratorStub("AddOne") { b in
-                    let value = b.runtimeData.peek("value")
-                    b.binary(value, b.loadInt(1), with: .Add)
-                },
-                GeneratorStub("SubOne") { b in
-                    let value = b.runtimeData.pop("value")
-                    b.binary(value, b.loadInt(1), with: .Sub)
-                },
-            ])
-        let expected = """
-            10 + 0;
-            11 + 0;
-            11 + 1;
-            11 - 1;
-            10 + 1;
-            12 + 0;
-            12 + 1;
-            12 - 1;
-            10 - 1;
-
-            """
-        #expect(runFuzzerWithGenerator(defineAndAddGenerator) == expected)
-    }
 
     @Test func testGeneratorResolutionLoopDetection() {
         /*
@@ -5028,5 +4916,117 @@ struct ProgramBuilderRuntimeDataTests {
                 calledGenerators.firstIndex(of: "GenA")! < calledGenerators.firstIndex(
                     of: "GenRecursionRoot")!)
         }
+    }
+}
+
+struct ProgramBuilderRuntimeDataTests {
+    func runFuzzerWithGenerator(_ generator: CodeGenerator) -> String {
+        let fuzzer = makeMockFuzzer(overwriteGenerators: WeightedList([(generator, 1)]))
+        return fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            let syntheticGenerator = b.assembleSyntheticGenerator(for: generator)
+            #expect(syntheticGenerator != nil)
+            let numInstructions = b.complete(generator: syntheticGenerator!, withBudget: 3)
+            #expect(numInstructions > 0)
+
+            let program = b.finalize()
+            return fuzzer.lifter.lift(program)
+        }
+    }
+
+    @Test func testNested() {
+        let loopGenerator = CodeGenerator(
+            "TestDoWhileLoop",
+            [
+                GeneratorStub("BeginLoop") { b in
+                    let loopVar = b.loadInt(0)
+                    b.runtimeData.push("loopVar", loopVar)
+                    b.emit(BeginDoWhileLoopBody())
+                },
+                GeneratorStub("EndLoop") { b in
+                    let loopVar = b.runtimeData.pop("loopVar")
+                    b.unary(.PreInc, loopVar)
+                    b.emit(BeginDoWhileLoopHeader())
+                    let cond = b.compare(loopVar, with: b.loadInt(3), using: .lessThan)
+                    b.emit(EndDoWhileLoop(), withInputs: [cond])
+                },
+            ])
+        let expected = """
+            let v0 = 0;
+            do {
+                let v2 = 0;
+                do {
+                    ++v2;
+                } while (v2 < 3)
+                ++v0;
+            } while (v0 < 3)
+
+            """
+        #expect(runFuzzerWithGenerator(loopGenerator) == expected)
+    }
+
+    @Test func testMultiLabel() {
+        var counter: Int64 = 0
+        let defineAndAddGenerator = CodeGenerator(
+            "TestMultiLabel",
+            [
+                GeneratorStub("Define") { b in
+                    b.runtimeData.push("first", b.loadInt(counter))
+                    counter += 1
+                    b.runtimeData.push("second", b.loadInt(counter))
+                    counter += 1
+                    b.runtimeData.push("third", b.loadInt(counter))
+                    counter += 1
+                },
+                GeneratorStub("Add") { b in
+                    // The order in which the different lables are popped doesn't matter.
+                    let third = b.runtimeData.pop("third")
+                    let first = b.runtimeData.pop("first")
+                    let second = b.runtimeData.pop("second")
+                    b.binary(b.binary(first, second, with: .Add), third, with: .Add)
+                },
+            ])
+        let expected = """
+            (3 + 4) + 5;
+            (0 + 1) + 2;
+
+            """
+        #expect(runFuzzerWithGenerator(defineAndAddGenerator) == expected)
+    }
+
+    @Test func testPassOn() {
+        var counter: Int64 = 10
+        let defineAndAddGenerator = CodeGenerator(
+            "TestPassOn",
+            [
+                GeneratorStub("Define") { b in
+                    let value = b.loadInt(counter)
+                    b.runtimeData.push("value", value)
+                    b.binary(value, b.loadInt(0), with: .Add)
+                    counter += 1
+                },
+                GeneratorStub("AddOne") { b in
+                    let value = b.runtimeData.peek("value")
+                    b.binary(value, b.loadInt(1), with: .Add)
+                },
+                GeneratorStub("SubOne") { b in
+                    let value = b.runtimeData.pop("value")
+                    b.binary(value, b.loadInt(1), with: .Sub)
+                },
+            ])
+        let expected = """
+            10 + 0;
+            11 + 0;
+            11 + 1;
+            11 - 1;
+            10 + 1;
+            12 + 0;
+            12 + 1;
+            12 - 1;
+            10 - 1;
+
+            """
+        #expect(runFuzzerWithGenerator(defineAndAddGenerator) == expected)
     }
 }
