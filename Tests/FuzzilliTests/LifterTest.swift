@@ -6093,4 +6093,56 @@ struct LifterTests {
             #expect(actual == expected)
         }
     }
+
+    @Test func testLiftingAvoidsIdentifierCollisions() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            let f = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+                b.createNamedDisposableVariable("C3", args[0])
+            }
+            let cls = b.buildClassDefinition { _ in }
+            b.buildConstructor(with: .parameters(n: 0)) { _ in }
+            let gen = b.buildGeneratorFunction(with: .parameters(n: 0)) { _ in }
+            b.buildAsyncFunction(with: .parameters(n: 0)) { _ in
+                b.createNamedAsyncDisposableVariable("f6", f)
+            }
+            let instance = b.construct(f)
+            b.createNamedVariable("v9", declarationMode: .const, initialValue: instance)
+            b.createNamedVariable("a1", declarationMode: .let, initialValue: cls)
+            b.buildPlainFunction(with: .parameters(n: 0), named: "F4") { _ in }
+            b.buildGeneratorFunction(with: .parameters(n: 0), named: "f7") { _ in }
+            b.createNamedVariable("f0", declarationMode: .var, initialValue: gen)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                function f0_(a1_) {
+                    using C3 = a1_;
+                }
+                class C3_ {
+                }
+                function F4_() {
+                    if (!new.target) { throw 'must be called with new'; }
+                }
+                function* f6_() {
+                }
+                async function f7_() {
+                    await using f6 = f0_;
+                }
+                const v9_ = new f0_();
+                const v9 = v9_;
+                let a1 = C3_;
+                function F4() {
+                }
+                function* f7() {
+                }
+                var f0 = f6_;
+
+                """
+            #expect(actual == expected)
+        }
+    }
 }

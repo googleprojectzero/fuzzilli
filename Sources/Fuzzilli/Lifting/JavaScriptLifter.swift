@@ -152,6 +152,7 @@ public class JavaScriptLifter: Lifter {
             }
         }.indices
 
+        var reservedNames = Set<String>()
         for instr in program.code {
             analyzer.analyze(instr)
             if instr.op is Explore { needToSupportExploration = true }
@@ -159,6 +160,18 @@ public class JavaScriptLifter: Lifter {
             if instr.op is Fixup { needToSupportFixup = true }
             if instr.op is BeginWasmModule { needToSupportWasm = true }
             if instr.op is RawWasmModule { needToSupportWasmProxy = true }
+            switch instr.op.opcode {
+            case .createNamedVariable(let op):
+                reservedNames.insert(op.variableName)
+            case .createNamedDisposableVariable(let op):
+                reservedNames.insert(op.variableName)
+            case .createNamedAsyncDisposableVariable(let op):
+                reservedNames.insert(op.variableName)
+            default:
+                if let op = instr.op as? BeginAnyNamedFunction, let name = op.functionName {
+                    reservedNames.insert(name)
+                }
+            }
         }
         analyzer.finishAnalysis()
 
@@ -171,7 +184,8 @@ public class JavaScriptLifter: Lifter {
             analyzer: analyzer, version: version,
             stripComments: !options.contains(.includeComments),
             includeLineNumbers: options.contains(.includeLineNumbers),
-            alwaysEmitVariables: alwaysEmitVariables)
+            alwaysEmitVariables: alwaysEmitVariables,
+            reservedNames: reservedNames)
 
         var wasmCodeStarts: Int? = nil
         var wasmTypeGroupStarts: Int? = nil
@@ -399,7 +413,7 @@ public class JavaScriptLifter: Lifter {
                     case .const:
                         w.emit("const \(op.variableName) = \(input(0));")
                     }
-                    w.declare(instr.output, as: op.variableName)
+                    w.declare(instr.output, sourceName: op.variableName)
                 } else {
                     // Emit an explicit declaration if we're going to use the variable in an export.
                     // This avoids "export {SomeBuiltin as foo}" and forces "const v1 = SomeBuiltin; export {v1 as foo}".
@@ -408,17 +422,17 @@ public class JavaScriptLifter: Lifter {
                         let V = w.declare(instr.output)
                         w.emit("const \(V) = \(op.variableName);")
                     } else {
-                        w.declare(instr.output, as: op.variableName)
+                        w.declare(instr.output, sourceName: op.variableName)
                     }
                 }
 
             case .createNamedDisposableVariable(let op):
                 w.emit("using \(op.variableName) = \(input(0));")
-                w.declare(instr.output, as: op.variableName)
+                w.declare(instr.output, sourceName: op.variableName)
 
             case .createNamedAsyncDisposableVariable(let op):
                 w.emit("await using \(op.variableName) = \(input(0));")
-                w.declare(instr.output, as: op.variableName)
+                w.declare(instr.output, sourceName: op.variableName)
 
             case .loadDisposableVariable:
                 let V = w.declare(instr.output)
@@ -566,8 +580,7 @@ public class JavaScriptLifter: Lifter {
                     w.emit("\(LET) \(V) = class\(EXTENDS) {")
                 } else {
                     // The name of the class is set to the uppercased variable name. This ensures that the heuristics used by the JavaScriptExploreLifting code to detect constructors works correctly (see shouldTreatAsConstructor).
-                    let NAME = "C\(instr.output.number)"
-                    w.declare(instr.output, as: NAME)
+                    let NAME = w.declare(instr.output, as: "C\(instr.output.number)")
                     w.emit("class \(NAME)\(EXTENDS) {")
                 }
                 w.enterNewBlock()
@@ -1011,8 +1024,7 @@ public class JavaScriptLifter: Lifter {
 
             case .beginConstructor(let op):
                 // Make the constructor name uppercased so that the difference to a plain function is visible, but also so that the heuristics to determine which functions are constructors in the ExplorationMutator work correctly.
-                let NAME = "F\(instr.output.number)"
-                w.declare(instr.output, as: NAME)
+                let NAME = w.declare(instr.output, as: "F\(instr.output.number)")
                 let vars = w.declareAll(instr.innerOutputs.dropFirst(), usePrefix: "a")
                 var defaultValues = [String?](repeating: nil, count: op.parameters.count)
                 for (inputIdx, paramIdx) in op.parameters.defaultParameterIndices.enumerated() {
@@ -2320,13 +2332,12 @@ public class JavaScriptLifter: Lifter {
         guard let op = instr.op as? BeginAnyFunction else {
             fatalError("Invalid operation passed to liftFunctionDefinitionBegin")
         }
-        let functionName: String
-        if let op = instr.op as? BeginAnyNamedFunction, op.functionName != nil {
-            functionName = op.functionName!
+        let NAME: String
+        if let sourceName = (instr.op as? BeginAnyNamedFunction)?.functionName {
+            NAME = w.declare(instr.output, sourceName: sourceName)
         } else {
-            functionName = "f\(instr.output.number)"
+            NAME = w.declare(instr.output, as: "f\(instr.output.number)")
         }
-        let NAME = w.declare(instr.output, as: functionName)
         let vars = w.declareAll(instr.innerOutputs, usePrefix: "a")
 
         var defaultValues = [String?](repeating: nil, count: op.parameters.count)
@@ -2602,10 +2613,12 @@ public class JavaScriptLifter: Lifter {
         // identifier of the JavaScript variable again (the lhs of the reassignment). This map is used to remember these identifiers.
         // See `reassign()` for more details about reassignment inlining.
         private var inlinedReassignments = VariableMap<Expression>()
+        private let reservedNames: Set<String>
 
         init(
             analyzer: DefUseAnalyzer, version: ECMAScriptVersion, stripComments: Bool = false,
-            includeLineNumbers: Bool = false, indent: Int = 4, alwaysEmitVariables: Bool = false
+            includeLineNumbers: Bool = false, indent: Int = 4, alwaysEmitVariables: Bool = false,
+            reservedNames: Set<String> = []
         ) {
             self.writer = ScriptWriter(
                 stripComments: stripComments, includeLineNumbers: includeLineNumbers, indent: indent
@@ -2614,6 +2627,15 @@ public class JavaScriptLifter: Lifter {
             self.varKeyword = version == .es6 ? "let" : "var"
             self.constKeyword = version == .es6 ? "const" : "var"
             self.alwaysEmitVariables = alwaysEmitVariables
+            self.reservedNames = reservedNames
+        }
+
+        func uniqueName(_ name: String) -> String {
+            var name = name
+            while reservedNames.contains(name) {
+                name += "_"
+            }
+            return name
         }
 
         /// Assign a JavaScript expression to a FuzzIL variable.
@@ -2786,7 +2808,7 @@ public class JavaScriptLifter: Lifter {
                 // them multiple times (if the same expression is "un-inlined" multiple times).
                 // We could instead remember the existing local variable for as long as it is visible, but it's
                 // probably not worth the effort.
-                let V = "t" + String(writer.currentLineNumber)
+                let V = uniqueName("t" + String(writer.currentLineNumber))
                 emit("\(LET) \(V) = \(expr);")
                 return Identifier.new(V)
             }
@@ -2815,9 +2837,19 @@ public class JavaScriptLifter: Lifter {
         @discardableResult
         mutating func declare(_ v: Variable, as maybeName: String? = nil) -> String {
             assert(!expressions.contains(v))
-            let name = maybeName ?? "v" + String(v.number)
+            let name = uniqueName(maybeName ?? "v" + String(v.number))
             expressions[v] = Identifier.new(name)
             return name
+        }
+
+        @discardableResult
+        mutating func declare(_ v: Variable, sourceName: String) -> String {
+            assert(!expressions.contains(v))
+            guard reservedNames.contains(sourceName) else {
+                fatalError("Source name \(sourceName) must be in reservedNames")
+            }
+            expressions[v] = Identifier.new(sourceName)
+            return sourceName
         }
 
         mutating func link(_ v2: Variable, to v1: Variable) {
