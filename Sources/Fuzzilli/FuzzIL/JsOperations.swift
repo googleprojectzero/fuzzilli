@@ -291,9 +291,14 @@ public struct RegExpFlags: OptionSet, Hashable {
         var strRepr = ""
 
         // These flags are mutually exclusive, will lead to runtime exceptions if used together
-        assert(!(contains(.unicode) && contains(.unicodeSets)))
+        if contains(.unicode) && contains(.unicodeSets) {
+            fatalError("Invalid regexp flags")
+        }
+        if !RegExpFlags.allKnownFlags.isSuperset(of: self) {
+            fatalError("Unknown regexp flag")
+        }
 
-        for (flag, char) in RegExpFlags.flagToCharDict {
+        for (flag, char) in RegExpFlags.flagsInOrder {
             if contains(flag) {
                 strRepr += char
             }
@@ -355,17 +360,23 @@ public struct RegExpFlags: OptionSet, Hashable {
         return flags
     }
 
-    private static let flagToCharDict: [RegExpFlags: String] = [
-        .empty: "",
-        .caseInsensitive: "i",
-        .global: "g",
-        .multiline: "m",
-        .dotall: "s",
-        .unicode: "u",
-        .sticky: "y",
-        .hasIndices: "d",
-        .unicodeSets: "v",
+    // The flags together with their character representation. This must be an
+    // ordered collection so that we always produce the same string when
+    // lifting.
+    private static let flagsInOrder: [(RegExpFlags, String)] = [
+        (.hasIndices, "d"),
+        (.global, "g"),
+        (.caseInsensitive, "i"),
+        (.multiline, "m"),
+        (.dotall, "s"),
+        (.unicode, "u"),
+        (.unicodeSets, "v"),
+        (.sticky, "y"),
     ]
+
+    private static let allKnownFlags = flagsInOrder.reduce(into: RegExpFlags.empty) {
+        $0.formUnion($1.0)
+    }
 
     static func | (lhs: RegExpFlags, rhs: RegExpFlags) -> RegExpFlags {
         return RegExpFlags(rawValue: lhs.rawValue | rhs.rawValue)

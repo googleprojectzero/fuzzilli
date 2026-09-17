@@ -1591,6 +1591,48 @@ struct LifterTests {
         }
     }
 
+    @Test func testRegExpFlagOrder() {
+        // Regexp flags must be emitted in a fixed order.
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            // All flags except the unicodeSets flag, which is mutually exclusive with unicode.
+            let allButUnicodeSets: RegExpFlags = [
+                .hasIndices, .global, .caseInsensitive, .multiline, .dotall, .unicode, .sticky,
+            ]
+            b.loadRegExp("a", allButUnicodeSets)
+            b.loadRegExp(
+                "b",
+                [
+                    .hasIndices, .global, .caseInsensitive, .multiline, .dotall, .unicodeSets,
+                    .sticky,
+                ])
+            // Subsets, to make sure the order doesn't depend on which flags are present.
+            b.loadRegExp("c", [.sticky, .global])
+            b.loadRegExp("d", [.unicode, .caseInsensitive])
+            b.loadRegExp("e", RegExpFlags())
+
+            let program = b.finalize()
+
+            let actual = fuzzer.lifter.lift(program)
+            let expected = """
+                /a/dgimsuy;
+                /b/dgimsvy;
+                /c/gy;
+                /d/iu;
+                /e/;
+
+                """
+
+            #expect(actual == expected)
+
+            // The string representation must also round-trip back to the same flags.
+            #expect(RegExpFlags.fromString(allButUnicodeSets.asString()) == allButUnicodeSets)
+        }
+    }
+
     @Test func testNestedCodeStrings() {
         let fuzzer = makeMockFuzzer()
         fuzzer.sync {
