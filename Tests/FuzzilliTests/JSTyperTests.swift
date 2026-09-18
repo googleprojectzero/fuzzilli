@@ -1841,6 +1841,44 @@ struct JSTyperTests {
         }
     }
 
+    @Test func testDestructAndReassignPropertyTargetTypeInference() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            let srcObj = b.createObject(with: ["a": b.loadInt(42)])
+            let srcArr = b.createArray(with: [b.loadString("hello")])
+            let targetObj = b.createObject(with: [:])
+
+            #expect(b.type(of: targetObj).properties.isEmpty)
+
+            // Object destructuring reassignment to a property target: ({ a: targetObj.foo } = srcObj)
+            let objPattern = DestructuringPattern.ObjectPattern(
+                properties: [
+                    DestructuringPattern.ObjectProperty(
+                        key: .string("a"),
+                        target: .property("foo"))
+                ],
+                hasRestElement: false)
+            b.destruct(srcObj, using: .object(objPattern), into: [targetObj])
+            #expect(b.type(of: targetObj).properties == ["foo"])
+
+            // Array destructuring reassignment to property targets: ([targetObj.bar, ...targetObj.baz] = srcArr)
+            let arrPattern = DestructuringPattern.ArrayPattern(
+                elements: [
+                    DestructuringPattern.ArrayElement(
+                        target: .property("bar"),
+                        hasDefaultValue: false)
+                ],
+                restTarget: .property("baz"))
+            b.destruct(srcArr, using: .array(arrPattern), into: [targetObj, targetObj])
+            #expect(b.type(of: targetObj).properties == ["foo", "bar", "baz"])
+
+            // Subsequent operations (e.g. rest destructuring) observe the newly added properties.
+            let outputs = b.destruct(targetObj, selecting: ["foo"], hasRestElement: true)
+            #expect(b.type(of: outputs[1]) == .object(withProperties: ["bar", "baz"]))
+        }
+    }
+
     @Test func testForOfLoopDestructTypeInference() {
         let fuzzer = makeMockFuzzer()
         fuzzer.sync {

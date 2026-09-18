@@ -3165,7 +3165,12 @@ public struct JSTyper: Analyzer {
             processDestructuring(
                 p, on: sourceVar, isRoot: false, iterator: &iterator,
                 isReassignment: isReassignment)
-        case .property(_), .element(_), .superComputedProperty, .privateProperty:
+        case .property(let propertyName):
+            if isReassignment {
+                let obj = iterator.next()!
+                set(obj, type(of: obj).adding(property: propertyName))
+            }
+        case .element(_), .superComputedProperty, .privateProperty:
             if isReassignment { _ = iterator.next()! }
         case .computedProperty:
             if isReassignment {
