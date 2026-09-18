@@ -646,8 +646,10 @@ public class Fuzzer {
         switch result {
         case .dropped, .needsWasm, .needsBundles, .imported:
             return (result, 0)
-        case .failed(_):
-            break
+        case .failed(let outcome):
+            if !outcome.isFailure() {
+                return (result, 0)
+            }
         }
 
         let b = makeBuilder()
@@ -670,8 +672,10 @@ public class Fuzzer {
         switch result {
         case .dropped, .needsWasm, .needsBundles, .imported:
             return (result, 1)
-        case .failed(_):
-            break
+        case .failed(let outcome):
+            if !outcome.isFailure() {
+                return (result, 1)
+            }
         }
 
         // Second attempt at fixing the program: enable guards (try-catch) for all guardable operations
@@ -699,8 +703,10 @@ public class Fuzzer {
         switch result {
         case .dropped, .needsWasm, .needsBundles, .imported:
             return (result, 2)
-        case .failed(_):
-            break
+        case .failed(let outcome):
+            if !outcome.isFailure() {
+                return (result, 2)
+            }
         }
 
         // Third and final attempt at fixing up the program: simply wrap the entire program in a try-catch block.
