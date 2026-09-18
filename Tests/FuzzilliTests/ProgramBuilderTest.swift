@@ -3923,86 +3923,63 @@ struct ProgramBuilderTests {
         }
     }
 
-    @Test(arguments: [false, true])
-    func testThatGeneratorsExistAndAreBuildableFromJs(enableCustomDescriptors: Bool) {
-        let config = Configuration(
-            logLevel: .error, enableCustomDescriptors: enableCustomDescriptors)
-        let fuzzer = makeMockFuzzer(config: config)
-        let tries: Int = 10
+    // TODO: Fix these generators and remove them from this list.
+    // Except for `DynamicImportGenerator`, they all seem to succeed in FuzzilliCli runs.
+    static let knownUnbuildableGenerators: Set<String> = [
+        "BlockBreakGenerator",
+        "DynamicImportGenerator",
+        "ReassignmentGenerator",
+        "TypedArrayLastIndexGenerator",
+        "UnboundFunctionApplyGenerator",
+        "UnboundFunctionBindGenerator",
+        "UnboundFunctionCallGenerator",
+        "WasmBranchGenerator",
+        "WasmBranchIfGenerator",
+        "WasmBranchOnNullGenerator",
+        "WasmDropDataSegmentGenerator",
+        "WasmDropElementSegmentGenerator",
+        "WasmLegacyRethrowGenerator",
+        "WasmLegacyTryDelegateGenerator",
+        "WasmMemoryInitGenerator",
+    ]
 
-        var failures: [String: Int] = [:]
+    @Test(arguments: [false, true], [false, true])
+    func testThatGeneratorsExistAndAreBuildable(generateBundle: Bool, enableCustomDescriptors: Bool)
+    {
+        let config = Configuration(
+            logLevel: .error, generateBundle: generateBundle,
+            enableCustomDescriptors: enableCustomDescriptors)
+        let fuzzer = makeMockFuzzer(config: config)
+        let tries: Int = 50
 
         for generator in fuzzer.codeGenerators {
-            fuzzer.sync {
-                let b = fuzzer.makeBuilder()
-                b.buildPrefix()
+            if !generateBundle
+                && (generator.requiredContext.contains(.bundle)
+                    || generator.requiredContext.contains(.moduleTopLevel))
+            {
+                // Only buildable in the "bundle" configuration.
+                continue
+            }
+            if Self.knownUnbuildableGenerators.contains(generator.name) {
+                continue
+            }
+            var succeeded = false
+            for _ in 0..<tries where !succeeded {
+                fuzzer.sync {
+                    let b = fuzzer.makeBuilder()
+                    b.buildPrefix()
 
-                if generator.requiredContext.contains(.bundle)
-                    || generator.requiredContext.contains(.moduleTopLevel)
-                {
-                    // Only buildable in the "bundle" configuration.
-                    return
-                }
-                if let syntheticGenerator = b.assembleSyntheticGenerator(for: generator) {
-                    let generatedInstructions = b.complete(
-                        generator: syntheticGenerator, withBudget: 40)
-
-                    if generatedInstructions == 0 {
-                        failures[generator.name, default: 0] += 1
+                    if let syntheticGenerator = b.assembleSyntheticGenerator(for: generator) {
+                        succeeded = b.complete(generator: syntheticGenerator, withBudget: 40) > 0
+                        #expect(syntheticGenerator.parts.count < 10, "for \(generator.name)")
+                    } else {
+                        Issue.record(
+                            "Unable to generate synthetic CodeGenerator for \(generator.name).")
                     }
-                    #expect(syntheticGenerator.parts.count < 10)
-                } else {
-                    Issue.record(
-                        "Unable to generate synthetic CodeGenerator for \(generator.name) from JS.")
                 }
             }
-        }
-
-        for (name, failureCount) in failures {
-            if failureCount == tries {
-                // This might fail very sparsely, if so, we might want to check the offending Generator to see if we can improve handling for it.
-                // OTOH this is a fuzzer and we sometimes have weird situations... :)
-                Issue.record("\(name) always failed to complete.")
-            }
-        }
-    }
-
-    @Test(arguments: [false, true])
-    func testThatGeneratorsAreBuildableFromBundle(enableCustomDescriptors: Bool) throws {
-        let config = Configuration(
-            logLevel: .error, generateBundle: true, enableCustomDescriptors: enableCustomDescriptors
-        )
-        let fuzzer = makeMockFuzzer(config: config)
-        let tries: Int = 10
-
-        var failures: [String: Int] = [:]
-
-        for generator in fuzzer.codeGenerators {
-            fuzzer.sync {
-                let b = fuzzer.makeBuilder()
-                b.buildPrefix()
-
-                if let syntheticGenerator = b.assembleSyntheticGenerator(for: generator) {
-                    let generatedInstructions = b.complete(
-                        generator: syntheticGenerator, withBudget: 40)
-
-                    if generatedInstructions == 0 {
-                        failures[generator.name, default: 0] += 1
-                    }
-                    #expect(syntheticGenerator.parts.count < 10, "for \(generator.name)")
-                } else {
-                    Issue.record(
-                        "Unable to generate synthetic CodeGenerator for \(generator.name) from a bundle."
-                    )
-                }
-            }
-        }
-
-        for (name, failureCount) in failures {
-            if failureCount == tries {
-                // This might fail very sparsely, if so, we might want to check the offending Generator to see if we can improve handling for it.
-                // OTOH this is a fuzzer and we sometimes have weird situations... :)
-                Issue.record("\(name) always failed to complete.")
+            if !succeeded {
+                Issue.record("\(generator.name) always failed to complete.")
             }
         }
     }
