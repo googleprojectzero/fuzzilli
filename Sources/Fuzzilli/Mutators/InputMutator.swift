@@ -117,6 +117,13 @@ public class InputMutator: BaseInstructionMutator {
         return b.randomVariable(ofType: type)
     }
 
+    private func findNullableRefVariant(of variable: Variable, _ b: ProgramBuilder) -> Variable? {
+        guard let refType = b.type(of: variable).wasmReferenceType else { return nil }
+        // This preserves the heap type including exactness, only nullability is possibly widened.
+        // Returned variables may still be non-nullable per the subtyping rules.
+        return b.randomVariable(ofType: .wasmRef(refType.kind, nullability: true))
+    }
+
     private func findInstructionSpecificWasmReplacement(
         forInput selectedInput: Int,
         of instr: Instruction,
@@ -131,15 +138,15 @@ public class InputMutator: BaseInstructionMutator {
             .wasmArraySet:
             // Input 0 is always the target struct or array reference.
             guard selectedInput == 0 else { return nil }
-            let currentType = b.type(of: inouts[selectedInput])
-            guard case .Index(let desc, let wasExact) = currentType.wasmReferenceType!.kind else {
-                fatalError("Expected index reference type for \(inouts[selectedInput])")
-            }
-            // Possibly replace the (possibly non-nullable) index ref with a nullable one,
-            // preserving exactness if the original input was exact.
-            let typeDesc = desc.get()!
-            let nullableType = ILType.wasmIndexRef(typeDesc, nullability: true, isExact: wasExact)
-            return b.randomVariable(ofType: nullableType)
+            return findNullableRefVariant(of: inouts[selectedInput], b)
+        case .wasmCallRef,
+            .wasmReturnCallRef,
+            .wasmStructNewDesc,
+            .wasmStructNewDefaultDesc:
+            // The function reference (for the call instructions), and
+            // the descriptor reference are the last input.
+            guard selectedInput == instr.numInputs - 1 else { return nil }
+            return findNullableRefVariant(of: inouts[selectedInput], b)
         case .wasmArrayLen:
             return b.randomVariable(ofType: .wasmArrayRef())
         default:
