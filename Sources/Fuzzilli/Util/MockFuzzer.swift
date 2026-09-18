@@ -148,10 +148,14 @@ public func makeMockFuzzer(
     let minimizer = Minimizer()
 
     // Use all builtin CodeGenerators
+    let builtinCodeGenerators =
+        CodeGenerators
+        + wasmCodeGenerators(enableCustomDescriptors: configuration.enableCustomDescriptors)
+
     let codeGenerators =
         overwriteGenerators
         ?? WeightedList<CodeGenerator>(
-            (CodeGenerators + WasmCodeGenerators).map {
+            builtinCodeGenerators.map {
                 guard let weight = codeGeneratorWeights[$0.name] else {
                     fatalError(
                         "Missing weight for CodeGenerator \($0.name) in CodeGeneratorWeights.swift")

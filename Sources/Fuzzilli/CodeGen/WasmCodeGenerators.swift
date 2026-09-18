@@ -29,38 +29,6 @@ private func generateBranchOnCast(
 ) {
     let function = b.currentWasmModule.currentWasmFunction
 
-    if let typeDef {
-        let structDesc =
-            b.type(of: typeDef).wasmTypeDefinition?.description
-            as? WasmStructTypeDescription
-        let descriptorDesc = structDesc?.descriptor
-        if let descriptorDesc, probability(0.5) {
-            let targetIsExact = targetRefType.wasmReferenceType!.kind.isExact
-            let descriptorType = ILType.wasmIndexRef(
-                descriptorDesc, nullability: probability(0.1), isExact: targetIsExact)
-            let descriptor = function.findOrGenerateWasmVar(ofType: descriptorType)
-            let descriptorIsExact = b.type(of: descriptor).wasmReferenceType!.kind.isExact
-            // If the target type is exact (the label type for branchOnCast or the fallthrough
-            // type for branchOnCastFail), the descriptor needs to be exact as well.
-            assert(!targetIsExact || descriptorIsExact)
-            let castTypeIsExact = targetIsExact || (descriptorIsExact && probability(0.5))
-            let castType = ILType.wasmRef(
-                .Index(isExact: castTypeIsExact),
-                nullability: targetRefType.wasmReferenceType!.nullability)
-
-            if branchOnCastFail {
-                function.wasmBranchOnCastDescEqFail(
-                    sourceVar, descriptorRef: descriptor, targetRefType: castType,
-                    to: label, args: args)
-            } else {
-                function.wasmBranchOnCastDescEq(
-                    sourceVar, descriptorRef: descriptor, targetRefType: castType,
-                    to: label, args: args)
-            }
-            return
-        }
-    }
-
     let unlinkedTargetRefType: ILType
     if typeDef != nil && !targetRefType.wasmReferenceType!.isAbstract() {
         let isExact = targetRefType.wasmReferenceType!.kind.isExact
@@ -80,6 +48,52 @@ private func generateBranchOnCast(
             sourceVar, targetRefType: unlinkedTargetRefType, to: label, args: args, typeDef: typeDef
         )
     }
+}
+
+public func wasmCodeGenerators(enableCustomDescriptors: Bool) -> [CodeGenerator] {
+    return WasmCodeGenerators
+        + [wasmTypeGroupWithAllTypesGenerator(withCustomDescriptors: enableCustomDescriptors)]
+        + (enableCustomDescriptors ? wasmCustomDescriptorsCodeGenerators : [])
+}
+
+private func wasmTypeGroupWithAllTypesGenerator(withCustomDescriptors: Bool) -> CodeGenerator {
+    let typeDefinitionGenerators: [GeneratorStub] =
+        [
+            wasmArrayTypeGenerator(),
+            wasmStructTypeGenerator(),
+            wasmSignatureTypeGenerator(),
+        ] + (withCustomDescriptors ? [wasmCustomDescriptorsStructTypesGenerator()] : [])
+
+    let producedTypes: [GeneratorStub.Constraint] =
+        [
+            .init(.wasmTypeDef(), .IsWasmArray),
+            .init(.wasmTypeDef(), .IsWasmStruct),
+            .init(.wasmTypeDef(), .IsWasmFunction),
+        ]
+        + (withCustomDescriptors
+            ? [
+                .init(.wasmTypeDef(), .IsWasmStructWithDescriptor),  // The described struct
+                .init(.wasmTypeDef(), .IsWasmStruct),  // The descriptor struct
+            ] : [])
+
+    return CodeGenerator(
+        "WasmTypeGroupWithAllTypesGenerator",
+        [
+            GeneratorStub(
+                "WasmTypeGroupBeginGenerator",
+                provides: [.wasmTypeGroup]
+            ) { b in
+                b.emit(WasmBeginTypeGroup())
+            }
+        ] + typeDefinitionGenerators + [
+            GeneratorStub(
+                "WasmTypeGroupEndGenerator",
+                inContext: .single(.wasmTypeGroup),
+                producesComplex: producedTypes
+            ) { b in
+                b.wasmEndTypeGroup()
+            }
+        ])
 }
 
 public let WasmCodeGenerators: [CodeGenerator] = [
@@ -185,39 +199,9 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             },
         ]),
 
-    CodeGenerator(
-        "WasmTypeGroupWithAllTypesGenerator",
-        [
-            GeneratorStub(
-                "WasmTypeGroupBeginGenerator",
-                provides: [.wasmTypeGroup]
-            ) { b in
-                b.emit(WasmBeginTypeGroup())
-            },
-            wasmArrayTypeGenerator(),
-            wasmStructTypeGenerator(),
-            wasmSignatureTypeGenerator(),
-            wasmCustomDescriptorsStructTypesGenerator(),
-            GeneratorStub(
-                "WasmTypeGroupEndGenerator",
-                inContext: .single(.wasmTypeGroup),
-                producesComplex: [
-                    .init(.wasmTypeDef(), .IsWasmArray),
-                    .init(.wasmTypeDef(), .IsWasmStruct),
-                    .init(.wasmTypeDef(), .IsWasmFunction),
-                    .init(.wasmTypeDef(), .IsWasmStruct),
-                    .init(.wasmTypeDef(), .IsWasmStruct),
-                ]
-            ) { b in
-                b.wasmEndTypeGroup()
-            },
-        ]),
-
     CodeGenerator("WasmArrayTypeGenerator", [wasmArrayTypeGenerator()]),
     CodeGenerator("WasmStructTypeGenerator", [wasmStructTypeGenerator()]),
     CodeGenerator("WasmSignatureTypeGenerator", [wasmSignatureTypeGenerator()]),
-    CodeGenerator(
-        "WasmCustomDescriptorsStructTypesGenerator", [wasmCustomDescriptorsStructTypesGenerator()]),
 
     CodeGenerator(
         "WasmSelfReferenceGenerator", inContext: .single(.wasmTypeGroup),
@@ -2848,11 +2832,10 @@ private let wasmCustomDescriptorsStructTypesGenerator = {
         "WasmCustomDescriptorsStructTypesGenerator",
         inContext: .single(.wasmTypeGroup),
         producesComplex: [
-            .init(.wasmTypeDef(), .IsWasmStruct),
-            .init(.wasmTypeDef(), .IsWasmStruct),
+            .init(.wasmTypeDef(), .IsWasmStructWithDescriptor),  // The described struct
+            .init(.wasmTypeDef(), .IsWasmStruct),  // The descriptor struct
         ]
     ) { b in
-        guard b.fuzzer.config.enableCustomDescriptors else { return }
         let finality = probability(0.25)
         let (fieldsA, indexTypesA) = b.generateRandomWasmStructFields()
         let typeA = b.wasmDefineStructType(
@@ -2862,5 +2845,114 @@ private let wasmCustomDescriptorsStructTypesGenerator = {
         let (fieldsB, indexTypesB) = b.generateRandomWasmStructFields()
         _ = b.wasmDefineStructType(
             fields: fieldsB, indexTypes: indexTypesB, isFinal: finality, describes: typeA)
+    }
+}
+
+/// Code generators that may only be used if the custom descriptors feature is enabled.
+///
+/// These are registered separately (see `wasmCodeGenerators()`) because they guarantee to
+/// produce/consume struct types with custom descriptors, which cannot be created when the feature
+/// is disabled.
+private let wasmCustomDescriptorsCodeGenerators: [CodeGenerator] = [
+    CodeGenerator(
+        "WasmCustomDescriptorsStructTypesGenerator", [wasmCustomDescriptorsStructTypesGenerator()]),
+
+    CodeGenerator(
+        "WasmBranchOnCastDescEqGenerator", inContext: .single(.wasmFunction),
+        inputs: .requiredComplex(.init(.wasmTypeDef(), .IsWasmStructWithDescriptor))
+    ) { b, structTypeDef in
+        generateBranchOnCastDesc(b: b, structTypeDef: structTypeDef, branchOnCastFail: false)
+    },
+
+    CodeGenerator(
+        "WasmBranchOnCastDescEqFailGenerator", inContext: .single(.wasmFunction),
+        inputs: .requiredComplex(.init(.wasmTypeDef(), .IsWasmStructWithDescriptor))
+    ) { b, structTypeDef in
+        generateBranchOnCastDesc(b: b, structTypeDef: structTypeDef, branchOnCastFail: true)
+    },
+]
+
+private func generateBranchOnCastDesc(
+    b: ProgramBuilder, structTypeDef: Variable, branchOnCastFail: Bool
+) {
+    let function = b.currentWasmModule.currentWasmFunction
+    // Guaranteed by the .IsWasmStructWithDescriptor input requirement of the calling generators.
+    let structDesc =
+        b.type(of: structTypeDef).wasmTypeDefinition!.description as! WasmStructTypeDescription
+
+    // If the cast target type is exact, the descriptor needs to be exact as well, so request an
+    // exact descriptor value whenever we want to cast to an exact type.
+    let descriptorIsExact = probability(0.5)
+    let castIsExact = descriptorIsExact && probability(0.5)
+    // TODO(bettscheider): Support non-nullable target types. This requires being able to
+    // generate non-nullable values for the block results, see randomWasmBlockOutputTypes().
+    let castType = ILType.wasmRef(.Index(isExact: castIsExact), nullability: true)
+    let descriptorType = ILType.wasmIndexRef(
+        structDesc.descriptor!, nullability: probability(0.1), isExact: descriptorIsExact)
+
+    // The value carried to the label: br_on_cast_desc branches with the successfully cast value,
+    // br_on_cast_desc_fail with the original, uncast one.
+    let branchedRefType =
+        branchOnCastFail
+        ? ILType.wasmAnyRef()
+        : ILType.wasmIndexRef(structDesc, nullability: true, isExact: castIsExact)
+
+    @discardableResult
+    func emitBranch(to label: Variable, args: [Variable]) -> [Variable] {
+        assert(branchedRefType.Is(b.type(of: label).wasmLabelType!.parameters.last!))
+        let descriptor = function.findOrGenerateWasmVar(ofType: descriptorType)
+        assert(!castIsExact || b.type(of: descriptor).wasmReferenceType!.kind.isExact)
+        let sourceType =
+            probability(0.5)
+            ? ILType.wasmIndexRef(structDesc, nullability: true, isExact: false)
+            : .wasmAnyRef()
+        let sourceVar = function.findOrGenerateWasmVar(ofType: sourceType)
+        if branchOnCastFail {
+            return function.wasmBranchOnCastDescEqFail(
+                sourceVar, descriptorRef: descriptor, targetRefType: castType, to: label,
+                args: args)
+        } else {
+            return function.wasmBranchOnCastDescEq(
+                sourceVar, descriptorRef: descriptor, targetRefType: castType, to: label,
+                args: args)
+        }
+    }
+
+    // Branch out of an enclosing block whenever one can accept the branched value. Its last
+    // parameter only has to be a supertype, so this also covers labels that expect an abstract
+    // heap type or a supertype of the described struct.
+    if let label = b.findVariable(satisfying: {
+        guard let last = b.type(of: $0).wasmLabelType?.parameters.last else { return false }
+        return branchedRefType.Is(last)
+    }) {
+        let labelParams = b.type(of: label).wasmLabelType!.parameters
+        emitBranch(to: label, args: labelParams.dropLast().map(function.findOrGenerateWasmVar))
+        return
+    }
+
+    // Otherwise create a fitting block ourselves, widening its label every now and then for the
+    // same reason. (There is nothing to widen for the fail branch, which already uses the top
+    // type of the hierarchy.)
+    let blockRefType =
+        branchOnCastFail || probability(0.5)
+        ? branchedRefType
+        : chooseUniform(from: [
+            // Drops the exactness of the cast type (a no-op if the cast isn't exact).
+            ILType.wasmIndexRef(structDesc, nullability: true, isExact: false),
+            .wasmStructRef(),
+            .wasmEqRef(),
+            .wasmAnyRef(),
+        ])
+    let outputTypes = b.randomWasmBlockOutputTypes(upTo: 2) + [blockRefType]
+
+    function.wasmBuildBlockWithResults(with: [] => outputTypes, args: []) { blockLabel, _ in
+        let args = outputTypes.dropLast().map(function.findOrGenerateWasmVar)
+        let fallthroughOutputs = emitBranch(to: blockLabel, args: args)
+        // On fallthrough, br_on_cast_desc_fail puts the successfully cast value on the stack, so
+        // its outputs are exactly the block results. br_on_cast_desc instead leaves the value that
+        // did *not* match the cast, whose type doesn't fit the block result, so generate that one.
+        return branchOnCastFail
+            ? fallthroughOutputs
+            : args + [function.findOrGenerateWasmVar(ofType: blockRefType)]
     }
 }

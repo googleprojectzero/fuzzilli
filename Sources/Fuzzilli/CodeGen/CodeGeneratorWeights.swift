@@ -409,7 +409,6 @@ public let codeGeneratorWeights = [
     "WasmStructTypeGenerator":                  5,
     "WasmSignatureTypeGenerator":               5,
 
-    "WasmCustomDescriptorsStructTypesGenerator":5,
     "WasmSelfReferenceGenerator":               5,
     "WasmForwardReferenceGenerator":            5,
 
@@ -437,6 +436,11 @@ public let codeGeneratorWeights = [
     "WasmRefCastAbstractGenerator":             5,
     "WasmBranchOnCastGenerator":                5,
     "WasmBranchOnCastFailGenerator":            5,
+
+    // These are only registered if the custom descriptors feature is enabled.
+    "WasmCustomDescriptorsStructTypesGenerator":5,
+    "WasmBranchOnCastDescEqGenerator":          5,
+    "WasmBranchOnCastDescEqFailGenerator":      5,
 
     // Wasm JS String Generators
     "WasmPackedI16ArrayTypeDefGenerator":       5,

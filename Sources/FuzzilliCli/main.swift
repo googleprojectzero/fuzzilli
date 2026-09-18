@@ -419,7 +419,10 @@ if swarmTesting {
 let disableCodeGenerators = Set(profile.disabledCodeGenerators)
 let additionalCodeGenerators = profile.additionalCodeGenerators
 
-var codeGeneratorsToUse = enableWasm ? CodeGenerators + WasmCodeGenerators : CodeGenerators
+var codeGeneratorsToUse =
+    enableWasm
+    ? CodeGenerators + wasmCodeGenerators(enableCustomDescriptors: enableCustomDescriptors)
+    : CodeGenerators
 if wasmOptPath != nil {
     codeGeneratorsToUse.append(BinaryenWasmGenerator)
 }

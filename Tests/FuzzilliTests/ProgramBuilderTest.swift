@@ -3923,8 +3923,11 @@ struct ProgramBuilderTests {
         }
     }
 
-    @Test func testThatGeneratorsExistAndAreBuildableFromJs() {
-        let fuzzer = makeMockFuzzer()
+    @Test(arguments: [false, true])
+    func testThatGeneratorsExistAndAreBuildableFromJs(enableCustomDescriptors: Bool) {
+        let config = Configuration(
+            logLevel: .error, enableCustomDescriptors: enableCustomDescriptors)
+        let fuzzer = makeMockFuzzer(config: config)
         let tries: Int = 10
 
         var failures: [String: Int] = [:]
@@ -3964,8 +3967,11 @@ struct ProgramBuilderTests {
         }
     }
 
-    @Test func testThatGeneratorsAreBuildableFromBundle() throws {
-        let config = Configuration(logLevel: .error, generateBundle: true)
+    @Test(arguments: [false, true])
+    func testThatGeneratorsAreBuildableFromBundle(enableCustomDescriptors: Bool) throws {
+        let config = Configuration(
+            logLevel: .error, generateBundle: true, enableCustomDescriptors: enableCustomDescriptors
+        )
         let fuzzer = makeMockFuzzer(config: config)
         let tries: Int = 10
 
