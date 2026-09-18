@@ -1857,6 +1857,22 @@ struct MinimizerTests {
             })
     }
 
+    @Test func testDestructAndReassignSimplificationOfArraySourceTarget() {
+        testMultiInstructionSimplification(
+            of: { b in
+                let a = b.createArray(with: [b.loadInt(1), b.loadInt(2)])
+                let v = b.loadInt(42)
+                b.destruct(a, selecting: [0, 1], into: [a, v])
+            },
+            into: { b in
+                let a = b.createArray(with: [b.loadInt(1), b.loadInt(2)])
+                let v = b.loadInt(42)
+                let source = b.dup(a)
+                b.reassign(variable: a, value: b.getElement(0, of: source))
+                b.reassign(variable: v, value: b.getElement(1, of: source))
+            })
+    }
+
     @Test func testVariableDeduplication() {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)

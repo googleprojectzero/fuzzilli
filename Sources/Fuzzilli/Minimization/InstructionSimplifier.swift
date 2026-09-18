@@ -319,8 +319,6 @@ struct InstructionSimplifier: Reducer {
         }
 
         for instr in helper.code {
-            typer.analyze(instr)
-
             var keepInstruction = true
             switch instr.op.opcode {
 
@@ -357,6 +355,8 @@ struct InstructionSimplifier: Reducer {
             default:
                 break
             }
+
+            typer.analyze(instr)
 
             if keepInstruction {
                 numCopiedInstructions += 1
