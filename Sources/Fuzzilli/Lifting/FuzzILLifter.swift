@@ -1999,7 +1999,7 @@ public class FuzzILLifter: Lifter {
             return "\(obj).\(s)"
         case .privateProperty(let s):
             let obj = lift(inputIterator.val.next()!)
-            return "\(obj).\(s)"
+            return "\(obj).#\(s)"
         case .element(let i):
             let obj = lift(inputIterator.val.next()!)
             return "\(obj)[\(i)]"
