@@ -386,6 +386,25 @@ struct InstructionSimplifier: Reducer {
                         instructionAt: instr.index,
                         with: Instruction(newOp, inouts: Array(newInouts)))
                 }
+            case .wasmDefineStructType(let op):
+                if op.hasSuperType {
+                    let newOp = WasmDefineStructType(
+                        fields: op.fields, hasSuperType: false, isFinal: op.isFinal,
+                        hasDescribes: op.hasDescribes)
+                    let newInouts = instr.inputs.dropFirst() + instr.outputs
+                    helper.tryReplacing(
+                        instructionAt: instr.index,
+                        with: Instruction(newOp, inouts: Array(newInouts)))
+                }
+            case .wasmDefineSignatureType(let op):
+                if op.hasSuperType {
+                    let newOp = WasmDefineSignatureType(
+                        signature: op.signature, hasSuperType: false, isFinal: op.isFinal)
+                    let newInouts = instr.inputs.dropFirst() + instr.outputs
+                    helper.tryReplacing(
+                        instructionAt: instr.index,
+                        with: Instruction(newOp, inouts: Array(newInouts)))
+                }
             case .endWasmModule(let op):
                 if op.hasStartFunction {
                     let newOp = EndWasmModule(hasStartFunction: false)
