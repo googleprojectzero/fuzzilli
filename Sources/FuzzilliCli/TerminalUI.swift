@@ -167,6 +167,7 @@ class TerminalUI {
             Timeout Rate:                 \(String(format: "%.2f%%", stats.timeoutRate * 100)) (overall: \(String(format: "%.2f%%", stats.overallTimeoutRate * 100)))
             Crashes Found:                \(stats.crashingSamples)\(differentialsLine)
             Timeouts Hit:                 \(stats.timedOutSamples)
+            Aspect Intersection Nil:      \(stats.aspectIntersectionNilCount)
             Coverage:                     \(String(format: "%.2f%%", stats.coverage * 100))
             Avg. program size:            \(String(format: "%.2f", stats.avgProgramSize))
             Avg. corpus program size:     \(String(format: "%.2f", stats.avgCorpusProgramSize))

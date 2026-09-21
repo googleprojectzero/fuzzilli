@@ -130,6 +130,7 @@ public class Statistics: Module {
             data.validSamples += node.validSamples
             data.timedOutSamples += node.timedOutSamples
             data.totalExecs += node.totalExecs
+            data.aspectIntersectionNilCount += node.aspectIntersectionNilCount
 
             for stats in node.contributorStats {
                 if var existing = contributorStatsByName[stats.name] {
@@ -245,6 +246,9 @@ public class Statistics: Module {
         fuzzer.registerEventListener(for: fuzzer.events.ProgramGenerated) { program in
             self.ownData.totalSamples += 1
             self.programSizeAvg.add(program.size)
+        }
+        fuzzer.registerEventListener(for: fuzzer.events.AspectIntersectionNil) { _ in
+            self.ownData.aspectIntersectionNilCount += 1
         }
         fuzzer.registerEventListener(for: fuzzer.events.ChildNodeConnected) { id in
             self.ownData.numChildNodes += 1

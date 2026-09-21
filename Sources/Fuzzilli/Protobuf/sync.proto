@@ -103,4 +103,7 @@ message Statistics {
             uint64 totalInstructionsProduced = 13;
         }
         repeated ContributorStats contributorStats = 19;
+
+        /// The number of times the aspect intersection was nil when analyzing an interesting sample.
+        uint64 aspectIntersectionNilCount = 20;
 }

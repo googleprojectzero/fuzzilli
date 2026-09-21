@@ -17,6 +17,17 @@ import Testing
 
 @testable import Fuzzilli
 
+class TestAspects: ProgramAspects {
+    private var customCount: UInt32
+    init(outcome: ExecutionOutcome, count: UInt32) {
+        self.customCount = count
+        super.init(outcome: outcome)
+    }
+    override var count: UInt32 {
+        return customCount
+    }
+}
+
 @Suite struct StatisticsTests {
     @Test func testStatisticsAggregation() {
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
@@ -124,17 +135,6 @@ import Testing
     }
 
     @Test func testConvergencePatternsTracking() {
-        class TestAspects: ProgramAspects {
-            private var customCount: UInt32
-            init(outcome: ExecutionOutcome, count: UInt32) {
-                self.customCount = count
-                super.init(outcome: outcome)
-            }
-            override var count: UInt32 {
-                return customCount
-            }
-        }
-
         class TestEvaluator: MockEvaluator {
             var counts = [4, 3, 3, 3, 3]
             var callCount = 0
@@ -173,6 +173,46 @@ import Testing
 
             #expect(result == true)
             #expect(fuzzer.getConvergencePatternsForTesting()["00111"] == 1)
+        }
+    }
+
+    @Test func testAspectIntersectionNilTracking() {
+        class NilIntersectionEvaluator: MockEvaluator {
+            override func computeAspectIntersection(
+                of program: Program, with aspects: ProgramAspects
+            ) -> ProgramAspects? {
+                return nil
+            }
+        }
+
+        let liveTestConfig = Configuration(
+            logLevel: .error,
+            enableInspection: true
+        )
+        let evaluator = NilIntersectionEvaluator()
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, evaluator: evaluator)
+
+        fuzzer.sync {
+            let stats = Statistics()
+            stats.initialize(with: fuzzer)
+
+            let b = fuzzer.makeBuilder()
+            let prog = b.finalize()
+
+            // Setup a dummy CorpusImportJob and state via test helper
+            let job = Fuzzer.CorpusImportJob(
+                corpus: [prog], mode: .interestingOnly(shouldMinimize: false))
+            fuzzer.setCorpusImportJobForTesting(job)
+
+            #expect(stats.compute().aspectIntersectionNilCount == 0)
+
+            let initialAspects = TestAspects(outcome: .succeeded, count: 5)
+            let result = fuzzer.processMaybeInteresting(
+                prog, havingAspects: initialAspects,
+                origin: .corpusImport(mode: .interestingOnly(shouldMinimize: false)))
+
+            #expect(result == false)
+            #expect(stats.compute().aspectIntersectionNilCount == 1)
         }
     }
 }

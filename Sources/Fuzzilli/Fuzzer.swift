@@ -842,6 +842,7 @@ public class Fuzzer {
             guard let intersection = evaluator.computeAspectIntersection(of: program, with: aspects)
             else {
                 // This likely means that no aspects are triggered deterministically, so discard this sample.
+                dispatchEvent(events.AspectIntersectionNil)
                 if isTrackingConvergencePatterns {
                     pattern += "0"
                     currentCorpusImportJob.recordConvergencePattern(pattern)

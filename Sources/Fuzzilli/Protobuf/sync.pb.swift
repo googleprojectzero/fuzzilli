@@ -190,6 +190,12 @@ public struct Fuzzilli_Protobuf_Statistics: @unchecked Sendable {
     set {_uniqueStorage()._contributorStats = newValue}
   }
 
+  //// The number of times the aspect intersection was nil when analyzing an interesting sample.
+  public var aspectIntersectionNilCount: UInt64 {
+    get {_storage._aspectIntersectionNilCount}
+    set {_uniqueStorage()._aspectIntersectionNilCount = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public struct ContributorStats: Sendable {
@@ -329,7 +335,7 @@ extension Fuzzilli_Protobuf_FuzzerState: SwiftProtobuf.Message, SwiftProtobuf._M
 
 extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Statistics"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}totalSamples\0\u{1}validSamples\0\u{1}interestingSamples\0\u{1}timedOutSamples\0\u{1}crashingSamples\0\u{1}totalExecs\0\u{1}avgCorpusSize\0\u{1}avgProgramSize\0\u{1}avgCorpusProgramSize\0\u{1}avgExecutionTime\0\u{1}execsPerSecond\0\u{1}fuzzerOverhead\0\u{1}minimizationOverhead\0\u{1}numChildNodes\0\u{1}coverage\0\u{1}correctnessRate\0\u{1}timeoutRate\0\u{1}differentialSamples\0\u{1}contributorStats\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}totalSamples\0\u{1}validSamples\0\u{1}interestingSamples\0\u{1}timedOutSamples\0\u{1}crashingSamples\0\u{1}totalExecs\0\u{1}avgCorpusSize\0\u{1}avgProgramSize\0\u{1}avgCorpusProgramSize\0\u{1}avgExecutionTime\0\u{1}execsPerSecond\0\u{1}fuzzerOverhead\0\u{1}minimizationOverhead\0\u{1}numChildNodes\0\u{1}coverage\0\u{1}correctnessRate\0\u{1}timeoutRate\0\u{1}differentialSamples\0\u{1}contributorStats\0\u{1}aspectIntersectionNilCount\0")
 
   fileprivate class _StorageClass {
     var _totalSamples: UInt64 = 0
@@ -351,6 +357,7 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
     var _timeoutRate: Double = 0
     var _differentialSamples: UInt64 = 0
     var _contributorStats: [Fuzzilli_Protobuf_Statistics.ContributorStats] = []
+    var _aspectIntersectionNilCount: UInt64 = 0
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -380,6 +387,7 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
       _timeoutRate = source._timeoutRate
       _differentialSamples = source._differentialSamples
       _contributorStats = source._contributorStats
+      _aspectIntersectionNilCount = source._aspectIntersectionNilCount
     }
   }
 
@@ -417,6 +425,7 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
         case 17: try { try decoder.decodeSingularDoubleField(value: &_storage._timeoutRate) }()
         case 18: try { try decoder.decodeSingularUInt64Field(value: &_storage._differentialSamples) }()
         case 19: try { try decoder.decodeRepeatedMessageField(value: &_storage._contributorStats) }()
+        case 20: try { try decoder.decodeSingularUInt64Field(value: &_storage._aspectIntersectionNilCount) }()
         default: break
         }
       }
@@ -482,6 +491,9 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
       if !_storage._contributorStats.isEmpty {
         try visitor.visitRepeatedMessageField(value: _storage._contributorStats, fieldNumber: 19)
       }
+      if _storage._aspectIntersectionNilCount != 0 {
+        try visitor.visitSingularUInt64Field(value: _storage._aspectIntersectionNilCount, fieldNumber: 20)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -510,6 +522,7 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
         if _storage._timeoutRate != rhs_storage._timeoutRate {return false}
         if _storage._differentialSamples != rhs_storage._differentialSamples {return false}
         if _storage._contributorStats != rhs_storage._contributorStats {return false}
+        if _storage._aspectIntersectionNilCount != rhs_storage._aspectIntersectionNilCount {return false}
         return true
       }
       if !storagesAreEqual {return false}

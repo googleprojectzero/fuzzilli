@@ -68,6 +68,9 @@ public class Events {
     /// Signals that a new interesting program has been found, after the program has been minimized.
     public let InterestingProgramFound = Event<(program: Program, origin: ProgramOrigin)>()
 
+    /// Signals that the aspect intersection of an evaluated program was nil.
+    public let AspectIntersectionNil = Event<Void>()
+
     /// Signals a diagnostics event
     public let DiagnosticsEvent = Event<(name: String, content: Data)>()
 
