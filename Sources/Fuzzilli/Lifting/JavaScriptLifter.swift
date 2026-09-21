@@ -2524,7 +2524,8 @@ public class JavaScriptLifter: Lifter {
             let key = inputIterator.val.next()!.1.text
             return "super[\(key)]"
         case .privateProperty(let p):
-            let obj = inputIterator.val.next()!.1.text
+            let (v, expr) = inputIterator.val.next()!
+            let obj = resolveTarget?((v, expr)) ?? expr.text
             return "\(obj).#\(p)"
         }
     }

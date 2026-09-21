@@ -6118,6 +6118,15 @@ struct LifterTests {
                     hasRestElement: false))
             b.destruct(v2, using: p6, into: [])
 
+            // ({foo: obj.#priv} = obj) and with an inlined non-identifier target
+            let p7 = DestructuringPattern.object(
+                .init(
+                    properties: [.init(key: .string("foo"), target: .privateProperty("priv"))],
+                    hasRestElement: false))
+            b.destruct(v2, using: p7, into: [v2])
+            let v4 = b.binary(v2, v3, with: .LogicOr)
+            b.destruct(v2, using: p7, into: [v4])
+
             let program = b.finalize()
             let actual = fuzzer.lifter.lift(program)
 
@@ -6130,6 +6139,9 @@ struct LifterTests {
                 ({"foo":v2["Hello"]} = v2);
                 ({"foo":super.prop} = v2);
                 ({"foo":super[0]} = v2);
+                ({"foo":v2.#priv} = v2);
+                const t9 = v2 || v3;
+                ({"foo":t9.#priv} = v2);
 
                 """
             #expect(actual == expected)
