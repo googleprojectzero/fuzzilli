@@ -126,11 +126,25 @@ public class Fuzzer {
         state = newState
     }
 
+    func setCorpusImportJobForTesting(_ job: CorpusImportJob) {
+        self.currentCorpusImportJob = job
+        self.state = .corpusImport
+    }
+
+    func getConvergencePatternsForTesting() -> [String: Int] {
+        return self.currentCorpusImportJob.convergencePatterns
+    }
+
     /// Start time of this fuzzing session
     private let startTime = Date()
 
     public var isDifferentialFuzzing: Bool {
         return referenceRunner != nil
+    }
+
+    /// Whether we are currently tracking convergence patterns.
+    var isTrackingConvergencePatterns: Bool {
+        return config.trackConvergencePatterns && state == .corpusImport
     }
 
     /// Returns the uptime of this fuzzer as TimeInterval.
@@ -807,10 +821,11 @@ public class Fuzzer {
         _ program: Program, havingAspects aspects: ProgramAspects, origin: ProgramOrigin
     ) -> Bool {
         var aspects = aspects
+        var pattern = ""
 
-        // Determine which (if any) aspects of the program are triggered deterministially.
-        // For that, the sample is executed at a few more times and the intersection of the interesting aspects of each execution is computed.
-        // Once that intersection is stable, the remaining aspects are considered to be triggered deterministic.
+        // Determine which (if any) aspects of the program are triggered deterministically.
+        // For that, the sample is executed a few more times and the intersection of the interesting aspects of each execution is computed.
+        // Once that intersection is stable, the remaining aspects are considered to be triggered deterministically.
         let minAttempts = 5
         let maxAttempts = 50
         var didConverge = false
@@ -820,20 +835,30 @@ public class Fuzzer {
             if attempt > maxAttempts {
                 logger.warning(
                     "Sample did not converage after \(maxAttempts) attempts. Discarding it")
+                // This case is rare, and we do not track convergence patterns here as extremely long patterns are not expected to be interesting.
                 return false
             }
 
             guard let intersection = evaluator.computeAspectIntersection(of: program, with: aspects)
             else {
                 // This likely means that no aspects are triggered deterministically, so discard this sample.
+                if isTrackingConvergencePatterns {
+                    pattern += "0"
+                    currentCorpusImportJob.recordConvergencePattern(pattern)
+                }
                 return false
             }
 
             // Since evaluateAndIntersect will only ever return aspects that are equivalent to, or a subset of,
             // the provided aspects, we can check if they are identical by comparing their sizes
             didConverge = aspects.count == intersection.count
+            pattern += didConverge ? "1" : "0"
             aspects = intersection
         } while !didConverge || attempt < minAttempts
+
+        if isTrackingConvergencePatterns {
+            currentCorpusImportJob.recordConvergencePattern(pattern)
+        }
 
         if origin == .local {
             iterationOfLastInterestingSample = iterations
@@ -1099,6 +1124,16 @@ public class Fuzzer {
                     logger.warning(
                         "\(String(format: "%.2f", failureRatio * 100))% of imported programs failed to \(reason) and therefore couldn't be imported."
                     )
+                }
+
+                if config.trackConvergencePatterns {
+                    logger.info("Convergence patterns report:")
+                    let sortedPatterns = currentCorpusImportJob.convergencePatterns.sorted {
+                        $0.value > $1.value
+                    }
+                    for (pattern, count) in sortedPatterns {
+                        logger.info("    \(pattern): \(count)")
+                    }
                 }
 
                 dispatchEvent(events.CorpusImportComplete)
@@ -1390,6 +1425,7 @@ public class Fuzzer {
         private(set) var numberOfProgramsThatNeededThreeFixupAttempts = 0
         private(set) var numberOfProgramsRequiringWasmButDisabled = 0
         private(set) var numberOfProgramsRequiringBundlesButDisabled = 0
+        private(set) var convergencePatterns = [String: Int]()
 
         var numberOfProgramsThatNeededFixup: Int {
             assert(Fuzzer.maxProgramImportFixupAttempts == 3)
@@ -1412,6 +1448,10 @@ public class Fuzzer {
             assert(!isFinished)
             numberOfProgramsProcessedSoFar += 1
             return corpusToImport.removeLast()
+        }
+
+        mutating func recordConvergencePattern(_ pattern: String) {
+            convergencePatterns[pattern, default: 0] += 1
         }
 
         mutating func notifyImportOutcome(_ result: ImportResult, fixupAttempts: Int) {

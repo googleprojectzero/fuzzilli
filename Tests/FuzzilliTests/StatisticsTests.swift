@@ -122,4 +122,57 @@ import Testing
             #expect(job.numberOfProgramsThatExecutedSuccessfullyDuringImport == 3)
         }
     }
+
+    @Test func testConvergencePatternsTracking() {
+        class TestAspects: ProgramAspects {
+            private var customCount: UInt32
+            init(outcome: ExecutionOutcome, count: UInt32) {
+                self.customCount = count
+                super.init(outcome: outcome)
+            }
+            override var count: UInt32 {
+                return customCount
+            }
+        }
+
+        class TestEvaluator: MockEvaluator {
+            var counts = [4, 3, 3, 3, 3]
+            var callCount = 0
+
+            override func computeAspectIntersection(
+                of program: Program, with aspects: ProgramAspects
+            ) -> ProgramAspects? {
+                guard callCount < counts.count else { return nil }
+                let c = counts[callCount]
+                callCount += 1
+                return TestAspects(outcome: .succeeded, count: UInt32(c))
+            }
+        }
+
+        let liveTestConfig = Configuration(
+            logLevel: .error,
+            enableInspection: true,
+            trackConvergencePatterns: true
+        )
+        let evaluator = TestEvaluator()
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, evaluator: evaluator)
+
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            let prog = b.finalize()
+
+            // Setup a dummy CorpusImportJob and state via test helper
+            let job = Fuzzer.CorpusImportJob(
+                corpus: [prog], mode: .interestingOnly(shouldMinimize: false))
+            fuzzer.setCorpusImportJobForTesting(job)
+
+            let initialAspects = TestAspects(outcome: .succeeded, count: 5)
+            let result = fuzzer.processMaybeInteresting(
+                prog, havingAspects: initialAspects,
+                origin: .corpusImport(mode: .interestingOnly(shouldMinimize: false)))
+
+            #expect(result == true)
+            #expect(fuzzer.getConvergencePatternsForTesting()["00111"] == 1)
+        }
+    }
 }

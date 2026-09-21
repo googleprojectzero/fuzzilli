@@ -75,6 +75,9 @@ public struct Configuration {
     /// as the reductions performed by the minimizer.
     public let enableInspection: Bool
 
+    /// Whether to track convergence patterns during corpus import.
+    public let trackConvergencePatterns: Bool
+
     /// Determines if we want to have a static corpus, i.e. we don't add any
     /// programs to the corpus even if they find new coverage.
     public let staticCorpus: Bool
@@ -131,7 +134,8 @@ public struct Configuration {
         forDifferentialFuzzing: Bool = false,
         instanceId: Int = -1,
         dumplingEnabled: Bool = false,
-        enableCustomDescriptors: Bool = false
+        enableCustomDescriptors: Bool = false,
+        trackConvergencePatterns: Bool = false
     ) {
         self.arguments = arguments
         self.timeout = timeout
@@ -141,6 +145,7 @@ public struct Configuration {
         self.enableDiagnostics = enableDiagnostics
         // If we have enabledDiagnostics we should also enable inspection.
         self.enableInspection = enableDiagnostics || enableInspection
+        self.trackConvergencePatterns = trackConvergencePatterns
         self.staticCorpus = staticCorpus
         self.tag = tag
         self.isWasmEnabled = isWasmEnabled

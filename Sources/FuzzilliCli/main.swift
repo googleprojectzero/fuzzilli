@@ -61,6 +61,7 @@ if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 
                                            No new samples are added to the corpus, regardless of their coverage.
                                            This can be used to find different manifestations of bugs and
                                            also to try and reproduce a flaky crash or turn it into a deterministic one.
+            --trackConvergencePatterns   : Track and print convergence patterns of interesting samples during corpus import.
             --exportStatistics           : If enabled, fuzzing statistics will be collected and saved to disk in regular intervals.
                                            Requires --storagePath.
             --statisticsExportInterval=n : Interval in minutes for saving fuzzing statistics to disk (default: 10).
@@ -172,6 +173,7 @@ let storagePath = args["--storagePath"]
 var resume = args.has("--resume")
 let overwrite = args.has("--overwrite")
 let staticCorpus = args.has("--staticCorpus")
+let trackConvergencePatterns = args.has("--trackConvergencePatterns")
 let exportStatistics = args.has("--exportStatistics")
 let statisticsExportInterval = args.uint(for: "--statisticsExportInterval") ?? 10
 let shutdownAfterImport = args.has("--shutdownAfterImport")
@@ -697,7 +699,8 @@ let mainConfig = Configuration(
     forDifferentialFuzzing: forDifferentialFuzzing,
     instanceId: 0,
     dumplingEnabled: profile.isDifferential,
-    enableCustomDescriptors: enableCustomDescriptors)
+    enableCustomDescriptors: enableCustomDescriptors,
+    trackConvergencePatterns: trackConvergencePatterns)
 
 let fuzzer = makeFuzzer(with: mainConfig)
 
@@ -925,7 +928,8 @@ for i in 1..<numJobs {
         forDifferentialFuzzing: forDifferentialFuzzing,
         instanceId: i,
         dumplingEnabled: profile.isDifferential,
-        enableCustomDescriptors: enableCustomDescriptors)
+        enableCustomDescriptors: enableCustomDescriptors,
+        trackConvergencePatterns: trackConvergencePatterns)
 
     let worker = makeFuzzer(with: workerConfig)
     workers.append(worker)
