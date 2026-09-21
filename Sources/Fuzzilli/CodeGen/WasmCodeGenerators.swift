@@ -2400,7 +2400,9 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let function = b.currentWasmModule.currentWasmFunction
         // The condition is an i32, so we should always find at least that one as a possible input.
         let trueValue = b.randomVariable(ofType: .wasmPrimitive)!
-        let falseValue = b.randomVariable(ofType: b.type(of: trueValue))!
+        let falseType =
+            b.type(of: trueValue).wasmReferenceType?.kind.topType() ?? b.type(of: trueValue)
+        let falseValue = b.randomVariable(ofType: falseType)!
         function.wasmSelect(
             on: condition, trueValue: trueValue, falseValue: falseValue)
     },

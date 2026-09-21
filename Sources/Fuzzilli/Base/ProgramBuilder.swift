@@ -6408,7 +6408,7 @@ public class ProgramBuilder {
             -> Variable
         {
             let type = b.type(of: trueValue) | b.type(of: falseValue)
-            assert(type.Is(.wasmAnything))
+            assert(ILType.wasmNonRefValueTypes.contains(type) || type.isWasmReferenceType)
             return b.emit(
                 WasmSelect(), withInputs: [trueValue, falseValue, condition],
                 types: [type, type, .wasmi32]

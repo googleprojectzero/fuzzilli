@@ -884,7 +884,7 @@ public class Fuzzer {
             attempt += 1
             if attempt > maxAttempts {
                 logger.warning(
-                    "Sample did not converage after \(maxAttempts) attempts. Discarding it")
+                    "Sample did not converge after \(maxAttempts) attempts. Discarding it")
                 // This case is rare, and we do not track convergence patterns here as extremely long patterns are not expected to be interesting.
                 return false
             }

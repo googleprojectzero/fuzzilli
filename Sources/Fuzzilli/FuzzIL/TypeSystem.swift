@@ -2340,10 +2340,12 @@ public class WasmReferenceType: WasmTypeExtension {
         func topType() -> ILType {
             switch self {
             case .Abstract(let info):
-                return .wasmRef(info.heapType.getTop())
+                return .wasmRef(info.heapType.getTop(), shared: info.shared)
             case .Index(let idx, _):
                 let desc = idx.get()!
-                return .wasmRef(desc.abstractHeapSupertype!.heapType.getTop())
+                return .wasmRef(
+                    desc.abstractHeapSupertype!.heapType.getTop(),
+                    shared: desc.abstractHeapSupertype!.shared)
             }
         }
 
