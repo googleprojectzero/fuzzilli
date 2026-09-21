@@ -18,7 +18,13 @@ extension ILType {
     public static let jsD8 = ILType.object(ofGroup: "D8", withProperties: ["test"], withMethods: [])
 
     public static let jsD8Test = ILType.object(
-        ofGroup: "D8Test", withProperties: ["FastCAPI"], withMethods: [])
+        ofGroup: "D8Test", withProperties: ["FastCAPI"],
+        withMethods: [
+            "createInterceptorObject",
+            "createAccessCheckedObject",
+            "createAccessCheckedInterceptorObject",
+            "setAccessPolicy",
+        ])
 
     public static let jsD8FastCAPI = ILType.object(
         ofGroup: "D8FastCAPI", withProperties: [],
@@ -30,6 +36,10 @@ extension ILType {
         ofName: "gcType", withValues: ["minor", "major"])
     public static let gcExecutionEnum = ILType.enumeration(
         ofName: "gcExecution", withValues: ["async", "sync"])
+
+    public static let jsD8AccessPolicyEnum = ILType.enumeration(
+        ofName: "d8AccessPolicy", withValues: ["same-context", "security-token"])
+    public static let jsD8AccessCheckedObject = object(ofGroup: "D8AccessCheckedObject")
 
     public static let jsWorker = object(
         ofGroup: "Worker",
@@ -47,6 +57,14 @@ public let gcOptions = ObjectGroup(
         "type": .gcTypeEnum,
         "execution": .gcExecutionEnum,
     ],
+    methods: [:])
+
+// This group has no properties or methods; it's only tracking which objects can
+// be passed to d8.test.setAccessPolicy.
+public let jsD8AccessCheckedObject = ObjectGroup(
+    name: "D8AccessCheckedObject",
+    instanceType: .jsD8AccessCheckedObject,
+    properties: [:],
     methods: [:])
 
 extension ObjectGroup {
@@ -322,6 +340,68 @@ public let StringShapeGenerator = CodeGenerator("StringShapeGenerator") { b in
             b.eval("%ConstructThinString(%@)", with: [str], hasOutput: true)
         }
     )
+}
+
+private func buildAccessCheck(_ b: ProgramBuilder) -> Variable {
+    withEqualProbability(
+        { b.loadBool(Bool.random()) },
+        { b.loadEnum(.jsD8AccessPolicyEnum) }
+    )
+}
+
+private func buildInterceptorCallback(_ b: ProgramBuilder) -> Variable {
+    b.buildPlainFunction(with: ProgramBuilder.SubroutineDescriptor.parameters(n: 1)) { _ in
+        b.build(n: Int.random(in: 1...5))
+        b.doReturn(b.randomJsVariable())
+    }
+}
+
+public let V8InterceptorObjectGenerator = CodeGenerator(
+    "V8InterceptorObjectGenerator",
+    // Interceptor objects don't have any special methods or properties, so they
+    // can be typed just .object.
+    produces: [.object()]
+) { b in
+    // Everything that can recursively generate code (the interceptor callback
+    // body) must happen before we create the other variables, especially the
+    // d8.test variable (v1 = d8.test). This is because recursive generation can
+    // reassign already visible variables (v1 = ...) and destroy their type.
+    let interceptor = buildInterceptorCallback(b)
+    let d8 = b.createNamedVariable(forBuiltin: "d8")
+    let d8Test = b.getProperty("test", of: d8)
+    b.callMethod("createInterceptorObject", on: d8Test, withArgs: [interceptor])
+}
+
+public let V8AccessCheckedObjectGenerator = CodeGenerator(
+    "V8AccessCheckedObjectGenerator",
+    produces: [.jsD8AccessCheckedObject]
+) { b in
+    // Everything that can recursively generate code (the interceptor callback
+    // body) must happen before we create the other variables, especially the
+    // d8.test variable (v1 = d8.test). This is because recursive generation can
+    // reassign already visible variables (v1 = ...) and destroy their type.
+    if probability(0.5) {
+        // Emit an access check but no interceptor
+        let accessCheck = buildAccessCheck(b)
+        let d8Test = b.getProperty("test", of: b.createNamedVariable(forBuiltin: "d8"))
+        b.callMethod("createAccessCheckedObject", on: d8Test, withArgs: [accessCheck])
+    } else {
+        // Emit an access check and an interceptor
+        let interceptor = buildInterceptorCallback(b)
+        let accessCheck = buildAccessCheck(b)
+        let d8Test = b.getProperty("test", of: b.createNamedVariable(forBuiltin: "d8"))
+        b.callMethod(
+            "createAccessCheckedInterceptorObject", on: d8Test,
+            withArgs: [accessCheck, interceptor])
+    }
+}
+
+public let V8SetAccessPolicyGenerator = CodeGenerator(
+    "V8SetAccessPolicyGenerator", inputs: .required(.jsD8AccessCheckedObject)
+) { b, s in
+    let accessCheck = buildAccessCheck(b)
+    let d8Test = b.getProperty("test", of: b.createNamedVariable(forBuiltin: "d8"))
+    b.callMethod("setAccessPolicy", on: d8Test, withArgs: [s, accessCheck])
 }
 
 public let MapTransitionFuzzer = ProgramTemplate("MapTransitionFuzzer") { b in
@@ -992,7 +1072,21 @@ public let jsD8 = ObjectGroup(
 
 public let jsD8Test = ObjectGroup(
     name: "D8Test", instanceType: .jsD8Test, properties: ["FastCAPI": .jsD8FastCAPIConstructor],
-    methods: [:])
+    methods: [
+        "createInterceptorObject": [.function()] => .object(),
+        // Gotcha: below we have to use .either instead of .oneof, since the
+        // union of an enum and something else gets rid of the enum-ness.
+        "createAccessCheckedObject": [.either(.jsD8AccessPolicyEnum, .boolean)]
+            => .jsD8AccessCheckedObject,
+        "createAccessCheckedInterceptorObject": [
+            .either(.jsD8AccessPolicyEnum, .boolean), .function(),
+        ]
+            => .jsD8AccessCheckedObject,
+        "setAccessPolicy": [
+            .plain(.jsD8AccessCheckedObject), .either(.jsD8AccessPolicyEnum, .boolean),
+        ]
+            => .undefined,
+    ])
 
 public let jsD8FastCAPI = ObjectGroup(
     name: "D8FastCAPI", instanceType: .jsD8FastCAPI, properties: [:],

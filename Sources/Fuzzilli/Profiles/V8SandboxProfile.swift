@@ -564,6 +564,9 @@ let v8SandboxProfile = Profile(
         (HoleNanGenerator, 5),
         (UndefinedNanGenerator, 5),
         (StringShapeGenerator, 5),
+        (V8InterceptorObjectGenerator, 5),
+        (V8AccessCheckedObjectGenerator, 5),
+        (V8SetAccessPolicyGenerator, 5),
     ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([
@@ -586,11 +589,12 @@ let v8SandboxProfile = Profile(
     ],
 
     additionalObjectGroups: [
-        jsD8, jsD8Test, jsD8FastCAPI, gcOptions, .jsWorkers, .jsWorkerPrototype,
+        jsD8, jsD8Test, jsD8FastCAPI, gcOptions,
+        jsD8AccessCheckedObject, .jsWorkers, .jsWorkerPrototype,
         .jsWorkerConstructors,
     ],
 
-    additionalEnumerations: [.gcTypeEnum, .gcExecutionEnum],
+    additionalEnumerations: [.gcTypeEnum, .gcExecutionEnum, .jsD8AccessPolicyEnum],
 
     additionalOptionsBags: [],
 

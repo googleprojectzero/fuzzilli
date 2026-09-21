@@ -79,6 +79,9 @@ let v8HoleFuzzingProfile = Profile(
         (V8GcGenerator, 10),
         (V8SimulateNewspaceFullGenerator, 5),
         (HoleLeakGenerator, 25),
+        (V8InterceptorObjectGenerator, 5),
+        (V8AccessCheckedObjectGenerator, 5),
+        (V8SetAccessPolicyGenerator, 5),
     ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
@@ -99,11 +102,12 @@ let v8HoleFuzzingProfile = Profile(
     ],
 
     additionalObjectGroups: [
-        jsD8, jsD8Test, jsD8FastCAPI, gcOptions, .jsWorkers, .jsWorkerPrototype,
+        jsD8, jsD8Test, jsD8FastCAPI, gcOptions,
+        jsD8AccessCheckedObject, .jsWorkers, .jsWorkerPrototype,
         .jsWorkerConstructors,
     ],
 
-    additionalEnumerations: [.gcTypeEnum, .gcExecutionEnum],
+    additionalEnumerations: [.gcTypeEnum, .gcExecutionEnum, .jsD8AccessPolicyEnum],
 
     additionalOptionsBags: [],
 
