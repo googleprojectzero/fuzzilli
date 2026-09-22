@@ -13,6 +13,8 @@ const { z, ...restObj } = { z: 5, w: 6, v: 7 };
 output(z);
 output(restObj.w);
 output(restObj.v);
+// The rest object must not contain the properties named by the pattern.
+output(Object.keys(restObj).join("|"));
 
 const [c, ...restArr] = [8, 9, 10];
 output(c);

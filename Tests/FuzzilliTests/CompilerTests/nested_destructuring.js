@@ -58,11 +58,15 @@ output(r_j);
 // Rest Properties (Declaration)
 let { k, ...restProps } = { k: 11, l: 12, m: 13 };
 output(k, restProps.l, restProps.m);
+// The rest object must not contain the properties named by the pattern.
+output(Object.keys(restProps).join("|"));
 
 // Rest Properties (Reassignment)
 let r_k, r_restProps;
 ({ k: r_k, ...r_restProps } = { k: 11, l: 12, m: 13 });
 output(r_k, r_restProps.l, r_restProps.m);
+// The rest object must not contain the properties named by the pattern.
+output(Object.keys(r_restProps).join("|"));
 
 // Deep / Nested Object Destructuring (Declaration)
 let { user: { profile: { id } } } = { user: { profile: { id: 14 } } };
@@ -180,6 +184,8 @@ let r_n, r_len, r_p;
 output(r_n, r_len, r_p);
 
 // Works on ANY Iterable (Declaration)
+// Note that array destructuring uses the iterator protocol, so this is *not* equivalent to an
+// indexed property load: mySet[0] is undefined.
 const mySet = new Set([88, 99]);
 let [setFirst] = mySet;
 output(setFirst);
@@ -188,6 +194,16 @@ output(setFirst);
 let r_setFirst;
 [r_setFirst] = mySet;
 output(r_setFirst);
+
+// Iterables without any indexed properties at all (Declaration)
+function* gen() { yield 77; yield 78; }
+let [genFirst, genSecond] = gen();
+output(genFirst, genSecond);
+
+// Iterables without any indexed properties at all (Reassignment)
+let r_genFirst, r_genSecond;
+[r_genFirst, r_genSecond] = gen();
+output(r_genFirst, r_genSecond);
 
 // Object inside Array (Declaration)
 let [{ id: id1 }, { id: id2 = "default" }] = [{ id: 1 }, {}];

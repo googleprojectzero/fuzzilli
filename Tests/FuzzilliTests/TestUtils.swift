@@ -97,6 +97,54 @@ final class AlwaysAcceptingEvaluator: MockEvaluator {
     }
 }
 
+/// Shared setup for the testsuites that operate on the .js files in the CompilerTests/ directory.
+struct CompilerTestcases {
+    let nodejs: JavaScriptExecutor
+    let parser: JavaScriptParser
+    let compiler: JavaScriptCompiler
+    let lifter: JavaScriptLifter
+
+    init() throws {
+        self.nodejs = try #require(
+            JavaScriptExecutor(type: .nodejs, withArguments: ["--allow-natives-syntax"]))
+        self.parser = try #require(JavaScriptParser(executor: self.nodejs))
+        self.compiler = JavaScriptCompiler()
+        self.lifter = JavaScriptLifter(ecmaVersion: .es6, environment: JavaScriptEnvironment())
+    }
+
+    /// The absolute paths of all .js testcases.
+    var paths: [String] {
+        return Bundle.module.paths(forResourcesOfType: "js", inDirectory: "CompilerTests")
+    }
+
+    /// Compiles the testcase at the given path to FuzzIL, recording an issue if that fails.
+    func compile(testcaseAt path: String) -> Program? {
+        let testName = URL(fileURLWithPath: path).lastPathComponent
+        guard let ast = try? parser.parse(path) else {
+            Issue.record("Could not parse \(testName)")
+            return nil
+        }
+        guard let program = try? compiler.compile(ast) else {
+            Issue.record("Could not compile \(testName)")
+            return nil
+        }
+        return program
+    }
+
+    /// Executes the given script and returns its output, recording an issue if it fails.
+    func execute(_ script: String, describedAs description: @autoclosure () -> String) throws
+        -> String?
+    {
+        let result = try nodejs.executeScript(script)
+        guard result.isSuccess else {
+            Issue.record(
+                "\(description()) failed to execute. Output:\n\(result.output)\nScript:\n\(script)")
+            return nil
+        }
+        return result.output
+    }
+}
+
 @Suite struct TestUtilsTests {
 
     // Test that running a program via the JavaScriptExecutor that produces a large output succeeds.

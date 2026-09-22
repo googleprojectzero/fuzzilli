@@ -28,54 +28,37 @@ import Testing
 ///  - The test passes if there are no errors along the way and if the output of both executions is identical
 @Suite(.enabled(if: shouldRunCompilerTests()))
 struct CompilerTests {
-    var nodejs: JavaScriptExecutor
-    var parser: JavaScriptParser
-    var compiler: JavaScriptCompiler
+    let testcases: CompilerTestcases
 
     init() throws {
-        self.nodejs = try #require(
-            JavaScriptExecutor(type: .nodejs, withArguments: ["--allow-natives-syntax"]))
-        self.parser = try #require(JavaScriptParser(executor: self.nodejs))
-        self.compiler = JavaScriptCompiler()
+        self.testcases = try CompilerTestcases()
     }
 
     @Test func testFuzzILCompiler() throws {
-        let lifter = JavaScriptLifter(ecmaVersion: .es6, environment: JavaScriptEnvironment())
-
-        for testcasePath in enumerateAllTestcases() {
+        for testcasePath in testcases.paths {
             let testName = URL(fileURLWithPath: testcasePath).lastPathComponent
 
             // Execute the original code and record the output.
-            let result1 = try nodejs.executeScript(at: URL(fileURLWithPath: testcasePath))
+            let result1 = try testcases.nodejs.executeScript(at: URL(fileURLWithPath: testcasePath))
             guard result1.isSuccess else {
                 Issue.record("TestCase \(testName) failed to execute. Output:\n\(result1.output)")
                 continue
             }
 
             // Compile the JavaScript code to FuzzIL...
-            guard let ast = try? parser.parse(testcasePath) else {
-                Issue.record("Could not parse \(testName)")
-                continue
-            }
-            guard let program = try? compiler.compile(ast) else {
-                Issue.record("Could not compile \(testName)")
-                continue
-            }
+            guard let program = testcases.compile(testcaseAt: testcasePath) else { continue }
 
             // ... then lift it back to JavaScript and execute it again.
-            let script = lifter.lift(program)
-            let result2 = try nodejs.executeScript(script)
-            guard result2.isSuccess else {
-                Issue.record(
-                    "TestCase \(testName) failed to execute after compiling and lifting. Output:\n\(result2.output)\nScript:\n\(script)"
-                )
-                continue
-            }
+            guard
+                let output = try testcases.execute(
+                    testcases.lifter.lift(program),
+                    describedAs: "TestCase \(testName) after compiling and lifting")
+            else { continue }
 
             // The output of both executions must be identical.
             #expect(
-                result1.output == result2.output,
-                "Testcase \(testName) failed.\nExpected output:\n\(result1.output)\nActual output:\n\(result2.output)"
+                result1.output == output,
+                "Testcase \(testName) failed.\nExpected output:\n\(result1.output)\nActual output:\n\(output)"
             )
         }
     }
@@ -123,13 +106,8 @@ struct CompilerTests {
         try script.write(to: tempFile, atomically: true, encoding: .utf8)
         defer { try? FileManager.default.removeItem(at: tempFile) }
 
-        let ast = try parser.parse(tempFile.path)
-        return try compiler.compile(ast)
-    }
-
-    /// Returns the absolute paths of all .js compiler testcases.
-    private func enumerateAllTestcases() -> [String] {
-        return Bundle.module.paths(forResourcesOfType: "js", inDirectory: "CompilerTests")
+        let ast = try testcases.parser.parse(tempFile.path)
+        return try testcases.compiler.compile(ast)
     }
 
     public enum TestError: Error {
