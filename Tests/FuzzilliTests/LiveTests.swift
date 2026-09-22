@@ -66,7 +66,7 @@ struct LiveTests {
             type: .any,
             withArguments: [
                 "--wasm-staging", "--experimental-fuzzing", "--wasm-allow-mixed-eh-for-testing",
-                "--experimental-wasm-acquire-release",
+                "--wasm-acquire-release",
             ]
         )!
 

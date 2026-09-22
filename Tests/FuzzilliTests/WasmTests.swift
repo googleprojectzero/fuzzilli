@@ -7508,7 +7508,7 @@ struct WasmGCTests {
 
     @Test(arguments: [true, false])
     func testRefNullAbstractTypes(sharedRef: Bool) throws {
-        let runner = JavaScriptExecutor(withArguments: ["--experimental-wasm-shared"])!
+        let runner = JavaScriptExecutor(withArguments: ["--wasm-shared"])!
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
         let (jsProg, expected) = fuzzer.sync {
@@ -7640,7 +7640,7 @@ struct WasmGCTests {
 
     @Test(arguments: [true, false])
     func testi31Ref(shared: Bool) throws {
-        let runner = JavaScriptExecutor(withArguments: ["--experimental-wasm-shared"])!
+        let runner = JavaScriptExecutor(withArguments: ["--wasm-shared"])!
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
         let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
         let jsProg = fuzzer.sync {
@@ -10058,7 +10058,7 @@ struct WasmJSPITests {
 
 struct WasmWideArithmeticsTests {
     @Test func testWideArithmetics() throws {
-        let runner = JavaScriptExecutor(withArguments: ["--experimental-wasm-wide-arithmetic"])!
+        let runner = JavaScriptExecutor(withArguments: ["--wasm-wide-arithmetic"])!
         let jsProg = buildAndLiftProgram { b in
             let module = b.buildWasmModule { wasmModule in
                 // i64.add128: [i64 i64 i64 i64] -> [i64 i64]
