@@ -374,9 +374,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
         let function = b.currentWasmModule.currentWasmFunction
 
-        if structType.descriptor != nil && probability(0.5) {
-            function.wasmRefGetDesc(theStruct: theStruct)
-        } else if let fieldIndex = (0..<structType.fields.count).randomElement() {
+        if let fieldIndex = (0..<structType.fields.count).randomElement() {
             function.wasmStructGet(
                 theStruct: theStruct, fieldIndex: fieldIndex, isSigned: Bool.random())
         }
@@ -2838,6 +2836,20 @@ private let wasmCustomDescriptorsStructTypesGenerator = {
 private let wasmCustomDescriptorsCodeGenerators: [CodeGenerator] = [
     CodeGenerator(
         "WasmCustomDescriptorsStructTypesGenerator", [wasmCustomDescriptorsStructTypesGenerator()]),
+
+    CodeGenerator(
+        "WasmRefGetDescGenerator", inContext: .single(.wasmFunction),
+        inputs: .requiredComplex(.init(.wasmTypeDef(), .IsWasmStructWithDescriptor)),
+        producesComplex: [.init(.anyNonNullableIndexRef, .IsWasmStruct)]
+    ) { b, structTypeDef in
+        let function = b.currentWasmModule.currentWasmFunction
+        let structDesc =
+            b.type(of: structTypeDef).wasmTypeDefinition!.description as! WasmStructTypeDescription
+        let structType = ILType.wasmIndexRef(
+            structDesc, nullability: false, isExact: false)
+        let theStruct = function.findOrGenerateWasmVar(ofType: structType)
+        function.wasmRefGetDesc(theStruct: theStruct)
+    },
 
     CodeGenerator(
         "WasmRefCastDescEqGenerator", inContext: .single(.wasmFunction),

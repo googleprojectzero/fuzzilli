@@ -439,6 +439,7 @@ public let codeGeneratorWeights = [
 
     // These are only registered if the custom descriptors feature is enabled.
     "WasmCustomDescriptorsStructTypesGenerator":5,
+    "WasmRefGetDescGenerator":                  5,
     "WasmRefCastDescEqGenerator":               5,
     "WasmBranchOnCastDescEqGenerator":          5,
     "WasmBranchOnCastDescEqFailGenerator":      5,
