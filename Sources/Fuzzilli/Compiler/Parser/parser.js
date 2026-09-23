@@ -352,7 +352,8 @@ function parse(script, proto) {
 
     function visitStatement(node) {
         switch (node.type) {
-            case 'EmptyStatement': {
+            case 'EmptyStatement':
+            case 'DebuggerStatement': {
                 return makeStatement('EmptyStatement', {});
             }
             case 'BlockStatement': {
