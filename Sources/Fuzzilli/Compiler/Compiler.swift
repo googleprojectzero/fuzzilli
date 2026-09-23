@@ -1236,27 +1236,30 @@ public class JavaScriptCompiler {
             var propertyValues = [Variable]()
             var computedKeys = [Variable]()
             var methodDefaultValues = [[Variable]]()
+            func compileComputedKey(_ key: Compiler_Protobuf_PropertyKey) throws {
+                if case .expression(let expression) = key.body {
+                    computedKeys.append(try compileExpression(expression))
+                }
+            }
             for field in objectExpression.fields {
                 guard let field = field.field else {
                     throw CompilerError.invalidNodeError(
                         "missing concrete field in object expression")
                 }
 
-                let key: Compiler_Protobuf_PropertyKey
                 switch field {
                 case .property(let property):
+                    try compileComputedKey(property.key)
                     propertyValues.append(try compileExpression(property.value))
-                    key = property.key
                 case .method(let method):
+                    try compileComputedKey(method.key)
                     methodDefaultValues.append(try compileDefaultValues(for: method.parameters))
-                    key = method.key
                 case .getter(let getter):
-                    key = getter.key
+                    try compileComputedKey(getter.key)
                 case .setter(let setter):
-                    key = setter.key
-                }
-                if case .expression(let expression) = key.body {
-                    computedKeys.append(try compileExpression(expression))
+                    try compileComputedKey(setter.key)
+                case .spread(let spread):
+                    propertyValues.append(try compileExpression(spread.argument))
                 }
             }
 
@@ -1288,6 +1291,10 @@ public class JavaScriptCompiler {
                         throw CompilerError.invalidNodeError(
                             "Private properties are not valid in object literals")
                     }
+                case .spread:
+                    emit(
+                        ObjectLiteralCopyProperties(),
+                        withInputs: [propertyValues.removeLast()])
                 case .method(let method):
                     let defaultValues = methodDefaultValues.removeLast()
                     let parameters = try convertParameters(method.parameters)

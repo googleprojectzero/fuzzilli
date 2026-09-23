@@ -656,6 +656,9 @@ function parse(script, proto) {
                         property.value = visitExpression(field.value);
                         property.key = visitMemberKey(field);
                         fields.push(make('ObjectField', { property: make('ObjectProperty', property) }));
+                    } else if (field.type === 'SpreadElement') {
+                        let argument = visitExpression(field.argument);
+                        fields.push(make('ObjectField', { spread: make('SpreadElement', { argument }) }));
                     } else {
                         assert(field.type === 'ObjectMethod', "Expected field.type to be exactly 'ObjectMethod'");
                         assert(!field.shorthand, "Expected field.shorthand to be false");

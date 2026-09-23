@@ -396,6 +396,7 @@ message ObjectField {
         ObjectMethod method = 2;
         ObjectGetter getter = 3;
         ObjectSetter setter = 4;
+        SpreadElement spread = 5;
     }
 }
 

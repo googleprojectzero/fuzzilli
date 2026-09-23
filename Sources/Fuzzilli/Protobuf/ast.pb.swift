@@ -1952,6 +1952,14 @@ public struct Compiler_Protobuf_ObjectField: Sendable {
     set {field = .setter(newValue)}
   }
 
+  public var spread: Compiler_Protobuf_SpreadElement {
+    get {
+      if case .spread(let v)? = field {return v}
+      return Compiler_Protobuf_SpreadElement()
+    }
+    set {field = .spread(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Field: Equatable, Sendable {
@@ -1959,6 +1967,7 @@ public struct Compiler_Protobuf_ObjectField: Sendable {
     case method(Compiler_Protobuf_ObjectMethod)
     case getter(Compiler_Protobuf_ObjectGetter)
     case setter(Compiler_Protobuf_ObjectSetter)
+    case spread(Compiler_Protobuf_SpreadElement)
 
   }
 
@@ -6607,7 +6616,7 @@ extension Compiler_Protobuf_ObjectSetter: SwiftProtobuf.Message, SwiftProtobuf._
 
 extension Compiler_Protobuf_ObjectField: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ObjectField"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}property\0\u{1}method\0\u{1}getter\0\u{1}setter\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}property\0\u{1}method\0\u{1}getter\0\u{1}setter\0\u{1}spread\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -6667,6 +6676,19 @@ extension Compiler_Protobuf_ObjectField: SwiftProtobuf.Message, SwiftProtobuf._M
           self.field = .setter(v)
         }
       }()
+      case 5: try {
+        var v: Compiler_Protobuf_SpreadElement?
+        var hadOneofValue = false
+        if let current = self.field {
+          hadOneofValue = true
+          if case .spread(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.field = .spread(v)
+        }
+      }()
       default: break
       }
     }
@@ -6693,6 +6715,10 @@ extension Compiler_Protobuf_ObjectField: SwiftProtobuf.Message, SwiftProtobuf._M
     case .setter?: try {
       guard case .setter(let v)? = self.field else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    }()
+    case .spread?: try {
+      guard case .spread(let v)? = self.field else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
     }()
     case nil: break
     }
