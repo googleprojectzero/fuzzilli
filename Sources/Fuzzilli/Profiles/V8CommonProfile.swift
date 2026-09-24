@@ -121,6 +121,12 @@ public let V8AllocationTimeoutGenerator = CodeGenerator("AllocationTimeoutGenera
     b.eval("%SetAllocationTimeout(%@, %@)", with: [b.loadInt(interval), b.loadInt(timeout)])
 }
 
+public let V8DispatchTableGCIntervalGenerator = CodeGenerator("DispatchTableGCIntervalGenerator") {
+    b in
+    let interval = Int64.random(in: 1...10)
+    b.eval("%SetDispatchTableGCInterval(%@)", with: [b.loadInt(interval)])
+}
+
 public let V8MajorGcGenerator = CodeGenerator("MajorGcGenerator") { b in
     // Differently to `gc()`, this intrinsic is registered with less effects, preventing fewer
     // optimizations in V8's optimizing compilers.

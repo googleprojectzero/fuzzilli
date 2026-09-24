@@ -130,6 +130,7 @@ let v8DumplingProfile = Profile(
         (NeverOptimizeFunctionGenerator, 5),
 
         (V8GcGenerator, 10),
+        (V8DispatchTableGCIntervalGenerator, 5),
         (V8SimulateNewspaceFullGenerator, 5),
         (V8InterceptorObjectGenerator, 5),
         (V8AccessCheckedObjectGenerator, 5),

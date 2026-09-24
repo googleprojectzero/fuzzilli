@@ -556,6 +556,7 @@ let v8SandboxProfile = Profile(
         (ForceOsrGenerator, 5),
         (NeverOptimizeFunctionGenerator, 5),
         (V8GcGenerator, 10),
+        (V8DispatchTableGCIntervalGenerator, 5),
         (V8SimulateNewspaceFullGenerator, 5),
         (WasmStructGenerator, 5),
         (WasmArrayGenerator, 5),
