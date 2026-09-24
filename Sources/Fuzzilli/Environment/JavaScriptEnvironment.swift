@@ -1331,8 +1331,8 @@ extension ILType {
         + ILType.object(
             ofGroup: "RegExp",
             withProperties: [
-                "flags", "dotAll", "global", "ignoreCase", "multiline", "source", "sticky",
-                "unicode",
+                "flags", "dotAll", "global", "hasIndices", "ignoreCase", "lastIndex", "multiline",
+                "source", "sticky", "unicode", "unicodeSets",
             ], withMethods: ["compile", "exec", "test"])
 
     /// Type of a JavaScript Symbol.
@@ -2189,11 +2189,14 @@ extension ObjectGroup {
             "flags": .string,
             "dotAll": .boolean,
             "global": .boolean,
+            "hasIndices": .boolean,
             "ignoreCase": .boolean,
+            "lastIndex": .integer,
             "multiline": .boolean,
             "source": .string,
             "sticky": .boolean,
             "unicode": .boolean,
+            "unicodeSets": .boolean,
         ],
         methods: [
             "compile": [.string] => .jsRegExp,
