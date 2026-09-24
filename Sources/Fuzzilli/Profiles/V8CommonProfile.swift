@@ -643,32 +643,34 @@ public let V8RegExpFuzzer = ProgramTemplate("RegExpFuzzer") { b in
     // Taken from: https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:v8/test/fuzzer/regexp-builtins.cc;l=212;drc=a61b95c63b0b75c1cfe872d9c8cdf927c226046e
     let twoByteSubjectString = "f\\uD83D\\uDCA9ba\\u2603"
 
-    let replacementCandidates = [
-        "'X'",
-        "'$1$2$3'",
-        "'$$$&$`$\\'$1'",
-        "() => 'X'",
-        "(arg0, arg1, arg2, arg3, arg4) => arg0 + arg1 + arg2 + arg3 + arg4",
-        "() => 42",
+    let stringReplacementPatterns = [
+        "X",
+        "$1$2$3",
+        "$$$&$`$' $1",
     ]
 
-    let lastIndices = [
-        "undefined", "-1", "0",
-        "1", "2", "3",
-        "4", "5", "6",
-        "7", "8", "9",
-        "50", "4294967296", "2147483647",
-        "2147483648", "NaN", "Not a Number",
+    let lastIndexNumbers: [Int64] = [
+        -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 50, 2_147_483_647, 2_147_483_648, 4_294_967_296,
     ]
 
     let f = b.buildPlainFunction(with: .parameters(n: 0)) { _ in
         let (pattern, flags) = b.randomRegExpPatternAndFlags()
         let regExpVar = b.loadRegExp(pattern, flags)
 
-        let lastIndex = chooseUniform(from: lastIndices)
-        let lastIndexString = b.loadString(lastIndex)
+        let lastIndexVar = withProbability(
+            0.9,
+            do: {
+                b.loadInt(chooseUniform(from: lastIndexNumbers))
+            },
+            else: {
+                withEqualProbability(
+                    { b.loadUndefined() },
+                    { b.loadFloat(Double.nan) },
+                    { b.loadString("Not a Number") }
+                )
+            })
 
-        b.setProperty("lastIndex", of: regExpVar, to: lastIndexString)
+        b.setProperty("lastIndex", of: regExpVar, to: lastIndexVar)
 
         let subjectVar: Variable
 
@@ -694,13 +696,43 @@ public let V8RegExpFuzzer = ProgramTemplate("RegExpFuzzer") { b in
                         b.reassign(variable: resultVar, value: res)
                     },
                     {
+                        let prop = b.getProperty("matchAll", of: symbol)
+                        var res = b.callComputedMethod(prop, on: regExpVar, withArgs: [subjectVar])
+                        if probability(0.5) {
+                            // Symbol.matchAll returns a lazy iterator, so spread it into an array
+                            // half the time to eagerly execute the RegExp matching on fast/slow
+                            // paths, while keeping the raw iterator object the other half.
+                            res = b.createArray(with: [res], spreading: [true])
+                        }
+                        b.reassign(variable: resultVar, value: res)
+                    },
+                    {
                         let prop = b.getProperty("replace", of: symbol)
                         let replacement = withEqualProbability(
                             {
                                 b.loadString(b.randomString())
                             },
                             {
-                                b.loadString(chooseUniform(from: replacementCandidates))
+                                b.loadString(chooseUniform(from: stringReplacementPatterns))
+                            },
+                            {
+                                withEqualProbability(
+                                    {
+                                        b.buildArrowFunction(with: .parameters(n: 0)) { _ in
+                                            b.doReturn(b.loadString("X"))
+                                        }
+                                    },
+                                    {
+                                        b.buildArrowFunction(with: .parameters(n: 5)) { _ in
+                                            b.build(n: 5)
+                                            b.doReturn(b.randomJsVariable())
+                                        }
+                                    },
+                                    {
+                                        b.buildArrowFunction(with: .parameters(n: 0)) { _ in
+                                            b.doReturn(b.loadInt(42))
+                                        }
+                                    })
                             })
                         let res = b.callComputedMethod(
                             prop, on: regExpVar, withArgs: [subjectVar, replacement])
@@ -713,19 +745,24 @@ public let V8RegExpFuzzer = ProgramTemplate("RegExpFuzzer") { b in
                     },
                     {
                         let prop = b.getProperty("split", of: symbol)
-                        let randomSplitLimit = withEqualProbability(
-                            {
-                                "undefined"
+                        let limit = withProbability(
+                            0.9,
+                            do: {
+                                withEqualProbability(
+                                    {
+                                        // Tests default limit path: limit = 2^32 - 1
+                                        b.loadUndefined()
+                                    },
+                                    {
+                                        b.loadInt(b.randomInt())
+                                    })
                             },
-                            {
-                                "'not a number'"
-                            },
-                            {
-                                String(b.randomInt())
+                            else: {
+                                // Tests string coercion to 0: ToUint32("not a number") -> 0
+                                b.loadString("not a number")
                             })
-                        let limit = b.loadString(randomSplitLimit)
                         let res = b.callComputedMethod(
-                            symbol, on: regExpVar, withArgs: [subjectVar, limit])
+                            prop, on: regExpVar, withArgs: [subjectVar, limit])
                         b.reassign(variable: resultVar, value: res)
                     },
                     {
