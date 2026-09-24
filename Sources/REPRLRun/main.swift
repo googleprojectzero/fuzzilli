@@ -104,12 +104,27 @@ if execute("").status != 0 {
 // Run a couple of tests now
 runREPRLTests()
 
-print("Enter code to run, then hit enter to execute it")
+print("Enter code to run, then hit enter to execute it, or enter :load <file> to execute a file")
 while true {
     print("> ", terminator: "")
-    guard let code = readLine(strippingNewline: false) else {
+    guard var code = readLine(strippingNewline: false) else {
         print("Bye")
         break
+    }
+
+    // TODO(fuzzilli): If we extend this with more commands, handle them elegantly (e.g., add a "command -> callback" map).
+    let loadCommand = ":load "
+    if code.hasPrefix(loadCommand) {
+        let path = NSString(
+            string: code.dropFirst(loadCommand.count).trimmingCharacters(
+                in: .whitespacesAndNewlines)
+        ).expandingTildeInPath
+        do {
+            code = try String(contentsOfFile: path, encoding: .utf8)
+        } catch {
+            print("Failed to read \(path): \(error.localizedDescription)")
+            continue
+        }
     }
 
     let (status, exec_time) = execute(code)
