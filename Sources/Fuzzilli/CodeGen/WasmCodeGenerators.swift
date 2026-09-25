@@ -2915,11 +2915,16 @@ private func generateBranchOnCastDesc(
     let descriptorType = ILType.wasmIndexRef(
         structDesc.descriptor!, nullability: probability(0.1), isExact: descriptorIsExact)
 
+    let sourceType =
+        probability(0.5)
+        ? ILType.wasmIndexRef(structDesc, nullability: true, isExact: false)
+        : .wasmAnyRef()
+
     // The value carried to the label: br_on_cast_desc branches with the successfully cast value,
     // br_on_cast_desc_fail with the original, uncast one.
     let branchedRefType =
         branchOnCastFail
-        ? ILType.wasmAnyRef()
+        ? sourceType
         : ILType.wasmIndexRef(structDesc, nullability: true, isExact: castIsExact)
 
     @discardableResult
@@ -2927,10 +2932,6 @@ private func generateBranchOnCastDesc(
         assert(branchedRefType.Is(b.type(of: label).wasmLabelType!.parameters.last!))
         let descriptor = function.findOrGenerateWasmVar(ofType: descriptorType)
         assert(!castIsExact || b.type(of: descriptor).wasmReferenceType!.kind.isExact)
-        let sourceType =
-            probability(0.5)
-            ? ILType.wasmIndexRef(structDesc, nullability: true, isExact: false)
-            : .wasmAnyRef()
         let sourceVar = function.findOrGenerateWasmVar(ofType: sourceType)
         if branchOnCastFail {
             return function.wasmBranchOnCastDescEqFail(
@@ -2956,13 +2957,12 @@ private func generateBranchOnCastDesc(
     }
 
     // Otherwise create a fitting block ourselves, widening its label every now and then for the
-    // same reason. (There is nothing to widen for the fail branch, which already uses the top
-    // type of the hierarchy.)
+    // same reason. (There is nothing to widen when branchedRefType is already the top type.)
     let blockRefType =
-        branchOnCastFail || probability(0.5)
+        branchedRefType == .wasmAnyRef() || probability(0.5)
         ? branchedRefType
         : chooseUniform(from: [
-            // Drops the exactness of the cast type (a no-op if the cast isn't exact).
+            // Drops the exactness of the cast type (a no-op if the branched type isn't exact).
             ILType.wasmIndexRef(structDesc, nullability: true, isExact: false),
             .wasmStructRef(),
             .wasmEqRef(),
@@ -2976,8 +2976,7 @@ private func generateBranchOnCastDesc(
         // On fallthrough, br_on_cast_desc_fail puts the successfully cast value on the stack, so
         // its outputs are exactly the block results. br_on_cast_desc instead leaves the value that
         // did *not* match the cast, whose type doesn't fit the block result, so generate that one.
-        return branchOnCastFail
-            ? fallthroughOutputs
-            : args + [function.findOrGenerateWasmVar(ofType: blockRefType)]
+        return b.type(of: fallthroughOutputs.last!).Is(blockRefType)
+            ? fallthroughOutputs : args + [function.findOrGenerateWasmVar(ofType: blockRefType)]
     }
 }

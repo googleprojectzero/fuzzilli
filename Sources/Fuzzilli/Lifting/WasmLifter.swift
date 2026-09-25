@@ -2034,14 +2034,21 @@ public class WasmLifter {
         let actualSourceType = typer.type(of: instr.input(refInputIndex)).wasmReferenceType!
         let targetRefType = targetType.wasmReferenceType!
 
-        // actualSourceType and targetRefType may be nullable or non-nullable independently of each other.
-        // For br_on_cast* to be valid: targetRefType.nullability => actualSourceType.nullability
+        // When custom descriptors are disabled, br_on_cast* requires target <= source (both nullability
+        // and heap type), so we widen the source type immediate to the (nullable) top type of the
+        // hierarchy, e.g., anyref.
+        // Custom descriptors relaxes this to only require the same type hierarchy, allowing us to
+        // use the actual input type as the source type immediate.
         var flags: UInt8 = 0
-        if actualSourceType.nullability || targetRefType.nullability { flags |= 0x01 }
+        if !typer.enableCustomDescriptors || actualSourceType.nullability { flags |= 0x01 }
         if targetRefType.nullability { flags |= 0x02 }
 
-        // To ensure br_on_cast* validation succeeds (target <= source), we use the top type of the hierarchy as the source type.
-        let sourceData = try encodeHeapType(actualSourceType.kind.topType())
+        // When custom descriptors are disabled, we use the top type of the hierarchy as the source type,
+        // in order to ensure br_on_cast* validation succeeds (target <= source).
+        let sourceData =
+            try typer.enableCustomDescriptors
+            ? encodeHeapType(actualSourceType.kind)
+            : encodeHeapType(actualSourceType.kind.topType())
         let targetData =
             isDescriptor
             ? try encodeDescriptorReferenceType(

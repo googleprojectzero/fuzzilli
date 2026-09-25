@@ -529,11 +529,14 @@ struct WasmCustomDescriptorsTests {
                         ],
                         args: []
                     ) { blockLabel, _ in
-                        let _ = function.wasmBranchOnCastDescEq(
+                        let fallthroughOutputs = function.wasmBranchOnCastDescEq(
                             abstractRef, descriptorRef: descriptorInst,
                             targetRefType: ILType.wasmRef(
                                 .Index(isExact: true), nullability: false),
                             to: blockLabel, args: [])
+                        #expect(
+                            b.type(of: fallthroughOutputs[0])
+                                == ILType.wasmRef(.WasmStruct, nullability: false))
 
                         let descriptorInst2 = function.wasmStructNew(
                             structType: types[1], fields: [fallbackDescVal])
@@ -548,7 +551,36 @@ struct WasmCustomDescriptorsTests {
                     let v3 = function.wasmStructGet(
                         theStruct: resultInexactLabelWithExactTarget[0], fieldIndex: 0)
 
-                    let sum = function.wasmi32BinOp(sum2, v3, binOpKind: .Add)
+                    // 5. Cast fails on nullable index-typed source with nullable target ->
+                    // fallthrough preserves the struct heap type and refines nullability to false.
+                    let nullableDescribed = function.wasmRefCast(
+                        describedInst,
+                        refType: ILType.wasmRef(.Index(isExact: false), nullability: true),
+                        typeDef: types[0])
+                    let otherDescInst = function.wasmStructNew(
+                        structType: types[1], fields: [fallbackDescVal])
+                    let resultFallthrough = function.wasmBuildBlockWithResults(
+                        with: [] => [
+                            ILType.wasmIndexRef(structTypeDesc, nullability: true, isExact: false)
+                        ],
+                        args: []
+                    ) { blockLabel, _ in
+                        let fallthroughOutputs = function.wasmBranchOnCastDescEq(
+                            nullableDescribed, descriptorRef: otherDescInst,
+                            targetRefType: ILType.wasmRef(
+                                .Index(isExact: false), nullability: true),
+                            to: blockLabel, args: [])
+                        #expect(
+                            b.type(of: fallthroughOutputs[0])
+                                == ILType.wasmIndexRef(
+                                    structTypeDesc, nullability: false, isExact: false))
+                        return fallthroughOutputs
+                    }
+                    let v4 = function.wasmStructGet(
+                        theStruct: resultFallthrough[0], fieldIndex: 0)
+
+                    let sum3 = function.wasmi32BinOp(sum2, v3, binOpKind: .Add)
+                    let sum = function.wasmi32BinOp(sum3, v4, binOpKind: .Add)
                     return [sum]
                 }
             }
@@ -557,7 +589,7 @@ struct WasmCustomDescriptorsTests {
             let outputFunc = b.createNamedVariable(forBuiltin: "output")
             b.callFunction(outputFunc, withArgs: [res])
         }
-        testForOutput(program: jsProg, runner: runner, outputString: "168\n")
+        testForOutput(program: jsProg, runner: runner, outputString: "210\n")
     }
     @Test func testBranchOnCastDescEqFail() throws {
         let runner = JavaScriptExecutor(withArguments: ["--wasm-custom-descriptors"])!
@@ -574,6 +606,9 @@ struct WasmCustomDescriptorsTests {
             }
 
             let module = b.buildWasmModule { wasmModule in
+                let structTypeDesc =
+                    b.type(of: types[0]).wasmTypeDefinition!.description
+                    as! WasmStructTypeDescription
                 let _ = wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _, _ in
                     let i32 = function.consti32(42)
                     let f32 = function.constf32(13.37)
@@ -646,16 +681,20 @@ struct WasmCustomDescriptorsTests {
                     }
                     let v2 = resultInexactWithInexactDesc[0]
 
-                    // 4. Cast fails -> branch taken to blockLabel
+                    // 4. Cast fails -> branch taken to blockLabel (with struct-typed source
+                    // branching to a block label expecting the struct type rather than anyref)
                     let otherDescInst = function.wasmStructNew(structType: types[1], fields: [f32])
 
                     let resultBranchTaken = function.wasmBuildBlockWithResults(
-                        with: [] => [.wasmi32, ILType.wasmRef(.WasmAny, nullability: false)],
+                        with: [] => [
+                            .wasmi32,
+                            ILType.wasmIndexRef(structTypeDesc, nullability: false, isExact: false),
+                        ],
                         args: []
                     ) { blockLabel, _ in
                         let i32_100 = function.consti32(100)
                         let casted = function.wasmBranchOnCastDescEqFail(
-                            abstractRef, descriptorRef: otherDescInst,
+                            describedInst, descriptorRef: otherDescInst,
                             targetRefType: ILType.wasmRef(
                                 .Index(isExact: true), nullability: false),
                             to: blockLabel, args: [i32_100])
@@ -664,10 +703,13 @@ struct WasmCustomDescriptorsTests {
                         return [fallback, casted[1]]
                     }
                     let v3 = resultBranchTaken[0]
+                    let v4 = function.wasmStructGet(
+                        theStruct: resultBranchTaken[1], fieldIndex: 0)
 
                     let sum1 = function.wasmi32BinOp(v0, v1, binOpKind: .Add)
                     let sum2 = function.wasmi32BinOp(sum1, v2, binOpKind: .Add)
-                    let sum = function.wasmi32BinOp(sum2, v3, binOpKind: .Add)
+                    let sum3 = function.wasmi32BinOp(sum2, v3, binOpKind: .Add)
+                    let sum = function.wasmi32BinOp(sum3, v4, binOpKind: .Add)
                     return [sum]
                 }
             }
@@ -676,7 +718,7 @@ struct WasmCustomDescriptorsTests {
             let outputFunc = b.createNamedVariable(forBuiltin: "output")
             b.callFunction(outputFunc, withArgs: [res])
         }
-        testForOutput(program: jsProg, runner: runner, outputString: "226\n")
+        testForOutput(program: jsProg, runner: runner, outputString: "268\n")
     }
 
     @Test func testSplicingCustomDescriptorSubtypeIntoTypeGroup() throws {

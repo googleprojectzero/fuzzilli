@@ -495,7 +495,7 @@ public struct JSTyper: Analyzer {
     private var indexOfLastInstruction = -1
 
     private let isBundle: Bool
-    private let enableCustomDescriptors: Bool
+    let enableCustomDescriptors: Bool
 
     init(for environ: JavaScriptEnvironment, isBundle: Bool) {
         self.environment = environ
@@ -1477,10 +1477,21 @@ public struct JSTyper: Analyzer {
             {
                 setType(of: output, to: parameterType)
             }
-            let refInputIndex = 1 + op.parameterCount
-            if let actualSourceType = type(of: instr.input(refInputIndex)).wasmReferenceType {
-                let sourceTopType = actualSourceType.kind.topType()
-                setType(of: instr.outputs.last!, to: sourceTopType)
+            let refInput = instr.input(1 + op.parameterCount)
+            if let actualSourceType = type(of: refInput).wasmReferenceType,
+                actualSourceType.isAbstract() || tryGetTypeDescription(of: refInput) != nil,
+                let targetRefType = op.targetType.wasmReferenceType
+            {
+                let fallthroughType: ILType
+                if enableCustomDescriptors {
+                    let fallthroughNullability =
+                        actualSourceType.nullability && !targetRefType.nullability
+                    fallthroughType = .wasmRef(
+                        actualSourceType.kind, nullability: fallthroughNullability)
+                } else {
+                    fallthroughType = actualSourceType.kind.topType()
+                }
+                setType(of: instr.outputs.last!, to: fallthroughType)
             } else {
                 setType(of: instr.outputs.last!, to: .error)
             }
@@ -1501,10 +1512,14 @@ public struct JSTyper: Analyzer {
 
             if let actualSourceType,
                 actualSourceType.isAbstract() || tryGetTypeDescription(of: structRef) != nil,
-                descriptorDesc?.describes != nil
+                descriptorDesc?.describes != nil,
+                let targetRefType = op.targetType.wasmReferenceType
             {
-                let sourceTopType = actualSourceType.kind.topType()
-                setType(of: instr.outputs.last!, to: sourceTopType)
+                let fallthroughNullability =
+                    actualSourceType.nullability && !targetRefType.nullability
+                setType(
+                    of: instr.outputs.last!,
+                    to: .wasmRef(actualSourceType.kind, nullability: fallthroughNullability))
             } else {
                 setType(of: instr.outputs.last!, to: .error)
             }
