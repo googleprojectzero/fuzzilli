@@ -1212,7 +1212,11 @@ public struct JSTyper: Analyzer {
                 withSignature: ProgramBuilder.convertWasmSignatureToJsSignature(signature),
                 forDefinition: instr, forVariable: instr.output)
         case .wasmSelect(_):
-            setType(of: instr.output, to: type(of: instr.input(0)) | type(of: instr.input(1)))
+            // Both inputs must share a single encodable Wasm value type (which may fail after cross-module global minimization).
+            let outputType = type(of: instr.input(0)) | type(of: instr.input(1))
+            let isEncodable =
+                outputType.isWasmReferenceType || ILType.wasmNonRefValueTypes.contains(outputType)
+            setType(of: instr.output, to: isEncodable ? outputType : .error)
         case .wasmBeginBlock(_):
             let signature = type(of: instr.input(0)).wasmFunctionSignatureDefSignature
             wasmTypeBeginBlock(instr, signature)

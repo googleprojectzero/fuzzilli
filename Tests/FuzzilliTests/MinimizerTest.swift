@@ -3867,6 +3867,28 @@ struct MinimizerTests {
                 }
             }
         ),
+        WasmCrossModuleGlobalMinimizationTestCase(
+            name: "wasmSelect",
+            build: { b in
+                let wg0 = buildExportingModule(
+                    with: b,
+                    unusedGlobal: .wasmi64(0),
+                    usedGlobal: .wasmi32(0)
+                )
+
+                b.buildWasmModule { wasmModule in
+                    wasmModule.addWasmFunction(with: [] => [.wasmi64]) { function, _, _ in
+                        let loaded = function.wasmLoadGlobal(globalVariable: wg0)
+                        let selected = function.wasmSelect(
+                            on: function.consti32(1),
+                            trueValue: loaded,
+                            falseValue: function.consti64(0)
+                        )
+                        return [selected]
+                    }
+                }
+            }
+        ),
     ]
 
     @Test(arguments: wasmCrossModuleGlobalMinimizationTestCases)
