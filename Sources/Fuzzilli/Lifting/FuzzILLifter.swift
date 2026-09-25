@@ -405,10 +405,9 @@ public class FuzzILLifter: Lifter {
             w.decreaseIndentionLevel()
             w.emit("EndClassDefinition")
 
-        case .createArray(let op):
+        case .createArray:
             let elems = instr.inputs.map(lift).joined(separator: ", ")
-            let group = op.elementGroupName != nil ? " [\(op.elementGroupName!)]" : ""
-            w.emit("\(output()) <- CreateArray\(group) [\(elems)]")
+            w.emit("\(output()) <- CreateArray [\(elems)]")
 
         case .createIntArray(let op):
             w.emit("\(instr.output) <- CreateIntArray \(op.values)")

@@ -2534,19 +2534,14 @@ public struct JSTyper: Analyzer {
                 instr.innerOutputs(1...),
                 parameters: inferSubroutineParameterList(of: op, at: instr.index),
                 opParameters: op.parameters)
-        case .createArray(let op):
-            if let elementGroupName = op.elementGroupName {
-                let elementType = self.environment.type(ofGroupOrEnum: elementGroupName)
-                set(instr.output, .createJsArrayType(ofElementType: elementType))
-            } else {
-                let iterableElementType =
-                    instr.inputs.isEmpty
-                    ? .jsAnything
-                    : instr.inputs.reduce(ILType.nothing) {
-                        $0 | self.type(of: $1)
-                    }
-                set(instr.output, .createJsArrayType(ofElementType: iterableElementType))
-            }
+        case .createArray:
+            let iterableElementType =
+                instr.inputs.isEmpty
+                ? .jsAnything
+                : instr.inputs.reduce(ILType.nothing) {
+                    $0 | self.type(of: $1)
+                }
+            set(instr.output, .createJsArrayType(ofElementType: iterableElementType))
 
         case .createArrayWithSpread(let op):
             let iterableElementType =

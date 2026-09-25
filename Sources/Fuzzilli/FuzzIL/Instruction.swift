@@ -766,12 +766,8 @@ extension Instruction: ProtobufConvertible {
                 }
             case .endClassDefinition:
                 $0.endClassDefinition = Fuzzilli_Protobuf_EndClassDefinition()
-            case .createArray(let op):
-                $0.createArray = Fuzzilli_Protobuf_CreateArray.with {
-                    if let elementGroupName = op.elementGroupName {
-                        $0.elementGroupName = elementGroupName
-                    }
-                }
+            case .createArray:
+                $0.createArray = Fuzzilli_Protobuf_CreateArray()
             case .createIntArray(let op):
                 $0.createIntArray = Fuzzilli_Protobuf_CreateIntArray.with { $0.values = op.values }
             case .createFloatArray(let op):
@@ -2342,10 +2338,8 @@ extension Instruction: ProtobufConvertible {
             op = EndClassPrivateSetter()
         case .endClassDefinition:
             op = EndClassDefinition()
-        case .createArray(let p):
-            let elementGroupName = p.hasElementGroupName ? p.elementGroupName : nil
-            op = CreateArray(
-                numInitialValues: inouts.count - 1, elementGroupName: elementGroupName)
+        case .createArray:
+            op = CreateArray(numInitialValues: inouts.count - 1)
         case .createIntArray(let p):
             op = CreateIntArray(values: p.values)
         case .createFloatArray(let p):

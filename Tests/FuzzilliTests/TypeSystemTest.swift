@@ -2114,6 +2114,7 @@ struct TypeSystemTests {
         #expect(!(intIterable >= strIterable))
         #expect(objIterable >= objIterable2)
         #expect(!(objIterable2 >= objIterable))
+        #expect(factory(.jsAnything) == baseInstance)
 
         #expect(intIterable | strIterable == multiIterable)
         #expect(baseInstance | strIterable == baseInstance)

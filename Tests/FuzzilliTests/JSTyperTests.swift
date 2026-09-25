@@ -1233,36 +1233,6 @@ struct JSTyperTests {
         }
     }
 
-    @Test func testParameterizedArrayCreation() {
-        let propFooType = ILType.float
-        let fooElement = ILType.object(ofGroup: "FooElement", withProperties: ["foo"])
-        let additionalObjectGroups: [ObjectGroup] = [
-            ObjectGroup(
-                name: "FooElement",
-                instanceType: fooElement,
-                properties: [
-                    "foo": propFooType
-                ],
-                methods: [:])
-        ]
-
-        let env = JavaScriptEnvironment(additionalObjectGroups: additionalObjectGroups)
-        let fuzzer = makeMockFuzzer(environment: env)
-        fuzzer.sync {
-            let b = fuzzer.makeBuilder()
-
-            let a1 = b.createArray(with: [], elementGroupName: "FooElement")
-            #expect(b.type(of: a1) == ILType.createJsArrayType(ofElementType: fooElement))
-
-            // For an unregistered group, resulting `jsArray` will have element type `.jsAnything`
-            let a2 = b.createArray(with: [], elementGroupName: "UnknownGroup")
-            #expect(b.type(of: a2) == ILType.createJsArrayType(ofElementType: .jsAnything))
-
-            let a3 = b.createArray(with: [])
-            #expect(b.type(of: a3) == ILType.jsArray)
-        }
-    }
-
     @Test func testMapCreation() {
         let env = JavaScriptEnvironment()
 
@@ -1328,6 +1298,10 @@ struct JSTyperTests {
             let a8 = b.createArray(with: [oFooAndBar, oBarAndBaz])
             #expect(
                 b.type(of: a8) == .createJsArrayType(ofElementType: .object(withMethods: ["bar"])))
+
+            // 9. Array of undefined
+            let a9 = b.createArray(with: [b.loadUndefined()])
+            #expect(b.type(of: a9) == .createJsArrayType(ofElementType: .undefined))
         }
     }
 

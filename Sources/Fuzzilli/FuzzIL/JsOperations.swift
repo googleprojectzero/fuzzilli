@@ -1014,10 +1014,7 @@ final class CreateArray: JsOperation {
         return numInputs
     }
 
-    let elementGroupName: String?
-
-    init(numInitialValues: Int, elementGroupName: String? = nil) {
-        self.elementGroupName = elementGroupName
+    init(numInitialValues: Int) {
         super.init(
             numInputs: numInitialValues, numOutputs: 1, firstVariadicInput: 0,
             attributes: [.isVariadic])

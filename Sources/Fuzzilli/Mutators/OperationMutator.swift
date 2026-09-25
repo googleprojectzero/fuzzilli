@@ -1013,16 +1013,31 @@ public class OperationMutator: BaseInstructionMutator {
 
         switch instr.op.opcode {
         case .createArray(let op):
-            newOp = CreateArray(
-                numInitialValues: op.numInitialValues + 1, elementGroupName: op.elementGroupName)
-            let elementType = op.elementGroupName.map {
-                b.fuzzer.environment.type(ofGroupOrEnum: $0)
-            }
-            inputs.append(
-                elementType.map { b.randomVariable(forUseAs: $0) } ?? b.randomJsVariable())
+            newOp = CreateArray(numInitialValues: op.numInitialValues + 1)
+            let elementType =
+                instr.inputs.isEmpty
+                ? .jsAnything
+                : instr.inputs.reduce(ILType.nothing) {
+                    $0 | b.type(of: $1)
+                }
+            inputs.append(b.randomVariable(forUseAs: elementType))
         case .createArrayWithSpread(let op):
-            let spreads = op.spreads + [Bool.random()]
-            inputs.append(b.randomJsVariable())
+            let elementType =
+                instr.inputs.isEmpty
+                ? .jsAnything
+                : zip(instr.inputs, op.spreads).reduce(ILType.nothing) {
+                    result, entry in
+                    let (input, isSpread) = entry
+                    let inputType = b.type(of: input)
+                    let resolvedElementType =
+                        isSpread ? (inputType.iterableElementType ?? .jsAnything) : inputType
+                    return result | resolvedElementType
+                }
+            let isSpread = Bool.random()
+            inputs.append(
+                b.randomVariable(
+                    forUseAs: isSpread ? .iterable(ofElementType: elementType) : elementType))
+            let spreads = op.spreads + [isSpread]
             newOp = CreateArrayWithSpread(spreads: spreads)
         case .callFunction(let op):
             inputs.append(b.randomJsVariable())

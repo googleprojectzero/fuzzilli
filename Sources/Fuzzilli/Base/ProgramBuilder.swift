@@ -869,23 +869,18 @@ public class ProgramBuilder {
                     }
 
                     let element = self.generateTypeInternal(iterableElementType)
-                    // Workaround for Mojo fuzzing: array literals can be annotated of being of a specific element type group.
-                    if let elementGroupName = iterableElementType.group {
-                        return self.createArray(with: [element], elementGroupName: elementGroupName)
-                    } else {
-                        let array = self.createArray(with: [element])
+                    let array = self.createArray(with: [element])
 
-                        // Ideally, `self.type(of: array)` should be a subtype of `type`.
-                        // Should this fail, we want a warning, but we should not abort!
-                        // These arrays used to be untyped and meaningful mutations were still being applied.
-                        if !self.type(of: array).Is(type) {
-                            self.logger.warning(
-                                "Type of generated array (\(self.type(of: array))) is not a subtype of the requested array type (\(type))."
-                            )
-                        }
-
-                        return array
+                    // Ideally, `self.type(of: array)` should be a subtype of `type`.
+                    // Should this fail, we want a warning, but we should not abort!
+                    // These arrays used to be untyped and meaningful mutations were still being applied.
+                    if !self.type(of: array).Is(type) {
+                        self.logger.warning(
+                            "Type of generated array (\(self.type(of: array))) is not a subtype of the requested array type (\(type))."
+                        )
                     }
+
+                    return array
                 },
             .function():
                 {
@@ -3491,12 +3486,11 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func createArray(with initialValues: [Variable], elementGroupName: String? = nil)
+    public func createArray(with initialValues: [Variable])
         -> Variable
     {
         return emit(
-            CreateArray(numInitialValues: initialValues.count, elementGroupName: elementGroupName),
-            withInputs: initialValues
+            CreateArray(numInitialValues: initialValues.count), withInputs: initialValues
         )
         .output
     }

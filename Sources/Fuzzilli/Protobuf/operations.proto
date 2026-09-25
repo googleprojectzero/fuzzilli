@@ -261,7 +261,6 @@ message EndClassDefinition {
 }
 
 message CreateArray {
-    optional string elementGroupName = 1;
 }
 
 message CreateIntArray {

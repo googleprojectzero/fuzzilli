@@ -1907,7 +1907,8 @@ class TypeExtension: Hashable {
         self.wasmExt = wasmExt
         self.receiver = receiver
         self.isEnumeration = isEnumeration
-        self.iterableElementType = iterableElementType
+        // Normalize `iterableElementType`. An iterable of `.jsAnything` is treated as unparameterized.
+        self.iterableElementType = iterableElementType == .jsAnything ? nil : iterableElementType
         self.exports = exports
         self.promiseResolvingTo = promiseResolvingTo
     }
