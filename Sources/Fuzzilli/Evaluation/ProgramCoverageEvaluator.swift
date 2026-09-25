@@ -91,6 +91,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
 
     /// Context for the C library.
     private var context = libcoverage.cov_context()
+    private var isShutDown = false
 
     public init(runner: ScriptRunner) {
         // In order to keep clean abstractions, any corpus scheduler requiring edge counting
@@ -114,6 +115,16 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
 
     }
 
+    public func shutdown() {
+        guard !isShutDown else { return }
+        libcoverage.cov_shutdown(&context)
+        isShutDown = true
+    }
+
+    deinit {
+        shutdown()
+    }
+
     public func enableEdgeTracking() {
         assert(!isInitialized)  // This should only be called prior to initialization
         shouldTrackEdgeCounts = true
@@ -123,7 +134,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         var edgeCounts = libcoverage.edge_counts()
         let result = libcoverage.cov_get_edge_counts(&context, &edgeCounts)
         if result == -1 {
-            logger.error("Error retrifying smallest hit count edges")
+            logger.error("Error retrieving smallest hit count edges")
             return []
         }
         var edgeArray = Array(
@@ -139,15 +150,31 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         return edgeArray
     }
 
+    public func getCurrentEdges() -> [UInt32] {
+        var edgeSet = libcoverage.edge_set()
+        let result = libcoverage.cov_get_current_edges(&context, &edgeSet)
+        if result == -1 {
+            logger.error("Error retrieving current edges")
+            return []
+        }
+        defer { free(edgeSet.edge_indices) }
+        let buffer = UnsafeBufferPointer(start: edgeSet.edge_indices, count: Int(edgeSet.count))
+        if resetCounts.isEmpty {
+            return Array(buffer)
+        }
+        return buffer.filter { (resetCounts[$0] ?? 0) < maxResetCount }
+    }
+
     override func initialize() {
         // Must clear the shared memory bitmap before every execution
-        fuzzer.registerEventListener(for: fuzzer.events.PreExecute) { execution in
+        fuzzer.registerEventListener(for: fuzzer.events.PreExecute) { [weak self] execution in
+            guard let self = self else { return }
             libcoverage.cov_clear_bitmap(&self.context)
         }
 
         // Unlink the shared memory regions on shutdown
-        fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { _ in
-            libcoverage.cov_shutdown(&self.context)
+        fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { [weak self] _ in
+            self?.shutdown()
         }
 
         let _ = fuzzer.execute(Program(isBundle: false), purpose: .startup)

@@ -240,6 +240,58 @@ int cov_get_edge_counts(struct cov_context* context, struct edge_counts* edges)
     return 0;
 }
 
+/// Scans the coverage bitmap in shared memory from the most recent execution and
+/// extracts the indices of all hit edges, populating the dynamically allocated
+/// `edge_indices` buffer in `edges`. The caller is responsible for freeing `edges->edge_indices`.
+/// Returns 0 on success, or -1 if the context, shared memory, or output pointer is NULL.
+int cov_get_current_edges(struct cov_context* context, struct edge_set* edges)
+{
+    if (!context || !context->shmem || !edges) {
+        return -1;
+    }
+    uint64_t* current = (uint64_t*)context->shmem->edges;
+    uint64_t* end = (uint64_t*)(context->shmem->edges + context->bitmap_size);
+    edges->count = 0;
+    edges->edge_indices = NULL;
+
+    size_t capacity = 0;
+
+    while (current < end) {
+        uint64_t val = *current;
+        if (val != 0) {
+            uint32_t base_index = (uint32_t)((uintptr_t)current - (uintptr_t)context->shmem->edges) * 8;
+            while (val != 0) {
+                uint32_t bit = (uint32_t)__builtin_ctzll(val);
+                uint32_t edge_idx = base_index + bit;
+                if (unlikely(edge_idx >= context->num_edges)) {
+                    fprintf(stderr, "[LibCoverage] Edge index %u out of bounds (num_edges = %u)\n", edge_idx, context->num_edges);
+                    abort();
+                }
+                // Zeroth edge is ignored, see cov_finish_initialization.
+                if (edge_idx > 0) {
+                    if (edges->count >= capacity) {
+                        size_t new_capacity = capacity == 0 ? 256 : capacity * 2;
+                        uint32_t* new_indices = realloc(edges->edge_indices, new_capacity * sizeof(uint32_t));
+                        if (!new_indices) {
+                            free(edges->edge_indices);
+                            edges->edge_indices = NULL;
+                            edges->count = 0;
+                            return -1;
+                        }
+                        edges->edge_indices = new_indices;
+                        capacity = new_capacity;
+                    }
+                    edges->edge_indices[edges->count++] = edge_idx;
+                }
+                // Clear the least significant 1-bit.
+                val &= val - 1;
+            }
+        }
+        current++;
+    }
+    return 0;
+}
+
 void cov_clear_edge_data(struct cov_context* context, uint32_t index)
 {
     if (context->should_track_edges) {

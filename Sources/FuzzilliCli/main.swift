@@ -35,7 +35,7 @@ if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 
                                            are started at the same time.
             --engine=name                : The fuzzing engine to use. Available engines: "mutation" (default), "hybrid", "multi".
                                            Only the mutation engine should be regarded stable at this point.
-            --corpus=name                : The corpus scheduler to use. Available schedulers: "basic" (default), "markov"
+            --corpus=name                : The corpus scheduler to use. Available schedulers: "basic" (default), "markov", "rarity"
             --logLevel=level             : The log level to use. Valid values: "verbose", "info", "warning", "error", "fatal" (default: "info").
             --maxIterations=n            : Run for the specified number of iterations (default: unlimited).
             --maxRuntime=n<s>|<m>|<h>    : Run for the specified amount of time.
@@ -51,6 +51,10 @@ if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 
             --markovDropoutRate=p        : Rate at which low edge samples are not selected, in the Markov Corpus Scheduler,
                                            per round of sample selection. Used to ensure diversity between fuzzer instances
                                            (default: 0.10)
+            --rarityAgeExponent=x        : Exponent controlling how fast seed energy decays with mutation age in the Rarity Corpus (default: 2.0).
+            --raritySizeExponent=x       : Exponent controlling the program size penalty in the Rarity Corpus (default: 2.0).
+            --rarityExponent=x           : Exponent controlling how fast an edge's weight decays as more seeds hit it in the Rarity Corpus (default: 3.0).
+            --rareEdgeLimit=n            : Maximum number of corpus seeds that can hit an edge before it is no longer considered rare (default: 8).
             --consecutiveMutations=n     : Perform this many consecutive mutations on each sample (default: 5).
             --corpusGenerationIterations=n : Switch from corpus generation to the main fuzzing phase after this many
                                            iterations without finding a new interesting sample (default: 100).
@@ -166,6 +170,13 @@ if let val = args["--maxRuntime"] {
 let minMutationsPerSample = args.int(for: "--minMutationsPerSample") ?? 25
 let minCorpusSize = args.int(for: "--minCorpusSize") ?? 1000
 let maxCorpusSize = args.int(for: "--maxCorpusSize") ?? Int.max
+// Exponents for the RarityCorpus energy formula:
+// energy = rarity / ((age + 1)^ageExponent * (1 + ln(size)^sizeExponent)), where rarity = sum(1 / count^rarityExponent).
+let ageExponent = args.double(for: "--rarityAgeExponent") ?? 2.0
+let sizeExponent = args.double(for: "--raritySizeExponent") ?? 2.0
+let rarityExponent = args.double(for: "--rarityExponent") ?? 3.0
+// Maximum number of seeds that can hit an edge before it is no longer considered rare in RarityCorpus.
+let rareEdgeLimit = args.int(for: "--rareEdgeLimit") ?? 8
 let markovDropoutRate = args.double(for: "--markovDropoutRate") ?? 0.10
 let consecutiveMutations = args.int(for: "--consecutiveMutations") ?? 5
 let corpusGenerationIterations = args.int(for: "--corpusGenerationIterations") ?? 100
@@ -262,7 +273,7 @@ guard validEngines.contains(engineName) else {
     configError("--engine must be one of \(validEngines)")
 }
 
-let validCorpora = ["basic", "markov"]
+let validCorpora = ["basic", "markov", "rarity"]
 guard validCorpora.contains(corpusName) else {
     configError("--corpus must be one of \(validCorpora)")
 }
@@ -284,6 +295,40 @@ if corpusName == "markov"
     )
 }
 
+// TODO(rherouart): Support corpus eviction in RarityCorpus (honouring --maxCorpusSize, --minCorpusSize, and --minMutationsPerSample like BasicCorpus).
+if corpusName == "rarity"
+    && (args.int(for: "--maxCorpusSize") != nil || args.int(for: "--minCorpusSize") != nil
+        || args.int(for: "--minMutationsPerSample") != nil)
+{
+    print(
+        "Warning: --maxCorpusSize, --minCorpusSize, and --minMutationsPerSample are ignored when using the Rarity corpus"
+    )
+}
+
+if corpusName != "rarity"
+    && (args.double(for: "--rarityAgeExponent") != nil
+        || args.double(for: "--raritySizeExponent") != nil
+        || args.double(for: "--rarityExponent") != nil
+        || args.int(for: "--rareEdgeLimit") != nil)
+{
+    print(
+        "Warning: --rarityAgeExponent, --raritySizeExponent, --rarityExponent, and --rareEdgeLimit are ignored when not using the Rarity corpus"
+    )
+}
+
+if rareEdgeLimit < 1 || rareEdgeLimit >= Int(UInt8.max) {
+    configError("--rareEdgeLimit must be between 1 and \(UInt8.max - 1)")
+}
+if !ageExponent.isFinite || ageExponent < 0.0 {
+    configError("--rarityAgeExponent must be a non-negative finite number")
+}
+if !sizeExponent.isFinite || sizeExponent < 0.0 {
+    configError("--raritySizeExponent must be a non-negative finite number")
+}
+if !rarityExponent.isFinite || rarityExponent < 0.0 {
+    configError("--rarityExponent must be a non-negative finite number")
+}
+
 if (resume || overwrite) && storagePath == nil {
     configError("--resume and --overwrite require --storagePath")
 }
@@ -292,8 +337,8 @@ if shutdownAfterImport && !resume && corpusImportPath == nil {
     configError("--shutdownAfterImport requires --resume or --importCorpus")
 }
 
-if corpusName == "markov" && staticCorpus {
-    configError("Markov corpus is not compatible with --staticCorpus")
+if (corpusName == "markov" || corpusName == "rarity") && staticCorpus {
+    configError("\(corpusName.capitalized) corpus is not compatible with --staticCorpus")
 }
 
 if let path = storagePath {
@@ -658,6 +703,11 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
     case "markov":
         corpus = MarkovCorpus(
             covEvaluator: evaluator as ProgramCoverageEvaluator, dropoutRate: markovDropoutRate)
+    case "rarity":
+        corpus = RarityCorpus(
+            ageExponent: ageExponent, sizeExponent: sizeExponent,
+            rarityExponent: rarityExponent, rareEdgeLimit: rareEdgeLimit,
+            covEvaluator: evaluator as ProgramCoverageEvaluator)
     default:
         logger.fatal("Invalid corpus name provided")
     }
