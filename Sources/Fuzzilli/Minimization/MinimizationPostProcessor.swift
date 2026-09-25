@@ -97,24 +97,16 @@ struct MinimizationPostProcessor {
                         CreateArray(numInitialValues: initialValues.count),
                         output: instr.output,
                         inputs: initialValues)
-                case .createMap(let op):
+                case .createMap:
                     // Add initial values, but only if there are none currently.
                     if instr.hasAnyVariadicInputs || !b.hasVisibleJsVariables { break }
 
-                    var elementType = ILType.jsArray
-                    if let keyGroup = op.keyGroupName, let valueGroup = op.valueGroupName {
-                        let keyType = b.fuzzer.environment.type(ofGroupOrEnum: keyGroup)
-                        let valueType = b.fuzzer.environment.type(ofGroupOrEnum: valueGroup)
-                        elementType = ILType.createJsArrayType(ofElementType: keyType | valueType)
+                    // Prefer arrays, as map elements should be 2-element arrays.
+                    let initialValues = (0..<Int.random(in: 1...5)).map { _ in
+                        b.randomVariable(forUseAs: .jsArray)
                     }
-                    let initialValues = [Variable](
-                        repeating: b.randomVariable(forUseAs: elementType),
-                        count: Int.random(in: 1...5))
                     replacementInstruction = Instruction(
-                        CreateMap(
-                            numInitialValues: initialValues.count,
-                            keyGroupName: op.keyGroupName,
-                            valueGroupName: op.valueGroupName),
+                        CreateMap(numInitialValues: initialValues.count),
                         output: instr.output,
                         inputs: initialValues)
                 default:

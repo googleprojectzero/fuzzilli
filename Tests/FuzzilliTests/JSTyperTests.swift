@@ -1305,9 +1305,8 @@ struct JSTyperTests {
         }
     }
 
-    @Test func testParameterizedMapCreation() {
+    @Test func testMapCreationTyping() {
         let fooElement = ILType.object(ofGroup: "FooElement", withProperties: ["foo"])
-        let stringElement = ILType.object(ofGroup: "StringElement")
         let additionalObjectGroups: [ObjectGroup] = [
             ObjectGroup(
                 name: "FooElement",
@@ -1315,40 +1314,40 @@ struct JSTyperTests {
                 properties: [
                     "foo": .float
                 ],
-                methods: [:]),
-            ObjectGroup(
-                name: "StringElement",
-                instanceType: stringElement,
-                properties: [:],
-                methods: [:]),
+                methods: [:])
         ]
-
-        let env = JavaScriptEnvironment(additionalObjectGroups: additionalObjectGroups)
+        let builtins: [String: ILType] = ["PureFoo": fooElement]
+        let env = JavaScriptEnvironment(
+            additionalBuiltins: builtins, additionalObjectGroups: additionalObjectGroups)
         let fuzzer = makeMockFuzzer(environment: env)
         fuzzer.sync {
             let b = fuzzer.makeBuilder()
 
-            let keyGroups = ["StringElement", "UnknownGroup", nil]
-            let valueGroups = ["FooElement", "UnknownGroup", nil]
-            for (keyGroupName, valueGroupName) in zip(keyGroups, valueGroups) {
-                let m = b.createMap(
-                    withKeys: [], withValues: [], keyGroupName: keyGroupName,
-                    valueGroupName: valueGroupName)
+            let i = b.loadInt(42)
+            let s = b.loadString("foo")
+            let foo = b.createNamedVariable(forBuiltin: "PureFoo")
 
-                if keyGroupName == nil || valueGroupName == nil {
-                    // If either group name is nil, resulting `jsMap` will have both key and value types set to nil
-                    #expect(b.type(of: m) == ILType.createJsMapType())
-                    continue
-                }
+            // 1. Map with homogeneous keys and values
+            let m1 = b.createMap(withKeys: [i, i], withValues: [i, i])
+            #expect(b.type(of: m1) == .createJsMapType(ofKeyType: .integer, ofValueType: .integer))
 
-                // Unregistered group names get resolved to jsAnything
-                let keyElement = keyGroupName != "UnknownGroup" ? stringElement : .jsAnything
-                let valueElement = valueGroupName != "UnknownGroup" ? fooElement : .jsAnything
+            // 2. Map with string keys and object values
+            let m2 = b.createMap(withKeys: [s], withValues: [foo])
+            #expect(
+                b.type(of: m2) == .createJsMapType(ofKeyType: .jsString, ofValueType: fooElement))
 
-                #expect(
-                    b.type(of: m)
-                        == ILType.createJsMapType(ofKeyType: keyElement, ofValueType: valueElement))
-            }
+            // 3. Map with heterogeneous keys
+            let m3 = b.createMap(withKeys: [i, s], withValues: [foo, foo])
+            #expect(
+                b.type(of: m3)
+                    == .createJsMapType(ofKeyType: .integer | .jsString, ofValueType: fooElement))
+
+            // 4. Map with heterogeneous entries
+            let m4 = b.createMap(withKeys: [i, s], withValues: [foo, i])
+            #expect(
+                b.type(of: m4)
+                    == .createJsMapType(
+                        ofKeyType: .integer | .jsString, ofValueType: fooElement | .integer))
         }
     }
 

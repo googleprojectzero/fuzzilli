@@ -1882,8 +1882,6 @@ message EndBundleModuleEntryPoint {
 }
 
 message CreateMap {
-    optional string keyGroupName = 1;
-    optional string valueGroupName = 2;
 }
 
 message WasmRefAsNonNull {

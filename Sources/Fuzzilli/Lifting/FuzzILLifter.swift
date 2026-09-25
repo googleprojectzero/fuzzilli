@@ -992,17 +992,9 @@ public class FuzzILLifter: Lifter {
         case .loadNewTarget:
             w.emit("\(output()) <- LoadNewTarget")
 
-        case .createMap(let op):
+        case .createMap:
             let elems = instr.inputs.map(lift).joined(separator: ", ")
-            var groupStr = ""
-            if let keyGroup = op.keyGroupName, let valueGroup = op.valueGroupName {
-                groupStr = " [\(keyGroup) => \(valueGroup)]"
-            } else if let keyGroup = op.keyGroupName {
-                groupStr = " [\(keyGroup) => _]"
-            } else if let valueGroup = op.valueGroupName {
-                groupStr = " [_ => \(valueGroup)]"
-            }
-            w.emit("\(output()) <- CreateMap\(groupStr) [\(elems)]")
+            w.emit("\(output()) <- CreateMap [\(elems)]")
 
         case .beginWasmModule:
             w.emit("BeginWasmModule")

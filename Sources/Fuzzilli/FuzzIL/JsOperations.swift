@@ -3553,9 +3553,9 @@ final class EndBundleModuleEntryPoint: JsOperation {
 /// Creates a new JavaScript Map object.
 ///
 /// While creating a Map is already possible in FuzzIL by calling the `Map`
-/// constructor this dedicated operation allows for parameterizing the types of
-/// the keys and values (via group names), providing more precise type
-/// information to the fuzzer for fuzzing programs with strict type requirements.
+/// constructor, this dedicated operation allows the key and value types to be
+/// inferred from the initial entries, providing more precise type information
+/// to the fuzzer for fuzzing programs with strict type requirements.
 final class CreateMap: JsOperation {
     override var opcode: Opcode { .createMap(self) }
 
@@ -3563,12 +3563,7 @@ final class CreateMap: JsOperation {
         return numInputs
     }
 
-    let keyGroupName: String?
-    let valueGroupName: String?
-
-    init(numInitialValues: Int, keyGroupName: String? = nil, valueGroupName: String? = nil) {
-        self.keyGroupName = keyGroupName
-        self.valueGroupName = valueGroupName
+    init(numInitialValues: Int) {
         super.init(
             numInputs: numInitialValues, numOutputs: 1, firstVariadicInput: 0,
             attributes: [.isVariadic])

@@ -126,10 +126,7 @@ struct VariadicInputReducer: Reducer {
                 case .exportVariables(let op):
                     newOp = ExportVariables(exportNames: op.exportNames.dropLast())
                 case .createMap(let op):
-                    newOp = CreateMap(
-                        numInitialValues: op.numInitialValues - 1,
-                        keyGroupName: op.keyGroupName,
-                        valueGroupName: op.valueGroupName)
+                    newOp = CreateMap(numInitialValues: op.numInitialValues - 1)
                 case .wasmArrayNewFixed(let op):
                     newOp = WasmArrayNewFixed(size: op.size - 1)
                 default:

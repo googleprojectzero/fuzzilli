@@ -1123,16 +1123,14 @@ public class OperationMutator: BaseInstructionMutator {
             inputs.append(b.randomJsVariable())
             newOp = ExportVariables(exportNames: names)
         case .createMap(let op):
-            newOp = CreateMap(
-                numInitialValues: op.numInitialValues + 1, keyGroupName: op.keyGroupName,
-                valueGroupName: op.valueGroupName)
-            var elementType = ILType.jsArray
-            if let keyGroup = op.keyGroupName, let valueGroup = op.valueGroupName {
-                let keyType = b.fuzzer.environment.type(ofGroupOrEnum: keyGroup)
-                let valueType = b.fuzzer.environment.type(ofGroupOrEnum: valueGroup)
-                elementType = ILType.createJsArrayType(ofElementType: keyType | valueType)
-            }
-            inputs.append(b.randomVariable(forUseAs: elementType))
+            newOp = CreateMap(numInitialValues: op.numInitialValues + 1)
+            let entryType =
+                instr.inputs.isEmpty
+                ? .jsArray
+                : instr.inputs.reduce(ILType.nothing) {
+                    $0 | b.type(of: $1)
+                }
+            inputs.append(b.randomVariable(forUseAs: entryType))
 
         case .wasmArrayNewFixed(let op):
             let arrayType = b.type(of: instr.input(0))

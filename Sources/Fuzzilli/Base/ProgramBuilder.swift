@@ -3513,8 +3513,7 @@ public class ProgramBuilder {
 
     @discardableResult
     public func createMap(
-        withKeys initialKeys: [Variable], withValues initialValues: [Variable],
-        keyGroupName: String? = nil, valueGroupName: String? = nil
+        withKeys initialKeys: [Variable], withValues initialValues: [Variable]
     )
         -> Variable
     {
@@ -3524,13 +3523,8 @@ public class ProgramBuilder {
         let mapEntries = zip(initialKeys, initialValues).map { key, value in
             createArray(with: [key, value])
         }
-        return emit(
-            CreateMap(
-                numInitialValues: initialKeys.count, keyGroupName: keyGroupName,
-                valueGroupName: valueGroupName),
-            withInputs: mapEntries
-        )
-        .output
+        return emit(CreateMap(numInitialValues: initialKeys.count), withInputs: mapEntries)
+            .output
     }
 
     @discardableResult

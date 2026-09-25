@@ -3038,14 +3038,16 @@ public struct JSTyper: Analyzer {
                 selfReferences[instr.input(0)] = []
             }
 
-        case .createMap(let op):
-            if let keyGroupName = op.keyGroupName, let valueGroupName = op.valueGroupName {
-                let keyType = self.environment.type(ofGroupOrEnum: keyGroupName)
-                let valueType = self.environment.type(ofGroupOrEnum: valueGroupName)
-                set(instr.output, .createJsMapType(ofKeyType: keyType, ofValueType: valueType))
-            } else {
-                set(instr.output, .jsMap)
-            }
+        case .createMap:
+            // Each input is a [key, value] entry array, so the union of the entries' element
+            // types is the union of all key and value types (which is how jsMap stores them).
+            let entryElementType =
+                instr.inputs.isEmpty
+                ? .jsAnything
+                : instr.inputs.reduce(ILType.nothing) {
+                    $0 | (self.type(of: $1).iterableElementType ?? .jsAnything)
+                }
+            set(instr.output, .createJsMapType(ofEntryElementType: entryElementType))
 
         case .declarePendingBundleModule(let op):
             // We use .jsAnything as the type for the variables which will be exported later - it's hard to decide a better type upfront and those won't technically be true (since we might access a "var" variable before it has its final value).

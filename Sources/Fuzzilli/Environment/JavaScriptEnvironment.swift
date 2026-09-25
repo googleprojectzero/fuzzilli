@@ -1364,9 +1364,7 @@ extension ILType {
     /// Type of a JavaScript array.
     public static let jsArray = createJsArrayType()
 
-    /// Create a jsArray parameterized by `ofELementType`. Note that the
-    /// element type should have a group, or else type information will be
-    /// lost.
+    /// Create a jsArray parameterized by `ofELementType`.
     public static func createJsArrayType(ofElementType: ILType = .jsAnything) -> ILType {
         return ILType.iterable(ofElementType: ofElementType)
             + ILType.object(
@@ -1443,8 +1441,7 @@ extension ILType {
     /// Type of a JavaScript Map object.
     public static let jsMap = createJsMapType()
 
-    /// Create a jsMap parameterized by `ofKeyType` and `ofValueType`. Note that both
-    /// types should have a group, or else type information will be lost.
+    /// Create a jsMap parameterized by `ofKeyType` and `ofValueType`.
     public static func createJsMapType(
         ofKeyType keyType: ILType? = nil, ofValueType valueType: ILType? = nil
     ) -> ILType {
@@ -1453,6 +1450,14 @@ extension ILType {
             "Either both key and value types must be specified, or neither.")
 
         let entryElementType: ILType = keyType != nil ? (keyType! | valueType!) : .jsAnything
+        return createJsMapType(ofEntryElementType: entryElementType)
+    }
+
+    /// Create a jsMap whose [key, value] entry arrays have element type
+    /// `ofEntryElementType`. Since keys and values share the entry array, the
+    /// type system only tracks their union, so this is equivalent to
+    /// `createJsMapType(ofKeyType, ofValueType)`.
+    public static func createJsMapType(ofEntryElementType entryElementType: ILType) -> ILType {
         let entryType = createJsArrayType(ofElementType: entryElementType)
 
         return ILType.iterable(ofElementType: entryType)
