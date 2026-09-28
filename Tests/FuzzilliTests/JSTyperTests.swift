@@ -2393,6 +2393,108 @@ struct JSTyperTests {
         dynamicObjectGroupTypingOfWasmModulesTestCase(isShared: true)
     }
 
+    @Test func testWasmTableInitDoesNotExportElementSegment() {
+        let fuzzer = makeMockFuzzer(environment: JavaScriptEnvironment())
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            let module = b.buildWasmModule { wasmModule in
+                let function = wasmModule.addWasmFunction(with: [] => []) { _, _, _ in [] }
+                let table = wasmModule.addTable(
+                    elementType: .wasmFuncRef(), minSize: 10, isTable64: false)
+                let segment = wasmModule.addElementSegment(elements: [function])
+                wasmModule.addWasmFunction(with: [] => []) { f, _, _ in
+                    let zero = f.consti32(0)
+                    f.wasmTableInit(
+                        elementSegment: segment, table: table, tableOffset: zero,
+                        elementSegmentOffset: zero, nrOfElementsToUpdate: zero)
+                    return []
+                }
+                wasmModule.addTable(elementType: .wasmExternRef(), minSize: 5, isTable64: false)
+            }
+
+            // The element segment is not a table, so it must not use up a table export name.
+            let exports = module.loadExports()
+            #expect(b.type(of: exports).properties == ["wt0", "wt1"])
+            #expect(
+                b.type(ofProperty: "wt0", on: exports).wasmTableType?.elementType == .wasmFuncRef())
+            #expect(
+                b.type(ofProperty: "wt1", on: exports).wasmTableType?.elementType
+                    == .wasmExternRef())
+        }
+    }
+
+    @Test func testWasmModuleReexportsImportedTablesAndMemoriesInOrderOfUse() {
+        let fuzzer = makeMockFuzzer(environment: JavaScriptEnvironment())
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            // The imported tables and memories can be told apart by their size.
+            let tables = (1...6).map {
+                b.createWasmTable(
+                    elementType: .wasmFuncRef(), limits: Limits(min: $0), isTable64: false)
+            }
+            let memories = (1...7).map { b.createWasmMemory(minPages: $0) }
+
+            // Use them in reverse order, through operations that take them at various input positions.
+            let module = b.buildWasmModule { wasmModule in
+                let function = wasmModule.addWasmFunction(with: [] => []) { _, _, _ in [] }
+                let elementSegment = wasmModule.addElementSegment(elements: [function])
+                let dataSegment = wasmModule.addDataSegment(segment: [1, 2, 3])
+                let signature = wasmModule.wasmDefineAdHocSignatureType(signature: [] => [])
+                wasmModule.addWasmFunction(with: [] => []) { f, _, _ in
+                    let zero = f.consti32(0)
+                    f.wasmCallIndirect(
+                        signatureDef: signature, table: tables[5], functionArgs: [],
+                        tableIndex: zero)
+                    f.wasmTableInit(
+                        elementSegment: elementSegment, table: tables[4], tableOffset: zero,
+                        elementSegmentOffset: zero, nrOfElementsToUpdate: zero)
+                    f.wasmTableCopy(
+                        dstTable: tables[3], srcTable: tables[2], dstOffset: zero,
+                        srcOffset: zero, count: zero)
+                    f.wasmTableSize(table: tables[1])
+                    f.wasmMemoryCopy(
+                        dstMemory: memories[6], srcMemory: memories[5], dstOffset: zero,
+                        srcOffset: zero, size: zero)
+                    f.wasmMemoryFill(
+                        memory: memories[4], offset: zero, byteToSet: zero,
+                        nrOfBytesToUpdate: zero)
+                    f.wasmMemoryInit(
+                        dataSegment: dataSegment, memory: memories[3], memoryOffset: zero,
+                        dataSegmentOffset: zero, nrOfBytesToUpdate: zero)
+                    let simd = f.wasmSimdLoad(
+                        kind: .LoadS128, memory: memories[2], dynamicOffset: zero,
+                        staticOffset: 0)
+                    f.wasmSimdStoreLane(
+                        kind: .Store8, memory: memories[1], dynamicOffset: zero, staticOffset: 0,
+                        from: simd, lane: 0)
+                    f.wasmMemorySize(memory: memories[0])
+                    return []
+                }
+                wasmModule.addWasmFunction(with: [] => []) { f, _, _ in
+                    f.wasmReturnCallIndirect(
+                        signatureDef: signature, table: tables[0], functionArgs: [],
+                        tableIndex: f.consti32(0))
+                    return []
+                }
+            }
+
+            // The module re-exports its imports in the order of their first use.
+            let exports = module.loadExports()
+            let tableSizes = (0..<6).map {
+                b.type(ofProperty: "iwt\($0)", on: exports).wasmTableType?.limits.min
+            }
+            #expect(tableSizes == [6, 5, 4, 3, 2, 1])
+            let memorySizes = (0..<7).map {
+                b.type(ofProperty: "iwm\($0)", on: exports).wasmMemoryType?.limits.min
+            }
+            #expect(memorySizes == [7, 6, 5, 4, 3, 2, 1])
+            // In particular, the element and data segments are not exported.
+            #expect(b.type(of: exports).properties.count == tables.count + memories.count)
+        }
+    }
+
     @Test func testBuiltinPrototypes() {
         let fuzzer = makeMockFuzzer()
         fuzzer.sync {

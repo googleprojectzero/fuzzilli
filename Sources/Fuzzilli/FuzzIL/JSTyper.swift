@@ -519,10 +519,34 @@ public struct JSTyper: Analyzer {
         seenExports = []
     }
 
-    private mutating func registerWasmMemoryUse(for memory: Variable) {
-        let definingInstruction = defUseAnalyzer.definition(of: memory)
-        dynamicObjectGroupManager.addWasmMemory(
-            withType: type(of: memory), forDefinition: definingInstruction, forVariable: memory)
+    /// Registers the tables, memories, globals and tags used by the given Wasm instruction with the
+    /// current Wasm module. Objects that aren't defined in this module are registered as imports,
+    /// which the lifted module re-exports as `iwt<n>`, `iwm<n>`, `iwg<n>` and `iwex<n>`.
+    ///
+    /// The index in these names is the order in which the WasmLifter first encounters each import:
+    /// `WasmLifter.importAnalysis` imports every input of these object groups, in instruction and
+    /// input order, regardless of the operation.
+    private func registerWasmObjectsUsed(by instr: Instruction) {
+        for input in instr.inputs {
+            let inputType = type(of: input)
+            if inputType.Is(.object(ofGroup: "WasmTable")) {
+                dynamicObjectGroupManager.addWasmTable(
+                    withType: inputType, forDefinition: defUseAnalyzer.definition(of: input),
+                    forVariable: input)
+            } else if inputType.Is(.object(ofGroup: "WasmMemory")) {
+                dynamicObjectGroupManager.addWasmMemory(
+                    withType: inputType, forDefinition: defUseAnalyzer.definition(of: input),
+                    forVariable: input)
+            } else if inputType.Is(.object(ofGroup: "WasmGlobal")) {
+                dynamicObjectGroupManager.addWasmGlobal(
+                    withType: inputType, forDefinition: defUseAnalyzer.definition(of: input),
+                    forVariable: input)
+            } else if inputType.Is(.object(ofGroup: "WasmTag")) {
+                dynamicObjectGroupManager.addWasmTag(
+                    withType: inputType, forDefinition: defUseAnalyzer.definition(of: input),
+                    forVariable: input)
+            }
+        }
     }
 
     // Array for collecting type changes during instruction execution.
@@ -954,6 +978,7 @@ public struct JSTyper: Analyzer {
     }
 
     private mutating func analyzeWasmInstruction(_ instr: Instruction) {
+        registerWasmObjectsUsed(by: instr)
         switch instr.op.opcode {
         case .consti64(_):
             setType(of: instr.output, to: .wasmi64)
@@ -1101,16 +1126,11 @@ public struct JSTyper: Analyzer {
             setType(of: instr.output, to: .wasmElementSegment(segmentLength: Int(op.size)))
         case .wasmDropElementSegment(_):
             type(of: instr.input(0)).wasmElementSegmentType!.markAsDropped()
-        case .wasmTableInit(_),
-            .wasmTableCopy(_):
-            let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
-            dynamicObjectGroupManager.addWasmTable(
-                withType: type(of: instr.input(0)), forDefinition: definingInstruction,
-                forVariable: instr.input(0))
-        // Ignore changed function signatures - it is too hard to reason about them statically.
         case .wasmDefineMemory(let op):
             setType(of: instr.output, to: op.wasmMemory)
-            registerWasmMemoryUse(for: instr.output)
+            dynamicObjectGroupManager.addWasmMemory(
+                withType: type(of: instr.output), forDefinition: instr,
+                forVariable: instr.output)
         case .wasmDefineDataSegment(let op):
             setType(of: instr.output, to: .wasmDataSegment(segmentLength: op.segment.count))
         case .wasmDropDataSegment(_):
@@ -1124,17 +1144,8 @@ public struct JSTyper: Analyzer {
             dynamicObjectGroupManager.addWasmTag(
                 withType: type(of: instr.output), forDefinition: instr,
                 forVariable: instr.output)
-        case .wasmThrow(_):
-            let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
-            dynamicObjectGroupManager.addWasmTag(
-                withType: type(of: instr.input(0)), forDefinition: definingInstruction,
-                forVariable: instr.input(0))
         case .wasmLoadGlobal(_):
-            let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
             let globalVarType = type(of: instr.input(0))
-            dynamicObjectGroupManager.addWasmGlobal(
-                withType: globalVarType, forDefinition: definingInstruction,
-                forVariable: instr.input(0))
             if let wasmGlobalType = globalVarType.wasmGlobalType {
                 setType(of: instr.output, to: wasmGlobalType.valueType)
             } else {
@@ -1142,51 +1153,23 @@ public struct JSTyper: Analyzer {
                 // We use the error type to avoid crashing on these invalid programs.
                 setType(of: instr.output, to: .error)
             }
-        case .wasmStoreGlobal(_):
-            let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
-            dynamicObjectGroupManager.addWasmGlobal(
-                withType: type(of: instr.input(0)), forDefinition: definingInstruction,
-                forVariable: instr.input(0))
         case .wasmTableGet(let op):
-            let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
-            let tableType = type(of: instr.input(0))
-            dynamicObjectGroupManager.addWasmTable(
-                withType: tableType, forDefinition: definingInstruction,
-                forVariable: instr.input(0))
             setType(of: instr.output, to: op.elementType)
-        case .wasmTableSet(_):
-            let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
-            dynamicObjectGroupManager.addWasmTable(
-                withType: type(of: instr.input(0)), forDefinition: definingInstruction,
-                forVariable: instr.input(0))
         case .wasmTableSize(_),
             .wasmTableGrow(_):
             let isTable64 = type(of: instr.input(0)).wasmTableType?.isTable64 ?? false
-            let definingInstruction = defUseAnalyzer.definition(of: instr.input(0))
-            dynamicObjectGroupManager.addWasmTable(
-                withType: type(of: instr.input(0)), forDefinition: definingInstruction,
-                forVariable: instr.input(0))
             setType(of: instr.output, to: isTable64 ? .wasmi64 : .wasmi32)
-        case .wasmMemoryStore(_):
-            registerWasmMemoryUse(for: instr.input(0))
         case .wasmMemoryLoad(let op):
-            registerWasmMemoryUse(for: instr.input(0))
             setType(of: instr.output, to: op.loadType.numberType())
         case .wasmAtomicLoad(let op):
-            registerWasmMemoryUse(for: instr.input(0))
             setType(of: instr.output, to: op.loadType.numberType())
-        case .wasmAtomicStore(_):
-            registerWasmMemoryUse(for: instr.input(0))
         case .wasmAtomicRMW(let op):
-            registerWasmMemoryUse(for: instr.input(0))
             setType(of: instr.output, to: op.op.type())
         case .wasmAtomicCmpxchg(let op):
-            registerWasmMemoryUse(for: instr.input(0))
             setType(of: instr.output, to: op.op.type())
         case .wasmMemorySize(_),
             .wasmMemoryGrow(_):
             let isMemory64 = type(of: instr.input(0)).wasmMemoryType?.isMemory64 ?? false
-            registerWasmMemoryUse(for: instr.input(0))
             setType(of: instr.output, to: isMemory64 ? .wasmi64 : .wasmi32)
         case .wasmJsCall(_):
             let wasmSignature = type(of: instr.input(0)).wasmFunctionSignatureDefSignature
@@ -1251,14 +1234,6 @@ public struct JSTyper: Analyzer {
         case .wasmBeginTryTable(_):
             let signature = type(of: instr.input(0)).wasmFunctionSignatureDefSignature
             wasmTypeBeginBlock(instr, signature)
-            instr.inputs.forEach { input in
-                if type(of: input).isWasmTagType {
-                    let definingInstruction = defUseAnalyzer.definition(of: input)
-                    dynamicObjectGroupManager.addWasmTag(
-                        withType: type(of: input), forDefinition: definingInstruction,
-                        forVariable: input)
-                }
-            }
         case .wasmEndTryTable(_):
             let signature = type(of: instr.input(0)).wasmFunctionSignatureDefSignature
             wasmTypeEndBlock(instr, signature.outputTypes)
@@ -1272,13 +1247,6 @@ public struct JSTyper: Analyzer {
             let blockSignature = type(of: instr.input(0)).wasmFunctionSignatureDefSignature
             // Type the label (used for branch instructions).
             setType(of: instr.innerOutput(0), to: .wasmLabel(blockSignature.outputTypes))
-            // Register the tag (Wasm exception) in the dynamicObjectGroupManager as being used
-            // by this Wasm module.
-            let tag = instr.input(1)
-            let definingInstruction = defUseAnalyzer.definition(of: tag)
-            dynamicObjectGroupManager.addWasmTag(
-                withType: type(of: tag),
-                forDefinition: definingInstruction, forVariable: tag)
             // The second inner output is the exception label which is used for rethrowing the
             // exception with the legacy exception handling proposal. (This is similar to the
             // exnref in the standard exception handling spec.)

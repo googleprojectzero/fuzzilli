@@ -57,4 +57,72 @@ struct WasmTableTests {
 
         testForOutput(program: js, runner: runner, outputString: expectedOutput)
     }
+
+    // The typer has to predict the names under which the lifted module exports its tables
+    // (including re-exported imported ones), check that they match the actual exports.
+    @Test func testTyperKnowsTableExportNames() throws {
+        let runner = JavaScriptExecutor()!
+        var expectedOutput = ""
+
+        let js = buildAndLiftProgram { b in
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+            // Outputs the names of all exports and the length of all exported tables, and records
+            // the output expected based on the typer's view of the exports.
+            func outputExports(of module: ProgramBuilder.WasmModule) {
+                let exports = module.loadExports()
+                let exportsType = b.type(of: exports)
+                let object = b.createNamedVariable(forBuiltin: "Object")
+                let names = b.callMethod("keys", on: object, withArgs: [exports])
+                let sortedNames = b.callMethod("sort", on: names)
+                b.callFunction(outputFunc, withArgs: [b.arrayToStringForTesting(sortedNames)])
+                let expectedNames = exportsType.properties.union(exportsType.methods).sorted()
+                expectedOutput += expectedNames.joined(separator: ",") + "\n"
+                for name in exportsType.properties.sorted() {
+                    guard let tableType = b.type(ofProperty: name, on: exports).wasmTableType
+                    else { continue }
+                    let length = b.getProperty("length", of: b.getProperty(name, of: exports))
+                    let line = b.binary(b.loadString("\(name).length="), length, with: .Add)
+                    b.callFunction(outputFunc, withArgs: [line])
+                    expectedOutput += "\(name).length=\(tableType.limits.min)\n"
+                }
+            }
+
+            // The element segment used by table.init is not a table.
+            let module = b.buildWasmModule { wasmModule in
+                let function = wasmModule.addWasmFunction(with: [] => []) { _, _, _ in [] }
+                let table = wasmModule.addTable(
+                    elementType: .wasmFuncRef(), minSize: 10, isTable64: false)
+                let segment = wasmModule.addElementSegment(elements: [function])
+                wasmModule.addWasmFunction(with: [] => []) { f, _, _ in
+                    let zero = f.consti32(0)
+                    f.wasmTableInit(
+                        elementSegment: segment, table: table, tableOffset: zero,
+                        elementSegmentOffset: zero, nrOfElementsToUpdate: zero)
+                    return []
+                }
+                wasmModule.addTable(elementType: .wasmExternRef(), minSize: 5, isTable64: false)
+            }
+            outputExports(of: module)
+
+            // The table used by call_indirect is imported and therefore re-exported.
+            let funcRefTable = b.createWasmTable(
+                elementType: .wasmFuncRef(), limits: Limits(min: 3), isTable64: false)
+            let externRefTable = b.createWasmTable(
+                elementType: .wasmExternRef(), limits: Limits(min: 7), isTable64: false)
+            let importingModule = b.buildWasmModule { wasmModule in
+                let signature = wasmModule.wasmDefineAdHocSignatureType(signature: [] => [])
+                wasmModule.addWasmFunction(with: [] => []) { f, _, _ in
+                    let zero = f.consti32(0)
+                    f.wasmCallIndirect(
+                        signatureDef: signature, table: funcRefTable, functionArgs: [],
+                        tableIndex: zero)
+                    f.wasmTableGet(tableRef: externRefTable, idx: zero)
+                    return []
+                }
+            }
+            outputExports(of: importingModule)
+        }
+
+        testForOutput(program: js, runner: runner, outputString: expectedOutput)
+    }
 }
