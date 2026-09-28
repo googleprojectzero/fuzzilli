@@ -295,7 +295,7 @@ if corpusName == "markov"
     )
 }
 
-// TODO(rherouart): Support corpus eviction in RarityCorpus (honouring --maxCorpusSize, --minCorpusSize, and --minMutationsPerSample like BasicCorpus).
+// TODO(rherouart): Honour --maxCorpusSize, --minCorpusSize, and --minMutationsPerSample in RarityCorpus like BasicCorpus (it currently only evicts 0.0-energy seeds).
 if corpusName == "rarity"
     && (args.int(for: "--maxCorpusSize") != nil || args.int(for: "--minCorpusSize") != nil
         || args.int(for: "--minMutationsPerSample") != nil)

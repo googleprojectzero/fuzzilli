@@ -146,6 +146,11 @@ import Testing
                 #expect(corpus.seedEnergy(at: i) == 0.0)
             }
 
+            // With no seed left with positive energy, mutation falls back to uniform random
+            // selection and no seed is evicted, so that the corpus never becomes empty.
+            let _ = corpus.randomElementForMutating()
+            #expect(corpus.size == 8)
+
             // Add a 9th seed with unique edge [501] (rarity = 1.0).
             let rareProg = makeProgram(for: fuzzer, intVal: 999)
             fuzzer.corpus.add(rareProg, makeCovEdgeSet([501]))
@@ -153,6 +158,9 @@ import Testing
 
             let picked = corpus.randomElementForMutating()
             #expect(picked == rareProg)
+            // The 8 saturated seeds can never be scheduled again, so they were evicted from RAM.
+            #expect(corpus.size == 1)
+            #expect(corpus.allPrograms() == [rareProg])
         }
     }
 

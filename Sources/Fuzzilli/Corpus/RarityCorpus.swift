@@ -17,28 +17,27 @@ import Foundation
 
 /// Corpus that schedules programs for mutation based on how rarely their coverage edges
 /// have been seen, decaying with mutation age and program size.
+/// Seeds whose energy dropped to 0.0 (all their tracked rare edges saturated) are evicted.
 public class RarityCorpus: ComponentBase, Collection, Corpus {
     private weak var covEvaluator: ProgramCoverageEvaluator?
 
     private final class Seed: Comparable {
         let program: Program
         let rareEdges: [UInt32]
-        /// Index of this seed in the 'seeds' array, most recently added seed wins
-        let index: Int
+        let id: Int
         var age: Int = 0
         var energy: Double = 0.0
 
-        init(program: Program, rareEdges: [UInt32], index: Int, age: Int = 0, energy: Double = 0.0)
-        {
+        init(program: Program, rareEdges: [UInt32], id: Int, age: Int = 0, energy: Double = 0.0) {
             self.program = program
             self.rareEdges = rareEdges
-            self.index = index
+            self.id = id
             self.age = age
             self.energy = energy
         }
 
         static func == (lhs: Seed, rhs: Seed) -> Bool {
-            return lhs.index == rhs.index
+            return lhs.id == rhs.id
         }
 
         static func < (lhs: Seed, rhs: Seed) -> Bool {
@@ -51,11 +50,13 @@ public class RarityCorpus: ComponentBase, Collection, Corpus {
             if lhs.program.size != rhs.program.size {
                 return lhs.program.size > rhs.program.size
             }
-            return lhs.index < rhs.index
+            return lhs.id < rhs.id
         }
     }
 
     private var seeds: [Seed] = []
+    /// Total number of seeds ever added, used to give each seed a unique `id`.
+    private var totalEntryCounter = 0
     private var edgeSeenCount: [UInt8] = []
     private var energyHeap = Heap<Seed>()
     private var heapNeedsRebuild = false
@@ -168,9 +169,10 @@ public class RarityCorpus: ComponentBase, Collection, Corpus {
                 .prefix(maxTrackedEdgesPerSeed)
         )
 
-        let index = seeds.count
-        prepareProgramForInclusion(program, index: index)
-        seeds.append(Seed(program: program, rareEdges: trackedEdges, index: index))
+        let id = totalEntryCounter
+        totalEntryCounter += 1
+        prepareProgramForInclusion(program, index: id)
+        seeds.append(Seed(program: program, rareEdges: trackedEdges, id: id))
         heapNeedsRebuild = true
     }
 
@@ -230,6 +232,12 @@ public class RarityCorpus: ComponentBase, Collection, Corpus {
             if seed.energy > 0.0 {
                 activeSeeds.append(seed)
             }
+        }
+        // Energy never increases (edge counts and ages only grow), so a seed with 0.0 energy can
+        // never be scheduled again: evict it from RAM as well. The corpus must never become empty,
+        // so if no seed has energy left, all seeds are kept.
+        if !activeSeeds.isEmpty {
+            seeds = activeSeeds
         }
         energyHeap = Heap(activeSeeds)
         heapNeedsRebuild = false
@@ -325,10 +333,11 @@ public class RarityCorpus: ComponentBase, Collection, Corpus {
             prepareProgramForInclusion(program, index: i)
             seeds.append(
                 Seed(
-                    program: program, rareEdges: state.seedEdges[i], index: i,
+                    program: program, rareEdges: state.seedEdges[i], id: i,
                     age: state.seedAges[i])
             )
         }
+        totalEntryCounter = newPrograms.count
         heapNeedsRebuild = true
     }
 
