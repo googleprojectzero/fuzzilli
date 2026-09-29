@@ -59,6 +59,7 @@ let package = Package(
             dependencies: [
                 .product(name: "SwiftProtobuf", package: "swift-protobuf"),
                 .product(name: "Collections", package: "swift-collections"),
+                .product(name: "Algorithms", package: "swift-algorithms"),
                 "libsocket",
                 "libreprl",
                 "libcoverage",

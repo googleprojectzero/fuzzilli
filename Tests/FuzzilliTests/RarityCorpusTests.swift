@@ -79,7 +79,7 @@ import Testing
     }
 
     @Test func testMutationAgeDecay() {
-        let corpus = RarityCorpus()
+        let corpus = RarityCorpus(ageExponent: 2.0)
         let fuzzer = makeMockFuzzer(corpus: corpus)
 
         fuzzer.sync {
@@ -244,8 +244,32 @@ import Testing
         }
     }
 
+    @Test func testSplicingAgesDonorFractionally() {
+        let corpus = RarityCorpus(ageExponent: 2.0, splicingAgeIncrement: 0.2)
+        let fuzzer = makeMockFuzzer(corpus: corpus)
+
+        fuzzer.sync {
+            let prog = makeProgram(for: fuzzer, intVal: 42)
+            fuzzer.corpus.add(prog, makeCovEdgeSet([100, 200]))
+
+            // Each selection as a splicing donor adds 0.2 to the age.
+            #expect(corpus.randomElementForSplicing() == prog)
+            #expect(corpus.seedAge(at: 0) == 0.2)
+            // Energy: 2.0 / (0.2 + 1)^2
+            #expect(abs(corpus.seedEnergy(at: 0) - 2.0 / 1.44) < 1e-9)
+
+            #expect(corpus.randomElementForSplicing() == prog)
+            #expect(abs(corpus.seedAge(at: 0) - 0.4) < 1e-9)
+
+            // A mutation round adds 1.0 on top of the splicing age: 2.0 / (1.4 + 1)^2
+            let _ = corpus.randomElementForMutating()
+            #expect(abs(corpus.seedAge(at: 0) - 1.4) < 1e-9)
+            #expect(abs(corpus.seedEnergy(at: 0) - 2.0 / (2.4 * 2.4)) < 1e-9)
+        }
+    }
+
     @Test func testFastStateSynchronizationPreservesRarityAndCounts() throws {
-        let parentCorpus = RarityCorpus()
+        let parentCorpus = RarityCorpus(splicingAgeIncrement: 0.2)
         let parentFuzzer = makeMockFuzzer(corpus: parentCorpus)
 
         let childCorpus = RarityCorpus()
@@ -258,6 +282,9 @@ import Testing
             parentFuzzer.corpus.add(progB, makeCovEdgeSet([20, 30]))
             let _ = parentCorpus.randomElementForMutating()
             parentCorpus.recordCrashEdges([30])
+            // progA now has the highest energy, so it is the splicing donor and gets a fractional age.
+            #expect(parentCorpus.randomElementForSplicing() == progA)
+            #expect(parentCorpus.seedAge(at: 0) == 0.2)
 
             let stateData = try parentCorpus.exportState()
 
@@ -279,7 +306,7 @@ import Testing
     }
 
     @Test func testHeapEntryTieBreakingByAgeSizeAndIndex() {
-        let corpus = RarityCorpus()
+        let corpus = RarityCorpus(ageExponent: 2.0)
         let fuzzer = makeMockFuzzer(corpus: corpus)
 
         fuzzer.sync {
@@ -302,6 +329,38 @@ import Testing
             // With age tie-breaking, Seed 1 (age 0) must be picked before Seed 0 (age 1) despite higher index.
             let secondPick = corpus.randomElementForMutating()
             #expect(secondPick == prog1)
+        }
+    }
+
+    @Test func testSplicingSelectsNonZeroEnergySeedsAndFavorsHighEnergy() {
+        let corpus = RarityCorpus(splicingPoolSize: 20)
+        let fuzzer = makeMockFuzzer(corpus: corpus)
+
+        fuzzer.sync {
+            // Saturate edge [0] across 100 seeds (>= rareEdgeLimit = 8) so all 100 have 0.0 energy.
+            for i in 0..<100 {
+                fuzzer.corpus.add(makeProgram(for: fuzzer, intVal: Int64(i)), makeCovEdgeSet([0]))
+            }
+
+            // Add 20 non-zero-energy seeds with energies 1.0, 2.0, ..., 20.0.
+            var nextUniqueEdge: UInt32 = 1
+            var maxProg: Program!
+            for k in 1...20 {
+                let edges = Array(nextUniqueEdge..<(nextUniqueEdge + UInt32(k)))
+                nextUniqueEdge += UInt32(k)
+                let prog = makeProgram(for: fuzzer, intVal: Int64(1000 + k))
+                fuzzer.corpus.add(prog, makeCovEdgeSet(edges))
+                if k == 20 {
+                    maxProg = prog
+                }
+            }
+
+            // Since `randomSample(count: 20)` draws 20 distinct non-zero-energy seeds without
+            // replacement, when there are 20 non-zero-energy seeds it deterministically includes
+            // all 20 of them and `.max()` always returns `maxProg`.
+            for _ in 0..<20 {
+                #expect(corpus.randomElementForSplicing() == maxProg)
+            }
         }
     }
 }

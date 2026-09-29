@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import Algorithms
 import Collections
 import Foundation
 
 /// Corpus that schedules programs for mutation based on how rarely their coverage edges
-/// have been seen, decaying with mutation age and program size.
+/// have been seen, decaying with age (mutation rounds and splicing uses) and program size.
 /// Seeds whose energy dropped to 0.0 (all their tracked rare edges saturated) are evicted.
 public class RarityCorpus: ComponentBase, Collection, Corpus {
     private weak var covEvaluator: ProgramCoverageEvaluator?
@@ -25,10 +26,13 @@ public class RarityCorpus: ComponentBase, Collection, Corpus {
         let program: Program
         let rareEdges: [UInt32]
         let id: Int
-        var age: Int = 0
+        /// 1.0 per mutation round plus `splicingAgeIncrement` per selection as a splicing donor.
+        var age: Double = 0.0
         var energy: Double = 0.0
 
-        init(program: Program, rareEdges: [UInt32], id: Int, age: Int = 0, energy: Double = 0.0) {
+        init(
+            program: Program, rareEdges: [UInt32], id: Int, age: Double = 0.0, energy: Double = 0.0
+        ) {
             self.program = program
             self.rareEdges = rareEdges
             self.id = id
@@ -61,7 +65,7 @@ public class RarityCorpus: ComponentBase, Collection, Corpus {
     private var energyHeap = Heap<Seed>()
     private var heapNeedsRebuild = false
 
-    /// Exponents controlling how seed energy scales with mutation age, program size, and edge rarity:
+    /// Exponents controlling how seed energy scales with age, program size, and edge rarity:
     /// energy = rarity / ((age + 1)^ageExponent * (1 + ln(size)^sizeExponent))
     /// where rarity = sum(1 / edgeSeenCount[e]^rarityExponent) over tracked rare edges.
     private let ageExponent: Double
@@ -70,13 +74,17 @@ public class RarityCorpus: ComponentBase, Collection, Corpus {
     /// Maximum number of times an edge can be seen across corpus seeds before its rarity weight
     /// drops to 0 (so thousands of common edges do not outweigh a few genuinely rare ones).
     private let rareEdgeLimit: UInt8
+    private let splicingPoolSize: Int
+    private let splicingAgeIncrement: Double
     private let maxTrackedEdgesPerSeed: Int = 128
 
     public init(
-        ageExponent: Double = 2.0,
+        ageExponent: Double = 1.5,
         sizeExponent: Double = 2.0,
         rarityExponent: Double = 3.0,
         rareEdgeLimit: Int = 8,
+        splicingPoolSize: Int = 3,
+        splicingAgeIncrement: Double = 0.2,
         covEvaluator: ProgramCoverageEvaluator? = nil
     ) {
         if rareEdgeLimit < 1 || rareEdgeLimit >= Int(UInt8.max) {
@@ -91,10 +99,18 @@ public class RarityCorpus: ComponentBase, Collection, Corpus {
         if !rarityExponent.isFinite || rarityExponent < 0.0 {
             fatalError("rarityExponent must be a non-negative finite number")
         }
+        if splicingPoolSize < 1 {
+            fatalError("splicingPoolSize must be at least 1")
+        }
+        if !splicingAgeIncrement.isFinite || splicingAgeIncrement < 0.0 {
+            fatalError("splicingAgeIncrement must be a non-negative finite number")
+        }
         self.ageExponent = ageExponent
         self.sizeExponent = sizeExponent
         self.rarityExponent = rarityExponent
         self.rareEdgeLimit = UInt8(rareEdgeLimit)
+        self.splicingPoolSize = splicingPoolSize
+        self.splicingAgeIncrement = splicingAgeIncrement
         self.covEvaluator = covEvaluator
 
         super.init(name: "RarityCorpus")
@@ -207,14 +223,14 @@ public class RarityCorpus: ComponentBase, Collection, Corpus {
         return sum
     }
 
-    /// Computes the scheduling energy for a seed based on edge rarity, mutation age, and program size.
+    /// Computes the scheduling energy for a seed based on edge rarity, age, and program size.
     /// - Size corresponds to the number of FuzzIL instructions (`seed.program.size`).
     /// - `sizeWeight = 1.0 + ln(size)^sizeExponent` ensures that single-instruction programs have weight 1.0
     private func computeEnergy(for seed: Seed) -> Double {
         let rarity = computeRarity(for: seed.rareEdges)
         let lnSize = Foundation.log(Double(Swift.max(1, seed.program.size)))
         let sizeWeight = 1.0 + Foundation.pow(lnSize, sizeExponent)
-        return rarity / (Foundation.pow(Double(seed.age + 1), ageExponent) * sizeWeight)
+        return rarity / (Foundation.pow(seed.age + 1.0, ageExponent) * sizeWeight)
     }
 
     func recordCrashEdges(_ edges: [UInt32]) {
@@ -252,7 +268,7 @@ public class RarityCorpus: ComponentBase, Collection, Corpus {
         return computeRarity(for: seeds[index].rareEdges)
     }
 
-    func seedAge(at index: Int) -> Int {
+    func seedAge(at index: Int) -> Double {
         return seeds[index].age
     }
 
@@ -261,10 +277,23 @@ public class RarityCorpus: ComponentBase, Collection, Corpus {
         return idx < edgeSeenCount.count ? Int(edgeSeenCount[idx]) : 0
     }
 
-    // TODO(rherouart): Consider also selecting based on energy
     public func randomElementForSplicing() -> Program {
         assert(!seeds.isEmpty)
-        return seeds[Int.random(in: 0..<seeds.count)].program
+        ensureHeapUpdated()
+        // Tournament selection: sample `splicingPoolSize` non-zero-energy seeds without
+        // replacement and pick the highest-energy one. This favors higher-energy donors
+        // while still allowing lower-energy active seeds to be chosen when high-energy
+        // seeds are not in the random sample.
+        let pool = energyHeap.unordered.isEmpty ? seeds : energyHeap.unordered
+        let donor = pool.randomSample(count: splicingPoolSize).max()!
+        // Splicing and mutation share `age` as a unified usage counter so seeds heavily used
+        // as splicing donors also decay in energy. Since `Collections.Heap` does not support
+        // arbitrary-element key updates, we defer recomputing `donor.energy` (leaving it slightly
+        // higher than its true value) until that `donor` is popped by `energyHeap.popMax()` in
+        // `randomElementForMutating()` or the whole heap is rebuilt on the next corpus addition/crash.
+        // TODO(rherouart): Experiment with rebuilding the heap (`heapNeedsRebuild = true`) on splicing.
+        donor.age += splicingAgeIncrement
+        return donor.program
     }
 
     public func randomElementForMutating() -> Program {
@@ -292,7 +321,7 @@ public class RarityCorpus: ComponentBase, Collection, Corpus {
     private struct SerializedState: Codable {
         let programs: Data
         let seedEdges: [[UInt32]]
-        let seedAges: [Int]
+        let seedAges: [Double]
         let edgeSeenCount: [UInt8]
     }
 
@@ -314,7 +343,7 @@ public class RarityCorpus: ComponentBase, Collection, Corpus {
         let newPrograms = try decodeProtobufCorpus(state.programs)
         guard newPrograms.count == state.seedEdges.count,
             newPrograms.count == state.seedAges.count,
-            state.seedAges.allSatisfy({ $0 >= 0 })
+            state.seedAges.allSatisfy({ $0.isFinite && $0 >= 0 })
         else {
             throw FuzzilliError.corpusImportError("Mismatched program and rarity metadata counts")
         }

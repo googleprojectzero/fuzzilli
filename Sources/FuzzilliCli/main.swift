@@ -51,10 +51,12 @@ if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 
             --markovDropoutRate=p        : Rate at which low edge samples are not selected, in the Markov Corpus Scheduler,
                                            per round of sample selection. Used to ensure diversity between fuzzer instances
                                            (default: 0.10)
-            --rarityAgeExponent=x        : Exponent controlling how fast seed energy decays with mutation age in the Rarity Corpus (default: 2.0).
+            --rarityAgeExponent=x        : Exponent controlling how fast seed energy decays with age (mutation rounds and splicing uses) in the Rarity Corpus (default: 1.5).
             --raritySizeExponent=x       : Exponent controlling the program size penalty in the Rarity Corpus (default: 2.0).
             --rarityExponent=x           : Exponent controlling how fast an edge's weight decays as more seeds hit it in the Rarity Corpus (default: 3.0).
             --rareEdgeLimit=n            : Maximum number of corpus seeds that can hit an edge before it is no longer considered rare (default: 8).
+            --rarity-splicing-pool-size=n : Number of random non-zero-energy seeds sampled when selecting a program for splicing in the Rarity Corpus (default: 3).
+            --rarity-splicing-age-increment=x : Age increment added to a seed each time it is selected as a splicing donor in the Rarity Corpus (default: 0.2).
             --consecutiveMutations=n     : Perform this many consecutive mutations on each sample (default: 5).
             --corpusGenerationIterations=n : Switch from corpus generation to the main fuzzing phase after this many
                                            iterations without finding a new interesting sample (default: 100).
@@ -172,11 +174,13 @@ let minCorpusSize = args.int(for: "--minCorpusSize") ?? 1000
 let maxCorpusSize = args.int(for: "--maxCorpusSize") ?? Int.max
 // Exponents for the RarityCorpus energy formula:
 // energy = rarity / ((age + 1)^ageExponent * (1 + ln(size)^sizeExponent)), where rarity = sum(1 / count^rarityExponent).
-let ageExponent = args.double(for: "--rarityAgeExponent") ?? 2.0
+let ageExponent = args.double(for: "--rarityAgeExponent") ?? 1.5
 let sizeExponent = args.double(for: "--raritySizeExponent") ?? 2.0
 let rarityExponent = args.double(for: "--rarityExponent") ?? 3.0
 // Maximum number of seeds that can hit an edge before it is no longer considered rare in RarityCorpus.
 let rareEdgeLimit = args.int(for: "--rareEdgeLimit") ?? 8
+let raritySplicingPoolSize = args.int(for: "--rarity-splicing-pool-size") ?? 3
+let raritySplicingAgeIncrement = args.double(for: "--rarity-splicing-age-increment") ?? 0.2
 let markovDropoutRate = args.double(for: "--markovDropoutRate") ?? 0.10
 let consecutiveMutations = args.int(for: "--consecutiveMutations") ?? 5
 let corpusGenerationIterations = args.int(for: "--corpusGenerationIterations") ?? 100
@@ -316,8 +320,20 @@ if corpusName != "rarity"
     )
 }
 
+if corpusName != "rarity" && args.has("--rarity-splicing-pool-size") {
+    configError("--rarity-splicing-pool-size is only compatible with the rarity corpus")
+}
+if corpusName != "rarity" && args.has("--rarity-splicing-age-increment") {
+    configError("--rarity-splicing-age-increment is only compatible with the rarity corpus")
+}
 if rareEdgeLimit < 1 || rareEdgeLimit >= Int(UInt8.max) {
     configError("--rareEdgeLimit must be between 1 and \(UInt8.max - 1)")
+}
+if raritySplicingPoolSize < 1 {
+    configError("--rarity-splicing-pool-size must be at least 1")
+}
+if !raritySplicingAgeIncrement.isFinite || raritySplicingAgeIncrement < 0.0 {
+    configError("--rarity-splicing-age-increment must be a non-negative finite number")
 }
 if !ageExponent.isFinite || ageExponent < 0.0 {
     configError("--rarityAgeExponent must be a non-negative finite number")
@@ -707,6 +723,8 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
         corpus = RarityCorpus(
             ageExponent: ageExponent, sizeExponent: sizeExponent,
             rarityExponent: rarityExponent, rareEdgeLimit: rareEdgeLimit,
+            splicingPoolSize: raritySplicingPoolSize,
+            splicingAgeIncrement: raritySplicingAgeIncrement,
             covEvaluator: evaluator as ProgramCoverageEvaluator)
     default:
         logger.fatal("Invalid corpus name provided")
