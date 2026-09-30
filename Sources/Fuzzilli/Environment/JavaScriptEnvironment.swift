@@ -1067,17 +1067,6 @@ public class JavaScriptEnvironment: ComponentBase {
         }
     }
 
-    public func type(ofGroupOrEnum name: String) -> ILType {
-        if let type = getGroup(name)?.instanceType {
-            return type
-        } else if let type = getEnum(ofName: name) {
-            return type
-        } else {
-            logger.warning("Missing type for ObjectGroup or enum \(name)")
-            return .jsAnything
-        }
-    }
-
     public func type(ofProperty propertyName: String, on baseType: ILType) -> ILType {
         if let groupName = baseType.group {
             if let group = getGroup(groupName) {
