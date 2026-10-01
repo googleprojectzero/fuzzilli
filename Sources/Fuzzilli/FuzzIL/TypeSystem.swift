@@ -826,10 +826,6 @@ public struct ILType: Hashable {
         return wasmType as? WasmLabelType
     }
 
-    public var isWasmLabelType: Bool {
-        return wasmTagType != nil
-    }
-
     public var wasmReferenceType: WasmReferenceType? {
         return wasmType as? WasmReferenceType
     }
