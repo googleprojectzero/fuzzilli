@@ -833,7 +833,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             return type.Is(.object(ofGroup: "WasmMemory"))
                 && type.wasmMemoryType!.isMemory64 == srcMemoryTypeInfo.isMemory64
         }!
-        let dstMemoryTypeInfo = b.type(of: srcMemory).wasmMemoryType!
+        let dstMemoryTypeInfo = b.type(of: dstMemory).wasmMemoryType!
         let memArg = { v in function.memoryArgument(v, dstMemoryTypeInfo) }
 
         let srcMemSize = srcMemoryTypeInfo.limits.min * WasmConstants.specWasmMemPageSize
