@@ -244,6 +244,40 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         }
     },
 
+    CodeGenerator(
+        "WasmArrayNewDataGenerator",
+        inContext: .single(.wasmFunction),
+        inputs: .requiredComplex(.init(.wasmTypeDef(), .IsWasmArray), .init(.wasmDataSegment()))
+    ) { b, _, dataSegment in
+        let dataSegmentTypeInfo = b.type(of: dataSegment).wasmDataSegmentType!
+        if dataSegmentTypeInfo.isDropped {
+            return
+        }
+
+        // array.new_data requires an array type with non-reference elements.
+        let maybeArrayType = b.findVariable { v in
+            let typeDesc =
+                b.type(of: v).wasmTypeDefinition?.description as? WasmArrayTypeDescription
+            return typeDesc?.elementType.isWasmReferenceType == false
+        }
+        guard let arrayType = maybeArrayType else { return }
+
+        let typeDesc =
+            b.type(of: arrayType).wasmTypeDefinition!.description as! WasmArrayTypeDescription
+        let elementByteSize = typeDesc.elementType.wasmByteSize!
+        let function = b.currentWasmModule.currentWasmFunction
+
+        let segmentLength = Int64(dataSegmentTypeInfo.segmentLength)
+        let offsetValue = b.randomNonNegativeIndex(upTo: segmentLength)
+        let offset = function.consti32(Int32(offsetValue))
+
+        let maxElements = max(0, (segmentLength - offsetValue) / Int64(elementByteSize))
+        let size = function.consti32(Int32(b.randomSize(upTo: min(maxElements, 0x1000))))
+
+        function.wasmArrayNewData(
+            arrayType: arrayType, dataSegment: dataSegment, offset: offset, size: size)
+    },
+
     // We use false nullability so we do not invoke null traps.
     // TODO(manoskouk): Express that only array types are .required (same with all relevant array and struct generators below).
     // TODO: make this produce an .wasmi32?
@@ -679,7 +713,9 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             minPages: minPages, maxPages: maxPages, isShared: isShared, isMemory64: isMemory64)
     },
 
-    CodeGenerator("WasmDefineDataSegmentGenerator", inContext: .single(.wasm)) { b in
+    CodeGenerator(
+        "WasmDefineDataSegmentGenerator", inContext: .single(.wasm), produces: [.wasmDataSegment()]
+    ) { b in
         let dataSegment = b.randomBytes()
         b.currentWasmModule.addDataSegment(segment: dataSegment)
     },

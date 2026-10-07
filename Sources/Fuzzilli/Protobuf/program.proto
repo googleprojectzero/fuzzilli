@@ -407,6 +407,7 @@ message Instruction {
         WasmBranchOnCastDescEq wasmBranchOnCastDescEq = 381;
         WasmBranchOnCastDescEqFail wasmBranchOnCastDescEqFail = 382;
         WasmTableFill wasmTableFill = 383;
+        WasmArrayNewData wasmArrayNewData = 384;
     }
 }
 

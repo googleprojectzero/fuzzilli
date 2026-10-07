@@ -960,6 +960,18 @@ public struct ILType: Hashable {
         return isPacked() ? .wasmi32 : self
     }
 
+    // Returns the byte size of a numeric, vector, or packed Wasm storage type, or nil for reference types.
+    public var wasmByteSize: Int? {
+        switch self {
+        case .wasmPackedI8: return 1
+        case .wasmPackedI16: return 2
+        case .wasmi32, .wasmf32: return 4
+        case .wasmi64, .wasmf64: return 8
+        case .wasmSimd128: return 16
+        default: return nil
+        }
+    }
+
     //
     // Type operations
     //

@@ -412,4 +412,5 @@ enum Opcode {
     case wasmBranchOnCastDescEq(WasmBranchOnCastDescEq)
     case wasmBranchOnCastDescEqFail(WasmBranchOnCastDescEqFail)
     case wasmTableFill(WasmTableFill)
+    case wasmArrayNewData(WasmArrayNewData)
 }

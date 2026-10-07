@@ -954,6 +954,7 @@ public class OperationMutator: BaseInstructionMutator {
             .wasmResolveForwardReference(_),
             .wasmArrayNewFixed(_),
             .wasmArrayNewDefault(_),
+            .wasmArrayNewData(_),
             .wasmArrayLen(_),
             .wasmArraySet(_),
             .wasmStructNewDefault(_),

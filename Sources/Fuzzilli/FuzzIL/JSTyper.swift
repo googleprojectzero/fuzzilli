@@ -1302,7 +1302,8 @@ public struct JSTyper: Analyzer {
         // Functions that can be called through a table are also already added by the wasmDefineTable instruction.
         // No need to analyze this and add them to the DynamicObjectGroupManager.
         case .wasmArrayNewFixed(_),
-            .wasmArrayNewDefault(_):
+            .wasmArrayNewDefault(_),
+            .wasmArrayNewData(_):
             setReferenceType(
                 of: instr.output, typeDef: instr.input(0), nullability: false,
                 isExact: enableCustomDescriptors)

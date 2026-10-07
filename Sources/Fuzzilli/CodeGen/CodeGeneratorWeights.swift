@@ -415,6 +415,7 @@ public let codeGeneratorWeights = [
 
     // Wasm-gc generators
     "WasmArrayNewGenerator":                    5,
+    "WasmArrayNewDataGenerator":                5,
     "WasmArrayLengthGenerator":                 5,
     "WasmArrayGetGenerator":                    5,
     "WasmArraySetGenerator":                    5,

@@ -2723,6 +2723,12 @@ public class WasmLifter {
             let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
             let arrayIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
             return Data([Prefix.GC.rawValue, 0x07]) + arrayIndex
+        case .wasmArrayNewData(_):
+            let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
+            let arrayIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
+            let dataSegmentIdx = resolveDataSegmentIdx(for: wasmInstruction.input(1))
+            return Data([Prefix.GC.rawValue, 0x09]) + arrayIndex
+                + Leb128.unsignedEncode(dataSegmentIdx)
         case .wasmArrayLen(_):
             return Data([Prefix.GC.rawValue, 0x0F])
         case .wasmArrayGet(let op):

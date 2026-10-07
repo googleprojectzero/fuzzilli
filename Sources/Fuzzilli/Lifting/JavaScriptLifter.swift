@@ -2143,6 +2143,7 @@ public class JavaScriptLifter: Lifter {
                 .wasmResolveForwardReference(_),
                 .wasmArrayNewFixed(_),
                 .wasmArrayNewDefault(_),
+                .wasmArrayNewData(_),
                 .wasmArrayLen(_),
                 .wasmArrayGet(_),
                 .wasmArraySet(_),

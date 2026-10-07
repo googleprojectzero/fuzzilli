@@ -2566,6 +2566,15 @@ final class WasmArrayNewDefault: WasmOperation {
     }
 }
 
+final class WasmArrayNewData: WasmOperation {
+    override var opcode: Opcode { .wasmArrayNewData(self) }
+
+    init() {
+        // The inputs are the array type, the data segment, the data segment offset, and the array size.
+        super.init(numInputs: 4, numOutputs: 1, requiredContext: [.wasmFunction])
+    }
+}
+
 final class WasmArrayLen: WasmOperation {
     override var opcode: Opcode { .wasmArrayLen(self) }
 
