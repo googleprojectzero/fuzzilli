@@ -1091,6 +1091,9 @@ public class FuzzILLifter: Lifter {
         case .wasmTableCopy:
             w.emit("WasmTableCopy \(input(0)), \(input(1)), \(input(2)), \(input(3)), \(input(4))")
 
+        case .wasmTableFill:
+            w.emit("WasmTableFill \(input(0)), \(input(1)), \(input(2)), \(input(3))")
+
         case .wasmDefineMemory(let op):
             assert(op.wasmMemory.isWasmMemoryType)
             let mem = op.wasmMemory.wasmMemoryType!

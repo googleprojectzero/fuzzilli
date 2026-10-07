@@ -1513,6 +1513,8 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmDropElementSegment = Fuzzilli_Protobuf_WasmDropElementSegment()
             case .wasmTableCopy(_):
                 $0.wasmTableCopy = Fuzzilli_Protobuf_WasmTableCopy()
+            case .wasmTableFill(_):
+                $0.wasmTableFill = Fuzzilli_Protobuf_WasmTableFill()
             case .wasmTableInit(_):
                 $0.wasmTableInit = Fuzzilli_Protobuf_WasmTableInit()
             case .wasmDefineMemory(let op):
@@ -2907,6 +2909,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmTableInit()
         case .wasmTableCopy(_):
             op = WasmTableCopy()
+        case .wasmTableFill(_):
+            op = WasmTableFill()
         case .wasmDefineMemory(let p):
             let maxPages = p.wasmMemory.hasMaxPages ? Int(p.wasmMemory.maxPages) : nil
             op = WasmDefineMemory(

@@ -5315,7 +5315,7 @@ public class ProgramBuilder {
         @discardableResult
         public func wasmTableGet(tableRef: Variable, idx: Variable) -> Variable {
             let tableType = b.type(of: tableRef)
-            let offsetType = tableType.wasmTableType!.isTable64 ? ILType.wasmi64 : ILType.wasmi32
+            let offsetType = tableType.wasmTableType!.addrType
             return b.emit(
                 WasmTableGet(elementType: tableType.wasmTableType!.elementType),
                 withInputs: [tableRef, idx], types: [tableType, offsetType]
@@ -5325,7 +5325,7 @@ public class ProgramBuilder {
         public func wasmTableSet(tableRef: Variable, idx: Variable, to value: Variable) {
             let tableType = b.type(of: tableRef)
             let elementType = tableType.wasmTableType!.elementType
-            let offsetType = tableType.wasmTableType!.isTable64 ? ILType.wasmi64 : ILType.wasmi32
+            let offsetType = tableType.wasmTableType!.addrType
             b.emit(
                 WasmTableSet(), withInputs: [tableRef, idx, value],
                 types: [tableType, offsetType, elementType])
@@ -5352,7 +5352,7 @@ public class ProgramBuilder {
         {
             let tableType = b.type(of: table)
             let elementType = tableType.wasmTableType!.elementType
-            let offsetType = tableType.wasmTableType!.isTable64 ? ILType.wasmi64 : ILType.wasmi32
+            let offsetType = tableType.wasmTableType!.addrType
             return b.emit(
                 WasmTableGrow(), withInputs: [table, initialValue, delta],
                 types: [.object(ofGroup: "WasmTable"), elementType, offsetType]
@@ -5364,16 +5364,14 @@ public class ProgramBuilder {
             signatureDef: Variable, table: Variable, functionArgs: [Variable], tableIndex: Variable
         ) -> [Variable] {
             let signature = b.type(of: signatureDef).wasmFunctionSignatureDefSignature
-            let isTable64 = b.type(of: table).wasmTableType!.isTable64
+            let addrType = b.type(of: table).wasmTableType!.addrType
             return Array(
                 b.emit(
                     WasmCallIndirect(
                         parameterCount: signature.parameterTypes.count,
                         outputCount: signature.outputTypes.count),
                     withInputs: [table, signatureDef] + functionArgs + [tableIndex],
-                    types: [.wasmTable, .wasmTypeDef()] + signature.parameterTypes + [
-                        isTable64 ? .wasmi64 : .wasmi32
-                    ]
+                    types: [.wasmTable, .wasmTypeDef()] + signature.parameterTypes + [addrType]
                 ).outputs)
         }
 
@@ -5439,7 +5437,7 @@ public class ProgramBuilder {
             signatureDef: Variable, table: Variable, functionArgs: [Variable], tableIndex: Variable
         ) {
             let signature = b.type(of: signatureDef).wasmFunctionSignatureDefSignature
-            let isTable64 = b.type(of: table).wasmTableType!.isTable64
+            let addrType = b.type(of: table).wasmTableType!.addrType
             assert(
                 self.signature.outputTypes.count == signature.outputTypes.count
                     && zip(self.signature.outputTypes, signature.outputTypes).allSatisfy {
@@ -5448,9 +5446,7 @@ public class ProgramBuilder {
             b.emit(
                 WasmReturnCallIndirect(parameterCount: signature.parameterTypes.count),
                 withInputs: [table, signatureDef] + functionArgs + [tableIndex],
-                types: [.wasmTable, .wasmTypeDef()] + signature.parameterTypes + [
-                    isTable64 ? .wasmi64 : .wasmi32
-                ])
+                types: [.wasmTable, .wasmTypeDef()] + signature.parameterTypes + [addrType])
         }
 
         @discardableResult
@@ -5626,8 +5622,7 @@ public class ProgramBuilder {
             let tableElemType = b.type(of: table).wasmTableType!.elementType
             assert(elementSegmentType.Is(tableElemType))
 
-            let addrType =
-                b.type(of: table).wasmTableType!.isTable64 ? ILType.wasmi64 : ILType.wasmi32
+            let addrType = b.type(of: table).wasmTableType!.addrType
             b.emit(
                 WasmTableInit(),
                 withInputs: [
@@ -5648,12 +5643,26 @@ public class ProgramBuilder {
             assert(dstTableType.isTable64 == srcTableType.isTable64)
             assert(srcTableType.elementType.Is(dstTableType.elementType))
 
-            let addrType = dstTableType.isTable64 ? ILType.wasmi64 : ILType.wasmi32
+            let addrType = dstTableType.addrType
             b.emit(
                 WasmTableCopy(), withInputs: [dstTable, srcTable, dstOffset, srcOffset, count],
                 types: [
                     .object(ofGroup: "WasmTable"), .object(ofGroup: "WasmTable"), addrType,
                     addrType, addrType,
+                ])
+        }
+
+        public func wasmTableFill(
+            table: Variable, offset: Variable, value: Variable, elementCount: Variable
+        ) {
+            let tableType = b.type(of: table).wasmTableType!
+            assert(b.type(of: value).Is(tableType.elementType))
+
+            b.emit(
+                WasmTableFill(), withInputs: [table, offset, value, elementCount],
+                types: [
+                    .object(ofGroup: "WasmTable"), tableType.addrType, tableType.elementType,
+                    tableType.addrType,
                 ])
         }
 

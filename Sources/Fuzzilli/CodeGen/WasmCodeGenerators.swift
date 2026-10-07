@@ -1151,6 +1151,32 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator(
+        "WasmTableFillGenerator", inContext: .single(.wasmFunction),
+        inputs: .required(.object(ofGroup: "WasmTable"))
+    ) { b, table in
+        let function = b.currentWasmModule.currentWasmFunction
+        let tableTypeInfo = b.type(of: table).wasmTableType!
+        let value = function.findOrGenerateWasmVar(ofType: tableTypeInfo.elementType)
+
+        let tableArg = { (v: Int64) in
+            tableTypeInfo.isTable64
+                ? function.consti64(v)
+                : function.consti32(Int32(v))
+        }
+
+        let tableSize = Int64(tableTypeInfo.limits.min)
+        let offsetValue = b.randomNonNegativeIndex(upTo: tableSize)
+        let offset = tableArg(offsetValue)
+
+        let elementCountValue = b.randomSize(upTo: tableSize - offsetValue)
+        let elementCount = tableArg(elementCountValue)
+
+        function.wasmTableFill(
+            table: table, offset: offset, value: value,
+            elementCount: elementCount)
+    },
+
+    CodeGenerator(
         "WasmCallIndirectGenerator", inContext: .single(.wasmFunction),
         inputs: .required(.object(ofGroup: "WasmTable"))
     ) { b, table in

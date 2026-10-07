@@ -1157,8 +1157,8 @@ public struct JSTyper: Analyzer {
             setType(of: instr.output, to: op.elementType)
         case .wasmTableSize(_),
             .wasmTableGrow(_):
-            let isTable64 = type(of: instr.input(0)).wasmTableType?.isTable64 ?? false
-            setType(of: instr.output, to: isTable64 ? .wasmi64 : .wasmi32)
+            let addrType = type(of: instr.input(0)).wasmTableType?.addrType ?? .wasmi32
+            setType(of: instr.output, to: addrType)
         case .wasmMemoryLoad(let op):
             setType(of: instr.output, to: op.loadType.numberType())
         case .wasmAtomicLoad(let op):

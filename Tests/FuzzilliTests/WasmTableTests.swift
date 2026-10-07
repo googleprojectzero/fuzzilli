@@ -171,4 +171,43 @@ struct WasmTableTests {
 
         testForOutput(program: js, runner: runner, outputString: expectedOutput)
     }
+
+    @Test func testTableFill() throws {
+        let runner = JavaScriptExecutor()!
+        var expectedOutput = ""
+
+        let js = buildAndLiftProgram { b in
+            let module = b.buildWasmModule { wasmModule in
+                let table = wasmModule.addTable(
+                    elementType: .wasmExternRef(), minSize: 5, maxSize: 10, isTable64: false)
+
+                wasmModule.addWasmFunction(
+                    with: [.wasmExternRef()] => [
+                        .wasmi32, .wasmExternRef(), .wasmExternRef(), .wasmi32,
+                    ]
+                ) { f, _, args in
+                    f.wasmTableFill(
+                        table: table, offset: f.consti32(1), value: args[0],
+                        elementCount: f.consti32(3))
+                    let elem0IsNull = f.wasmRefIsNull(
+                        f.wasmTableGet(tableRef: table, idx: f.consti32(0)))
+                    let elem1 = f.wasmTableGet(tableRef: table, idx: f.consti32(1))
+                    let elem3 = f.wasmTableGet(tableRef: table, idx: f.consti32(3))
+                    let elem4IsNull = f.wasmRefIsNull(
+                        f.wasmTableGet(tableRef: table, idx: f.consti32(4)))
+                    return [elem0IsNull, elem1, elem3, elem4IsNull]
+                }
+                expectedOutput += "1,42,42,1\n"
+            }
+
+            let exports = module.loadExports()
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+
+            let w0 = b.getProperty("w0", of: exports)
+            let res = b.callFunction(w0, withArgs: [b.loadInt(42)])
+            b.callFunction(outputFunc, withArgs: [b.arrayToStringForTesting(res)])
+        }
+
+        testForOutput(program: js, runner: runner, outputString: expectedOutput)
+    }
 }

@@ -1814,6 +1814,9 @@ message WasmTableInit {
 message WasmTableCopy {
 }
 
+message WasmTableFill {
+}
+
 message BeginBundleScript {
 }
 

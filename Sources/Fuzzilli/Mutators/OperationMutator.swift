@@ -972,6 +972,7 @@ public class OperationMutator: BaseInstructionMutator {
             .wasmDropElementSegment(_),
             .wasmTableInit(_),
             .wasmTableCopy(_),
+            .wasmTableFill(_),
             .wasmStructNew(_),
             .wasmRefEq(_),
             .wasmRefCast(_),

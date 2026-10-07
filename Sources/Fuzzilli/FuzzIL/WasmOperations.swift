@@ -1039,6 +1039,16 @@ final class WasmTableCopy: WasmOperation {
     }
 }
 
+final class WasmTableFill: WasmOperation {
+    override var opcode: Opcode { .wasmTableFill(self) }
+
+    init() {
+        // The inputs are the table, the table offset, the element value to set, and the number of elements to update.
+        super.init(
+            numInputs: 4, numOutputs: 0, requiredContext: [.wasmFunction])
+    }
+}
+
 // TODO: Wasm memory can be initialized in the data segment, theoretically one could initialize them with this instruction as well.
 // Currently they are by default zero initialized and fuzzilli should then just store or load from there.
 // Also note: https://webassembly.github.io/spec/core/syntax/modules.html#memories

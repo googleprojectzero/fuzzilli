@@ -411,4 +411,5 @@ enum Opcode {
     case wasmRefCastDescEq(WasmRefCastDescEq)
     case wasmBranchOnCastDescEq(WasmBranchOnCastDescEq)
     case wasmBranchOnCastDescEqFail(WasmBranchOnCastDescEqFail)
+    case wasmTableFill(WasmTableFill)
 }

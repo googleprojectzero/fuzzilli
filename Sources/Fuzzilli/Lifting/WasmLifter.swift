@@ -2363,6 +2363,9 @@ public class WasmLifter {
             let srcTableIdx = try resolveIdx(ofType: .table, for: wasmInstruction.input(1))
             return Data([0xFC, 0x0e]) + Leb128.unsignedEncode(dstTableIdx)
                 + Leb128.unsignedEncode(srcTableIdx)
+        case .wasmTableFill(_):
+            let tableIdx = try resolveIdx(ofType: .table, for: wasmInstruction.input(0))
+            return Data([0xFC, 0x11]) + Leb128.unsignedEncode(tableIdx)
         case .wasmJsCall(_):
             // We filter first, such that we get the index of functions only.
             let wasmSignature = typer.type(of: wasmInstruction.input(0))

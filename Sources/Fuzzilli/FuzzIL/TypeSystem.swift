@@ -2567,6 +2567,9 @@ public class WasmTableType: WasmTypeExtension {
     let isTable64: Bool
     let knownEntrySignatures: [ILType]
 
+    /// The address type of this table, i.e. the type of its indices and sizes.
+    var addrType: ILType { isTable64 ? .wasmi64 : .wasmi32 }
+
     override func isEqual(to other: WasmTypeExtension) -> Bool {
         guard let other = other as? WasmTableType else { return false }
         return self.elementType == other.elementType

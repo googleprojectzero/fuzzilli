@@ -2058,6 +2058,7 @@ public class JavaScriptLifter: Lifter {
                 .wasmDropElementSegment(_),
                 .wasmTableInit(_),
                 .wasmTableCopy(_),
+                .wasmTableFill(_),
                 .wasmDefineMemory(_),
                 .wasmDefineDataSegment(_),
                 .wasmLoadGlobal(_),
