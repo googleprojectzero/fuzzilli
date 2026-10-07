@@ -74,7 +74,9 @@ struct LoopSimplifier: Reducer {
         //
         //      init()
         //      BeginRepeatLoop 'n' -> v7
-        //          // All inner outputs (v7, v8, v10, v11, v14, and 15) are replaced with v7
+        //          // Reads of the loop variables (v7, v8, v10, v11, v14, and v15) are replaced with
+        //          // v7. Writes to them go to their initial values (v4 and v6) instead, so that
+        //          // nothing but the repeat loop changes v7 and the loop runs exactly n times.
         //          condition()
         //          body()
         //          afterthought()
@@ -107,34 +109,30 @@ struct LoopSimplifier: Reducer {
                 BeginRepeatLoop(iterations: 1, exposesLoopCounter: needLoopVariable),
                 inouts: needLoopVariable ? [loopVar!, labelVar] : [labelVar]))
 
-        // Append condition, body, and afterthought code
-        var replacements = [Variable: Variable](
-            uniqueKeysWithValues: beginConditionBlock.innerOutputs.map({ ($0, loopVar!) }))
-        for instr in helper.code.body(of: conditionBlock) {
-            let newInouts = instr.inouts.map({ replacements[$0] ?? $0 })
-            newCode.append(Instruction(instr.op, inouts: newInouts))
+        // Append condition, body, and afterthought code. Reads of a loop variable use the repeat
+        // counter, writes use the loop variable's initial value.
+        let initialValues = Array(beginConditionBlock.inputs)
+        func appendBody(of block: Block, loopVariables: [Variable]) {
+            for instr in helper.code.body(of: block) {
+                var inouts = Array(instr.inouts)
+                for i in 0..<instr.numInputs {
+                    if let k = loopVariables.firstIndex(of: inouts[i]) {
+                        inouts[i] = instr.op.reassigns(input: i) ? initialValues[k] : loopVar!
+                    }
+                }
+                newCode.append(Instruction(instr.op, inouts: inouts))
+            }
         }
+        appendBody(of: conditionBlock, loopVariables: Array(beginConditionBlock.innerOutputs))
 
         assert(helper.code[bodyBlock.head].op is BeginForLoopBody)
-        replacements = [Variable: Variable](
-            uniqueKeysWithValues: helper.code[bodyBlock.head].innerOutputs.dropLast().map({
-                ($0, loopVar!)
-            }))
-        for instr in helper.code.body(of: bodyBlock) {
-            let newInouts = instr.inouts.map({ replacements[$0] ?? $0 })
-            newCode.append(Instruction(instr.op, inouts: newInouts))
-        }
+        appendBody(of: bodyBlock, loopVariables: Array(beginBodyBlock.innerOutputs.dropLast()))
 
         let afterthoughtBlock = group.block(2)
         assert(helper.code[afterthoughtBlock.head].op is BeginForLoopAfterthought)
-        replacements = [Variable: Variable](
-            uniqueKeysWithValues: helper.code[afterthoughtBlock.head].innerOutputs.map({
-                ($0, loopVar!)
-            }))
-        for instr in helper.code.body(of: afterthoughtBlock) {
-            let newInouts = instr.inouts.map({ replacements[$0] ?? $0 })
-            newCode.append(Instruction(instr.op, inouts: newInouts))
-        }
+        appendBody(
+            of: afterthoughtBlock,
+            loopVariables: Array(helper.code[afterthoughtBlock.head].innerOutputs))
 
         // Append loop footer
         newCode.append(Instruction(EndRepeatLoop()))
@@ -276,6 +274,8 @@ struct LoopSimplifier: Reducer {
     ) {
         var newCode = newCode
         let originalOp = newCode[headerIndex].op as! BeginRepeatLoop
+        // The timeout check below relies on increasing counts.
+        assert(commonLoopIterationCounts == commonLoopIterationCounts.sorted())
         for numIterations in commonLoopIterationCounts {
             let repeatOp = BeginRepeatLoop(
                 iterations: numIterations, exposesLoopCounter: originalOp.exposesLoopCounter)
@@ -286,6 +286,10 @@ struct LoopSimplifier: Reducer {
                 range: range, with: newCode, renumberVariables: true,
                 numExecutions: numTestExecutions)
             {
+                return
+            }
+            // More iterations won't end sooner.
+            if helper.lastCandidateTimedOut {
                 return
             }
         }

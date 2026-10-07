@@ -1416,6 +1416,78 @@ struct MinimizerTests {
         }
     }
 
+    @Test func testLoopConversionStopsAtFirstTimeout() {
+        class TimingOutScriptRunner: MockScriptRunner {
+            override func run(_ script: String, withTimeout timeout: UInt32) -> Execution {
+                return MockExecution(
+                    outcome: .timedOut, stdout: "", stderr: "", fuzzout: "", execTime: 0.1)
+            }
+        }
+        let fuzzer = makeMockFuzzer(runner: TimingOutScriptRunner())
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            b.buildWhileLoop({ b.loadBool(true) }) {}
+            let helper = MinimizationHelper(
+                for: ProgramAspects(outcome: .succeeded), forCode: b.finalize().code, of: fuzzer,
+                runningOnFuzzerQueue: true)
+
+            LoopSimplifier().reduce(with: helper)
+
+            // Only the first iteration count is tried.
+            #expect(helper.totalReductions == 1)
+        }
+    }
+
+    @Test func testForLoopConversionRedirectsWritesToInitialValues() {
+        let updates: [(ProgramBuilder, [Variable]) -> Void] = [
+            // i++
+            { b, v in b.unary(.PostInc, v[0]) },
+            // i++, j--
+            { b, v in
+                b.unary(.PostInc, v[0])
+                b.unary(.PostDec, v[1])
+            },
+            // j--
+            { b, v in b.unary(.PostDec, v[1]) },
+            // j = 5
+            { b, v in b.reassign(variable: v[1], value: b.loadInt(5)) },
+            // j -= 1
+            { b, v in b.reassign(variable: v[1], value: b.loadInt(1), with: .Sub) },
+            // [j] = []
+            { b, v in b.destruct(b.createArray(with: []), selecting: [0], into: [v[1]]) },
+        ]
+        for update in updates {
+            let fuzzer = makeMockFuzzer(evaluator: EvaluatorForMinimizationTests())
+            fuzzer.sync {
+                let b = fuzzer.makeBuilder()
+                // for (let i = 0, j = 10; i < j; update) { f(i, j); }
+                var f = b.createNamedVariable(forBuiltin: "f")
+                b.buildForLoop(
+                    { [b.loadInt(0), b.loadInt(10)] },
+                    { v in b.compare(v[0], with: v[1], using: .lessThan) },
+                    { v in update(b, v) }
+                ) { v in b.callFunction(f, withArgs: v) }
+                let helper = MinimizationHelper(
+                    for: ProgramAspects(outcome: .succeeded), forCode: b.finalize().code,
+                    of: fuzzer, runningOnFuzzerQueue: true)
+
+                LoopSimplifier().reduce(with: helper)
+                helper.removeNops()
+
+                // Reads of i and j use the counter k, writes use their initial values i0 and j0:
+                // let i0 = 0, j0 = 10; for (let k = 0; k < 5; k++) { k < k; f(k, k); update }
+                f = b.createNamedVariable(forBuiltin: "f")
+                let initialValues = [b.loadInt(0), b.loadInt(10)]
+                b.buildRepeatLoop(n: 5) { k in
+                    b.compare(k, with: k, using: .lessThan)
+                    b.callFunction(f, withArgs: [k, k])
+                    update(b, initialValues)
+                }
+                #expect(Program(code: helper.code) == b.finalize())
+            }
+        }
+    }
+
     @Test func testNestedLoopMerging1() {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)

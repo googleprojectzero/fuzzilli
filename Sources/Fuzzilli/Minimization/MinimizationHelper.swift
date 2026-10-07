@@ -17,6 +17,8 @@ class MinimizationHelper {
     var totalReductions = 0
     var failedReductions = 0
     var didReduce = false
+    /// Whether the last candidate timed out.
+    private(set) var lastCandidateTimedOut = false
 
     /// Fuzzer instance to schedule execution of programs on.
     let fuzzer: Fuzzer
@@ -80,6 +82,7 @@ class MinimizationHelper {
     ) -> Bool {
         assert(!self.finalized)
         assert(numExecutions > 0)
+        lastCandidateTimedOut = false
         #if DEBUG
             if expectCodeToBeValid {
                 newCode.assertIsStaticallyValid()
@@ -106,6 +109,7 @@ class MinimizationHelper {
                 let execution = fuzzer.execute(
                     Program(with: newCode), withTimeout: fuzzer.config.timeout * 2,
                     purpose: .minimization)
+                lastCandidateTimedOut = execution.outcome == .timedOut
                 stillHasAspects = fuzzer.evaluator.hasAspects(execution, aspects)
                 guard stillHasAspects else { break }
             }
