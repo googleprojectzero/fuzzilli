@@ -3937,7 +3937,6 @@ struct ProgramBuilderTests {
         "WasmBranchIfGenerator",
         "WasmBranchOnNullGenerator",
         "WasmDropDataSegmentGenerator",
-        "WasmDropElementSegmentGenerator",
         "WasmLegacyRethrowGenerator",
         "WasmLegacyTryDelegateGenerator",
         "WasmMemoryInitGenerator",

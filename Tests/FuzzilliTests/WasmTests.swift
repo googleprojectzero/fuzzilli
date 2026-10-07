@@ -2187,7 +2187,7 @@ struct WasmFoundationTests {
                     let memIdx: (Int64) -> Variable = { v in f.memoryArgument(v, memoryTypeInfo) }
                     f.wasmMemoryInit(
                         dataSegment: segment, memory: memory, memoryOffset: memIdx(16),
-                        dataSegmentOffset: i32(3), nrOfBytesToUpdate: i32(8))
+                        dataSegmentOffset: i32(3), byteCount: i32(8))
                     return [
                         f.wasmMemoryLoad(
                             memory: memory, dynamicOffset: memIdx(16), loadType: .I64LoadMem,
@@ -2257,10 +2257,10 @@ struct WasmFoundationTests {
                     let memIdx: (Int64) -> Variable = { v in f.memoryArgument(v, memoryTypeInfo) }
                     f.wasmMemoryInit(
                         dataSegment: segment1, memory: memory, memoryOffset: memIdx(0),
-                        dataSegmentOffset: i32(0), nrOfBytesToUpdate: i32(4))
+                        dataSegmentOffset: i32(0), byteCount: i32(4))
                     f.wasmMemoryInit(
                         dataSegment: segment2, memory: memory, memoryOffset: memIdx(4),
-                        dataSegmentOffset: i32(0), nrOfBytesToUpdate: i32(4))
+                        dataSegmentOffset: i32(0), byteCount: i32(4))
                     return [
                         f.wasmMemoryLoad(
                             memory: memory, dynamicOffset: memIdx(0), loadType: .I64LoadMem,
@@ -2295,10 +2295,10 @@ struct WasmFoundationTests {
                     let memIdx: (Int64) -> Variable = { v in f.memoryArgument(v, memoryTypeInfo) }
                     f.wasmMemoryInit(
                         dataSegment: segment, memory: memory1, memoryOffset: memIdx(0),
-                        dataSegmentOffset: i32(0), nrOfBytesToUpdate: i32(8))
+                        dataSegmentOffset: i32(0), byteCount: i32(8))
                     f.wasmMemoryInit(
                         dataSegment: segment, memory: memory2, memoryOffset: memIdx(0),
-                        dataSegmentOffset: i32(0), nrOfBytesToUpdate: i32(8))
+                        dataSegmentOffset: i32(0), byteCount: i32(8))
                     let val1 = f.wasmMemoryLoad(
                         memory: memory1, dynamicOffset: memIdx(0), loadType: .I64LoadMem,
                         staticOffset: 0)
@@ -2337,7 +2337,7 @@ struct WasmFoundationTests {
                     let memIdx: (Int64) -> Variable = { v in f.memoryArgument(v, memoryTypeInfo) }
                     f.wasmMemoryInit(
                         dataSegment: segment, memory: memory, memoryOffset: memIdx(65536),
-                        dataSegmentOffset: i32(0), nrOfBytesToUpdate: i32(1))
+                        dataSegmentOffset: i32(0), byteCount: i32(1))
                     return []
                 }
             }
@@ -2365,7 +2365,7 @@ struct WasmFoundationTests {
                     let memIdx: (Int64) -> Variable = { v in f.memoryArgument(v, memoryTypeInfo) }
                     f.wasmMemoryInit(
                         dataSegment: segment, memory: memory, memoryOffset: memIdx(0),
-                        dataSegmentOffset: i32(0), nrOfBytesToUpdate: i32(2))
+                        dataSegmentOffset: i32(0), byteCount: i32(2))
                     return []
                 }
             }
@@ -2614,10 +2614,10 @@ struct WasmFoundationTests {
                 wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _, _ in
                     let fillOffset = function.memoryArgument(100, memoryTypeInfo)
                     let byteToSet = function.consti32(0xAA)
-                    let nrOfBytesToUpdate = function.memoryArgument(4, memoryTypeInfo)
+                    let byteCount = function.memoryArgument(4, memoryTypeInfo)
                     function.wasmMemoryFill(
                         memory: memory, offset: fillOffset, byteToSet: byteToSet,
-                        nrOfBytesToUpdate: nrOfBytesToUpdate)
+                        byteCount: byteCount)
                     let loadOffset = function.memoryArgument(102, memoryTypeInfo)
                     let val = function.wasmMemoryLoad(
                         memory: memory, dynamicOffset: loadOffset, loadType: .I32LoadMem,
@@ -6530,7 +6530,7 @@ struct WasmFoundationTests {
                     }
                     f.wasmTableInit(
                         elementSegment: elemSegment2, table: table2, tableOffset: tableOffset(5),
-                        elementSegmentOffset: f.consti32(2), nrOfElementsToUpdate: f.consti32(2))
+                        elementSegmentOffset: f.consti32(2), elementCount: f.consti32(2))
                     let sigDef = f.wasmDefineAdHocSignatureType(signature: [] => [.wasmi64])
                     let callIndirect = { (table: Variable, idx: Int) in
                         let idxVar = isTable64 ? f.consti64(Int64(idx)) : f.consti32(Int32(idx))

@@ -1023,6 +1023,7 @@ final class WasmTableInit: WasmOperation {
     override var opcode: Opcode { .wasmTableInit(self) }
 
     init() {
+        // The inputs are the element segment, the table, the table offset, the element segment offset, and the number of elements to update.
         super.init(
             numInputs: 5, numOutputs: 0, requiredContext: [.wasmFunction])
     }
@@ -1032,6 +1033,7 @@ final class WasmTableCopy: WasmOperation {
     override var opcode: Opcode { .wasmTableCopy(self) }
 
     init() {
+        // The inputs are the destination table, the source table, the destination offset, the source offset, and the number of elements to copy.
         super.init(
             numInputs: 5, numOutputs: 0, requiredContext: [.wasmFunction])
     }

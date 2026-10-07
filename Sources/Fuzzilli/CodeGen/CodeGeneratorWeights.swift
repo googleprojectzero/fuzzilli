@@ -290,14 +290,14 @@ public let codeGeneratorWeights = [
     "WasmDefineGlobalGenerator":                2,
     "WasmDefineIndexTypedGlobalGenerator":      2,
     "WasmDefineTableGenerator":                 2,
-    // TODO(427115604): update onece both init and copy instructions are implemented.
-    "WasmDefineElementSegmentGenerator":        1,
-    // TODO(427115604): update onece both init and copy instructions are implemented.
-    "WasmDropElementSegmentGenerator":          1,
+    "WasmDefineElementSegmentGenerator":        2,
+    "WasmDropElementSegmentGenerator":          2,
     "WasmTableSizeGenerator":                   5,
     "WasmTableGrowGenerator":                   1,
     "WasmTableGetGenerator":                    5,
     "WasmTableSetGenerator":                    5,
+    "WasmTableInitGenerator":                   5,
+    "WasmTableCopyGenerator":                   5,
     "WasmGlobalStoreGenerator":                 2,
     "WasmGlobalLoadGenerator":                  2,
     "WasmReassignmentGenerator":                2,

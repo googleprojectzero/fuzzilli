@@ -97,7 +97,7 @@ struct WasmTableTests {
                     let zero = f.consti32(0)
                     f.wasmTableInit(
                         elementSegment: segment, table: table, tableOffset: zero,
-                        elementSegmentOffset: zero, nrOfElementsToUpdate: zero)
+                        elementSegmentOffset: zero, elementCount: zero)
                     return []
                 }
                 wasmModule.addTable(elementType: .wasmExternRef(), minSize: 5, isTable64: false)
@@ -121,6 +121,52 @@ struct WasmTableTests {
                 }
             }
             outputExports(of: importingModule)
+        }
+
+        testForOutput(program: js, runner: runner, outputString: expectedOutput)
+    }
+
+    @Test func testTableInitAndCopy() throws {
+        let runner = JavaScriptExecutor()!
+        var expectedOutput = ""
+
+        let js = buildAndLiftProgram { b in
+            let module = b.buildWasmModule { wasmModule in
+                let f0 = wasmModule.addWasmFunction(with: [] => [.wasmi32]) { f, _, _ in
+                    return [f.consti32(42)]
+                }
+                let f1 = wasmModule.addWasmFunction(with: [] => [.wasmi32]) { f, _, _ in
+                    return [f.consti32(1337)]
+                }
+                let elementSegment = wasmModule.addElementSegment(elements: [f0, f1])
+                let table1 = wasmModule.addTable(
+                    elementType: .wasmFuncRef(), minSize: 5, maxSize: 10, isTable64: false)
+                let table2 = wasmModule.addTable(
+                    elementType: .wasmFuncRef(), minSize: 5, maxSize: 10, isTable64: false)
+
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { f, _, _ in
+                    f.wasmTableInit(
+                        elementSegment: elementSegment, table: table1,
+                        tableOffset: f.consti32(1), elementSegmentOffset: f.consti32(0),
+                        elementCount: f.consti32(2))
+                    f.wasmTableCopy(
+                        dstTable: table2, srcTable: table1,
+                        dstOffset: f.consti32(3), srcOffset: f.consti32(2),
+                        count: f.consti32(1))
+                    let sigDef = f.wasmDefineAdHocSignatureType(signature: [] => [.wasmi32])
+                    return f.wasmCallIndirect(
+                        signatureDef: sigDef, table: table2,
+                        functionArgs: [], tableIndex: f.consti32(3))
+                }
+                expectedOutput += "1337\n"
+            }
+
+            let exports = module.loadExports()
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+
+            let w2 = b.getProperty("w2", of: exports)
+            let res = b.callFunction(w2)
+            b.callFunction(outputFunc, withArgs: [res])
         }
 
         testForOutput(program: js, runner: runner, outputString: expectedOutput)

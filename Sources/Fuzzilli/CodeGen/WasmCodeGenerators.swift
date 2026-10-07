@@ -866,12 +866,12 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         let offsetValue = b.randomNonNegativeIndex(upTo: memSize)
         let offset = function.memoryArgument(offsetValue, memoryTypeInfo)
         let byteToSet = function.consti32(Int32.random(in: 0...255))
-        let nrOfBytesToUpdate = function.memoryArgument(
+        let byteCount = function.memoryArgument(
             Int64.random(in: 0...(memSize - offsetValue)) + 1, memoryTypeInfo)
 
         function.wasmMemoryFill(
             memory: memory, offset: offset, byteToSet: byteToSet,
-            nrOfBytesToUpdate: nrOfBytesToUpdate)
+            byteCount: byteCount)
     },
 
     CodeGenerator(
@@ -895,14 +895,14 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             upTo: Int64(dataSegmentTypeInfo.segmentLength))
         let dataSegmentOffset = function.consti32(Int32(dataSegmentOffsetValue))
 
-        let maxNrOfBytesToUpdate = min(
+        let maxByteCount = min(
             memSize - memoryOffsetValue,
             Int64(dataSegmentTypeInfo.segmentLength) - dataSegmentOffsetValue)
-        let nrOfBytesToUpdate = function.consti32(Int32(b.randomSize(upTo: maxNrOfBytesToUpdate)))
+        let byteCount = function.consti32(Int32(b.randomSize(upTo: maxByteCount)))
 
         function.wasmMemoryInit(
             dataSegment: dataSegment, memory: memory, memoryOffset: memoryOffset,
-            dataSegmentOffset: dataSegmentOffset, nrOfBytesToUpdate: nrOfBytesToUpdate)
+            dataSegmentOffset: dataSegmentOffset, byteCount: byteCount)
     },
 
     CodeGenerator(
@@ -999,15 +999,13 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             definedSignatures: inputs, isTable64: probability(0.5))
     },
 
-    CodeGenerator("WasmDefineElementSegmentGenerator", inContext: .single(.wasm)) { b in
-        let expectedEntryType = b.currentWasmModule.getEntryTypeForTable(
-            elementType: .wasmFuncRef())
-        if b.randomVariable(ofType: expectedEntryType) == nil {
-            return
-        }
-
-        var elements: [Variable] = (0...Int.random(in: 0...8)).map { _ in
-            b.randomVariable(ofType: expectedEntryType)!
+    CodeGenerator(
+        "WasmDefineElementSegmentGenerator", inContext: .single(.wasm),
+        inputs: .required(.wasmFunctionDef()),
+        produces: [.wasmElementSegment()]
+    ) { b, _ in
+        let elements: [Variable] = (0...Int.random(in: 0...8)).map { _ in
+            b.findVariable { b.type(of: $0).Is(.wasmFunctionDef()) }!
         }
         b.currentWasmModule.addElementSegment(elements: elements)
     },
@@ -1073,6 +1071,83 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             return
         }
         function.wasmTableSet(tableRef: table, idx: indexVar, to: value)
+    },
+
+    CodeGenerator(
+        "WasmTableInitGenerator", inContext: .single(.wasmFunction),
+        inputs: .required(.object(ofGroup: "WasmTable"), .wasmElementSegment())
+    ) { b, _, elementSegment in
+        let elementSegmentTypeInfo = b.type(of: elementSegment).wasmElementSegmentType!
+        if elementSegmentTypeInfo.isDropped {
+            return
+        }
+        // Element segments currently only hold funcrefs, so the destination table must also be a funcref table.
+        // TODO(bettscheider): Support non-funcref element segments and tables in table.init.
+        let maybeTable = b.findVariable { v in
+            let type = b.type(of: v)
+            return type.Is(.object(ofGroup: "WasmTable"))
+                && type.wasmTableType!.elementType == .wasmFuncRef()
+        }
+        guard let table = maybeTable else { return }
+
+        let function = b.currentWasmModule.currentWasmFunction
+
+        let tableTypeInfo = b.type(of: table).wasmTableType!
+        let tableSize = Int64(tableTypeInfo.limits.min)
+        let tableOffsetValue = b.randomNonNegativeIndex(upTo: tableSize)
+        let tableOffset =
+            tableTypeInfo.isTable64
+            ? function.consti64(tableOffsetValue)
+            : function.consti32(Int32(tableOffsetValue))
+
+        let elementSegmentOffsetValue = b.randomNonNegativeIndex(
+            upTo: Int64(elementSegmentTypeInfo.segmentLength))
+        let elementSegmentOffset = function.consti32(Int32(elementSegmentOffsetValue))
+
+        let maxElementCount = min(
+            tableSize - tableOffsetValue,
+            Int64(elementSegmentTypeInfo.segmentLength) - elementSegmentOffsetValue)
+        let elementCount = function.consti32(
+            Int32(b.randomSize(upTo: maxElementCount)))
+
+        function.wasmTableInit(
+            elementSegment: elementSegment, table: table, tableOffset: tableOffset,
+            elementSegmentOffset: elementSegmentOffset, elementCount: elementCount)
+    },
+
+    CodeGenerator(
+        "WasmTableCopyGenerator", inContext: .single(.wasmFunction),
+        inputs: .required(.object(ofGroup: "WasmTable"))
+    ) { b, srcTable in
+        let function = b.currentWasmModule.currentWasmFunction
+        let srcTableTypeInfo = b.type(of: srcTable).wasmTableType!
+        let dstTable = b.findVariable { v in
+            let type = b.type(of: v)
+            return type.Is(.object(ofGroup: "WasmTable"))
+                && type.wasmTableType!.isTable64 == srcTableTypeInfo.isTable64
+                && srcTableTypeInfo.elementType.Is(type.wasmTableType!.elementType)
+        }!
+        let dstTableTypeInfo = b.type(of: dstTable).wasmTableType!
+        let tableArg = { (v: Int64) in
+            dstTableTypeInfo.isTable64
+                ? function.consti64(v)
+                : function.consti32(Int32(v))
+        }
+
+        let srcTableSize = Int64(srcTableTypeInfo.limits.min)
+        let dstTableSize = Int64(dstTableTypeInfo.limits.min)
+        let srcOffsetValue = b.randomNonNegativeIndex(upTo: srcTableSize)
+        let srcOffset = tableArg(srcOffsetValue)
+        let dstOffsetValue = b.randomNonNegativeIndex(upTo: dstTableSize)
+        let dstOffset = tableArg(dstOffsetValue)
+
+        let maxCopySize = min(srcTableSize - srcOffsetValue, dstTableSize - dstOffsetValue)
+        let copySizeValue = b.randomSize(upTo: maxCopySize)
+        let copySize = tableArg(copySizeValue)
+
+        function.wasmTableCopy(
+            dstTable: dstTable, srcTable: srcTable, dstOffset: dstOffset, srcOffset: srcOffset,
+            count: copySize)
     },
 
     CodeGenerator(

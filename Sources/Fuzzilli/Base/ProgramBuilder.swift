@@ -5583,23 +5583,23 @@ public class ProgramBuilder {
         }
 
         public func wasmMemoryFill(
-            memory: Variable, offset: Variable, byteToSet: Variable, nrOfBytesToUpdate: Variable
+            memory: Variable, offset: Variable, byteToSet: Variable, byteCount: Variable
         ) {
             let addrType = b.type(of: memory).wasmMemoryType!.addrType
             b.emit(
-                WasmMemoryFill(), withInputs: [memory, offset, byteToSet, nrOfBytesToUpdate],
+                WasmMemoryFill(), withInputs: [memory, offset, byteToSet, byteCount],
                 types: [.object(ofGroup: "WasmMemory"), addrType, .wasmi32, addrType])
         }
 
         public func wasmMemoryInit(
             dataSegment: Variable, memory: Variable, memoryOffset: Variable,
-            dataSegmentOffset: Variable, nrOfBytesToUpdate: Variable
+            dataSegmentOffset: Variable, byteCount: Variable
         ) {
             let addrType = b.type(of: memory).wasmMemoryType!.addrType
             b.emit(
                 WasmMemoryInit(),
                 withInputs: [
-                    dataSegment, memory, memoryOffset, dataSegmentOffset, nrOfBytesToUpdate,
+                    dataSegment, memory, memoryOffset, dataSegmentOffset, byteCount,
                 ],
                 types: [
                     .wasmDataSegment(), .object(ofGroup: "WasmMemory"), addrType, .wasmi32,
@@ -5620,7 +5620,7 @@ public class ProgramBuilder {
         // TODO(pawkra): support shared tables and element segments.
         public func wasmTableInit(
             elementSegment: Variable, table: Variable, tableOffset: Variable,
-            elementSegmentOffset: Variable, nrOfElementsToUpdate: Variable
+            elementSegmentOffset: Variable, elementCount: Variable
         ) {
             let elementSegmentType = ILType.wasmFuncRef()
             let tableElemType = b.type(of: table).wasmTableType!.elementType
@@ -5631,7 +5631,7 @@ public class ProgramBuilder {
             b.emit(
                 WasmTableInit(),
                 withInputs: [
-                    elementSegment, table, tableOffset, elementSegmentOffset, nrOfElementsToUpdate,
+                    elementSegment, table, tableOffset, elementSegmentOffset, elementCount,
                 ],
                 types: [
                     .wasmElementSegment(), .object(ofGroup: "WasmTable"), addrType, .wasmi32,

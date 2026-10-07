@@ -2407,7 +2407,7 @@ struct JSTyperTests {
                     let zero = f.consti32(0)
                     f.wasmTableInit(
                         elementSegment: segment, table: table, tableOffset: zero,
-                        elementSegmentOffset: zero, nrOfElementsToUpdate: zero)
+                        elementSegmentOffset: zero, elementCount: zero)
                     return []
                 }
                 wasmModule.addTable(elementType: .wasmExternRef(), minSize: 5, isTable64: false)
@@ -2449,7 +2449,7 @@ struct JSTyperTests {
                         tableIndex: zero)
                     f.wasmTableInit(
                         elementSegment: elementSegment, table: tables[4], tableOffset: zero,
-                        elementSegmentOffset: zero, nrOfElementsToUpdate: zero)
+                        elementSegmentOffset: zero, elementCount: zero)
                     f.wasmTableCopy(
                         dstTable: tables[3], srcTable: tables[2], dstOffset: zero,
                         srcOffset: zero, count: zero)
@@ -2459,10 +2459,10 @@ struct JSTyperTests {
                         srcOffset: zero, size: zero)
                     f.wasmMemoryFill(
                         memory: memories[4], offset: zero, byteToSet: zero,
-                        nrOfBytesToUpdate: zero)
+                        byteCount: zero)
                     f.wasmMemoryInit(
                         dataSegment: dataSegment, memory: memories[3], memoryOffset: zero,
-                        dataSegmentOffset: zero, nrOfBytesToUpdate: zero)
+                        dataSegmentOffset: zero, byteCount: zero)
                     let simd = f.wasmSimdLoad(
                         kind: .LoadS128, memory: memories[2], dynamicOffset: zero,
                         staticOffset: 0)
