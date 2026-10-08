@@ -3249,8 +3249,8 @@ struct ProgramBuilderTests {
                 wasmModule.addWasmFunction(with: [.wasmi32] => []) { function, label, args in
                     let arrayI32 = function.wasmArrayNewFixed(arrayType: arrayDefI32, elements: [])
                     let arrayI32Type = b.type(of: arrayI32)
-                    #expect(arrayI32Type.Is(.wasmRef(.Index(), nullability: true)))
-                    #expect(arrayI32Type.Is(.wasmRef(.Index(), nullability: false)))
+                    #expect(arrayI32Type.Is(.anyIndexRef))
+                    #expect(arrayI32Type.Is(.anyNonNullableIndexRef))
                     #expect(arrayI32Type.Is(.wasmRef(.WasmArray, nullability: true)))
                     #expect(arrayI32Type.Is(.wasmRef(.WasmArray, nullability: false)))
                     #expect(arrayI32Type.Is(.wasmRef(.WasmEq, nullability: true)))
@@ -3274,8 +3274,8 @@ struct ProgramBuilderTests {
 
                     let structVar = function.wasmStructNewDefault(structType: structDef)
                     let structType = b.type(of: structVar)
-                    #expect(structType.Is(.wasmRef(.Index(), nullability: true)))
-                    #expect(structType.Is(.wasmRef(.Index(), nullability: false)))
+                    #expect(structType.Is(.anyIndexRef))
+                    #expect(structType.Is(.anyNonNullableIndexRef))
                     #expect(structType.Is(.wasmRef(.WasmStruct, nullability: false)))
                     #expect(structType.Is(.wasmRef(.WasmEq, nullability: false)))
                     #expect(structType.Is(.wasmRef(.WasmAny, nullability: false)))
@@ -3291,7 +3291,7 @@ struct ProgramBuilderTests {
 
                     let i31 = function.wasmRefI31(function.consti32(42))
                     let i31Type = b.type(of: i31)
-                    #expect(!i31Type.Is(.wasmRef(.Index(), nullability: true)))
+                    #expect(!i31Type.Is(.anyIndexRef))
                     #expect(i31Type.Is(.wasmRef(.WasmEq, nullability: false)))
                     #expect(i31Type.Is(.wasmRef(.WasmAny, nullability: false)))
                     #expect(!i31Type.Is(.wasmRef(.WasmArray, nullability: false)))
@@ -3331,7 +3331,7 @@ struct ProgramBuilderTests {
                 let subStruct = b.generateSubtype(for: baseStruct)
 
                 let baseArray = b.wasmDefineArrayType(
-                    elementType: ILType.wasmRef(.Index(), nullability: true), mutability: false,
+                    elementType: ILType.anyIndexRef, mutability: false,
                     indexType: baseStruct)
 
                 let abstractBaseArray = b.wasmDefineArrayType(
@@ -3426,7 +3426,7 @@ struct ProgramBuilderTests {
                 let subInnerStruct = b.generateSubtype(for: innerStruct)
                 let outerStruct = b.wasmDefineStructType(
                     fields: [
-                        .init(type: ILType.wasmRef(.Index(), nullability: true), mutability: false),
+                        .init(type: ILType.anyIndexRef, mutability: false),
                         .init(type: ILType.wasmRef(.WasmAny, nullability: true), mutability: false),
                     ],
                     indexTypes: [innerStruct])
@@ -3492,10 +3492,10 @@ struct ProgramBuilderTests {
                 let subStructType = b.generateSubtype(for: structType)
                 let baseSignatureType = b.wasmDefineSignatureType(
                     signature: [
-                        ILType.wasmRef(.Index(), nullability: true),
+                        ILType.anyIndexRef,
                         ILType.wasmRef(.WasmEq, nullability: true),
                     ] => [
-                        ILType.wasmRef(.Index(), nullability: true),
+                        ILType.anyIndexRef,
                         ILType.wasmRef(.WasmAny, nullability: true),
                     ],
                     indexTypes: [subStructType, structType])
@@ -3897,14 +3897,14 @@ struct ProgramBuilderTests {
             let typeGroup = b.wasmDefineTypeGroup {
                 let v0 = b.wasmDefineForwardOrSelfReference()
                 let v1 = b.wasmDefineArrayType(
-                    elementType: .wasmRef(.Index(), nullability: true), mutability: true,
+                    elementType: .anyIndexRef, mutability: true,
                     indexType: v0)
                 #expect(
                     b.type(of: v1).wasmTypeDefinition!.description!.hasUnresolvedSelfReferences())
 
                 let v2 = b.wasmDefineForwardOrSelfReference()
                 let v3 = b.wasmDefineArrayType(
-                    elementType: .wasmRef(.Index(), nullability: true), mutability: true,
+                    elementType: .anyIndexRef, mutability: true,
                     indexType: v2)
                 let v4 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
                 b.wasmResolveForwardReference(v2, to: v4)
@@ -3913,7 +3913,7 @@ struct ProgramBuilderTests {
 
                 let v5 = b.wasmDefineForwardOrSelfReference()
                 let v6 = b.wasmDefineArrayType(
-                    elementType: .wasmRef(.Index(), nullability: true), mutability: true,
+                    elementType: .anyIndexRef, mutability: true,
                     indexType: v5)
                 b.wasmResolveForwardReference(v5, to: v6)
                 #expect(
@@ -3921,7 +3921,7 @@ struct ProgramBuilderTests {
 
                 let v7 = b.wasmDefineForwardOrSelfReference()
                 let v8 = b.wasmDefineStructType(
-                    fields: [.init(type: .wasmRef(.Index(), nullability: true), mutability: true)],
+                    fields: [.init(type: .anyIndexRef, mutability: true)],
                     indexTypes: [v7])
                 #expect(
                     b.type(of: v8).wasmTypeDefinition!.description!.hasUnresolvedSelfReferences())
@@ -3931,7 +3931,7 @@ struct ProgramBuilderTests {
 
                 let v9 = b.wasmDefineForwardOrSelfReference()
                 let v10 = b.wasmDefineSignatureType(
-                    signature: [.wasmRef(.Index(), nullability: true)] => [], indexTypes: [v9])
+                    signature: [.anyIndexRef] => [], indexTypes: [v9])
                 #expect(
                     b.type(of: v10).wasmTypeDefinition!.description!.hasUnresolvedSelfReferences())
                 b.wasmResolveForwardReference(v9, to: v10)

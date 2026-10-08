@@ -4934,7 +4934,7 @@ struct LifterTests {
                 // Note that index types use generic .Index() descriptions without a type
                 // description (as the operation doesn't know its inputs).
                 let arrayOfArrayi32 = b.wasmDefineArrayType(
-                    elementType: .wasmRef(.Index(), nullability: true),
+                    elementType: .anyIndexRef,
                     mutability: false,
                     indexType: forwardReference)
                 let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
@@ -4952,9 +4952,9 @@ struct LifterTests {
                         fields: [
                             // Note that index types use generic .Index() descriptions without a type
                             // description (as the operation doesn't know its inputs).
-                            .init(type: .wasmRef(.Index(), nullability: false), mutability: false),
+                            .init(type: .anyNonNullableIndexRef, mutability: false),
                             .init(type: .wasmi32, mutability: true),
-                            .init(type: .wasmRef(.Index(), nullability: true), mutability: true),
+                            .init(type: .anyIndexRef, mutability: true),
                         ],
                         indexTypes: [typeGroupArray[0], selfReference])
                 ]

@@ -1587,7 +1587,7 @@ struct TypeSystemTests {
         // A generic index type without a type description.
         // These are e.g. used by the element types for arrays and structs inside the operation as
         // the operation doesn't know about the actual type definition inputs.
-        let nullableGenericIndexRef = ILType.wasmRef(.Index(), nullability: true)
+        let nullableGenericIndexRef = ILType.anyIndexRef
         #expect(nullableGenericIndexRef.description == ".wasmRef(null Index)")
         #expect(ILType.anyNonNullableIndexRef.description == ".wasmRef(Index)")
     }
@@ -1627,19 +1627,19 @@ struct TypeSystemTests {
 
         // Test Wasm references.
         #expect(
-            ILType.wasmRef(.Index(), nullability: true)
-                <= ILType.wasmRef(.Index(), nullability: true))
+            ILType.anyIndexRef
+                <= ILType.anyIndexRef)
         #expect(
-            ILType.wasmRef(.Index(), nullability: false)
-                <= ILType.wasmRef(.Index(), nullability: false))
+            ILType.anyNonNullableIndexRef
+                <= ILType.anyNonNullableIndexRef)
         #expect(
-            ILType.wasmRef(.Index(), nullability: false)
-                <= ILType.wasmRef(.Index(), nullability: true))
+            ILType.anyNonNullableIndexRef
+                <= ILType.anyIndexRef)
         #expect(
-            !(ILType.wasmRef(.Index(), nullability: true)
-                <= ILType.wasmRef(.Index(), nullability: false)))
-        #expect(!(ILType.wasmi32 <= ILType.wasmRef(.Index(), nullability: true)))
-        #expect(!(ILType.wasmRef(.Index(), nullability: true) <= ILType.wasmi32))
+            !(ILType.anyIndexRef
+                <= ILType.anyNonNullableIndexRef))
+        #expect(!(ILType.wasmi32 <= ILType.anyIndexRef))
+        #expect(!(ILType.anyIndexRef <= ILType.wasmi32))
         #expect(
             !(ILType.wasmIndexRef(arrayi32Desc, nullability: true)
                 >= ILType.wasmIndexRef(arrayi64Desc, nullability: true)))
@@ -1653,14 +1653,14 @@ struct TypeSystemTests {
             ILType.wasmIndexRef(arrayi32Desc, nullability: true)
                 >= ILType.wasmIndexRef(arrayi32Desc, nullability: false))
         #expect(
-            ILType.wasmRef(.Index(), nullability: true)
+            ILType.anyIndexRef
                 >= ILType.wasmIndexRef(arrayi32Desc, nullability: true))
         #expect(
-            !(ILType.wasmRef(.Index(), nullability: true)
+            !(ILType.anyIndexRef
                 <= ILType.wasmIndexRef(arrayi32Desc, nullability: true)))
 
-        #expect(ILType.wasmRef(.Index(), nullability: true) <= ILType.wasmGenericRef)
-        #expect(!(ILType.wasmGenericRef <= ILType.wasmRef(.Index(), nullability: true)))
+        #expect(ILType.anyIndexRef <= ILType.wasmGenericRef)
+        #expect(!(ILType.wasmGenericRef <= ILType.anyIndexRef))
 
         // Test nullability rules for abstract Wasm types.
         for heapType: WasmAbstractHeapType in WasmAbstractHeapType.allCases {

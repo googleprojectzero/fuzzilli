@@ -1299,7 +1299,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             b.findVariable {
                 let varType = b.type(of: $0)
                 return varType.Is(.wasmFuncRef())
-                    && varType.Is(.wasmRef(.Index(), nullability: false))
+                    && varType.Is(.anyNonNullableIndexRef)
             } ?? function.wasmRefFunc(functionVar)
 
         let signatureDef = b.getWasmTypeDef(for: b.type(of: functionRef))

@@ -3029,7 +3029,7 @@ struct MinimizerTests {
                         signature: [.wasmi32] => [.wasmi32], indexTypes: [])
                     let structType = b.wasmDefineStructType(
                         fields: [
-                            .init(type: .wasmRef(.Index(), nullability: true), mutability: true)
+                            .init(type: .anyIndexRef, mutability: true)
                         ],
                         indexTypes: [signature])
                     return [signature, structType]
@@ -3052,7 +3052,7 @@ struct MinimizerTests {
                         signature: [.wasmi32] => [.wasmi32], indexTypes: [])
                     let structType = b.wasmDefineStructType(
                         fields: [
-                            .init(type: .wasmRef(.Index(), nullability: true), mutability: true)
+                            .init(type: .anyIndexRef, mutability: true)
                         ],
                         indexTypes: [signature])
                     return [signature, structType]
@@ -3095,11 +3095,11 @@ struct MinimizerTests {
                     return [
                         // Only used by an unimportant instruction.
                         b.wasmDefineArrayType(
-                            elementType: .wasmRef(.Index(), nullability: false), mutability: false,
+                            elementType: .anyNonNullableIndexRef, mutability: false,
                             indexType: typeGroupA[2]),
                         // Needed for an important instruction, shall not be removed.
                         b.wasmDefineArrayType(
-                            elementType: .wasmRef(.Index(), nullability: true), mutability: true,
+                            elementType: .anyIndexRef, mutability: true,
                             indexType: typeGroupA[1]),
                     ]
                 }
@@ -3124,7 +3124,7 @@ struct MinimizerTests {
                 let typeGroupB = b.wasmDefineTypeGroup {
                     return [
                         b.wasmDefineArrayType(
-                            elementType: .wasmRef(.Index(), nullability: true), mutability: true,
+                            elementType: .anyIndexRef, mutability: true,
                             indexType: typeGroupA[0])
                     ]
                 }
@@ -3378,7 +3378,7 @@ struct MinimizerTests {
                 let fwd = b.wasmDefineForwardOrSelfReference()
                 evaluator.nextInstructionIsImportant(in: b)
                 let arrayType = b.wasmDefineArrayType(
-                    elementType: .wasmRef(.Index(), nullability: true), mutability: true,
+                    elementType: .anyIndexRef, mutability: true,
                     indexType: fwd
                 )
                 let structType = b.wasmDefineStructType(
@@ -3883,7 +3883,7 @@ struct MinimizerTests {
                 let wg0 = buildExportingModule(with: b)
 
                 b.buildWasmModule { wasmModule in
-                    let unresolvedType = ILType.wasmRef(.Index(), nullability: true)
+                    let unresolvedType = ILType.anyIndexRef
                     wasmModule.addWasmFunction(
                         with: [] => [.wasmi32, unresolvedType], indexTypes: [structType]
                     ) { function, functionLabel, _ in
@@ -3920,7 +3920,7 @@ struct MinimizerTests {
                 let wg0 = buildExportingModule(with: b)
 
                 b.buildWasmModule { wasmModule in
-                    let unresolvedType = ILType.wasmRef(.Index(), nullability: true)
+                    let unresolvedType = ILType.anyIndexRef
                     wasmModule.addWasmFunction(
                         with: [] => [.wasmi32, unresolvedType], indexTypes: [structType]
                     ) { function, functionLabel, _ in

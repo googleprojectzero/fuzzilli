@@ -81,7 +81,7 @@ struct WasmSignatureConversionTests {
                 == ([.jsAnything, .function()] => .jsArray))
         #expect(
             ProgramBuilder.convertWasmSignatureToJsSignature(
-                [.wasmRef(.Index(), nullability: false), .wasmFuncRef()] => [.wasmf64, .wasmf64])
+                [.anyNonNullableIndexRef, .wasmFuncRef()] => [.wasmf64, .wasmf64])
                 == ([.jsAnything, .function()] => .jsArray))
         #expect(
             ProgramBuilder.convertWasmSignatureToJsSignature(
@@ -1681,12 +1681,12 @@ struct WasmFoundationTests {
                     ])
 
                 // Signature: (array, struct) -> (struct)
-                // We use .wasmRef(.Index(), nullability: false) as placeholders in the signature and provide the actual type definitions in indexTypes.
+                // We use .anyNonNullableIndexRef as placeholders in the signature and provide the actual type definitions in indexTypes.
                 let wasmSigDef = b.wasmDefineAdHocSignatureType(
                     signature: [
-                        .wasmRef(.Index(), nullability: false),
-                        .wasmRef(.Index(), nullability: false),
-                    ] => [.wasmRef(.Index(), nullability: false)],
+                        .anyNonNullableIndexRef,
+                        .anyNonNullableIndexRef,
+                    ] => [.anyNonNullableIndexRef],
                     indexTypes: [arrayDef, structDef, structDef]
                 )
                 return [arrayDef, structDef, wasmSigDef]
@@ -1718,9 +1718,9 @@ struct WasmFoundationTests {
 
                 wasmModule.addWasmFunction(
                     with: [
-                        .wasmi32, .wasmRef(.Index(), nullability: false),
-                        .wasmRef(.Index(), nullability: false),
-                    ] => [.wasmRef(.Index(), nullability: false)],
+                        .wasmi32, .anyNonNullableIndexRef,
+                        .anyNonNullableIndexRef,
+                    ] => [.anyNonNullableIndexRef],
                     indexTypes: [arrayDef, structDef, structDef]
                 ) { fn, label, params in
                     let results = fn.wasmCallIndirect(

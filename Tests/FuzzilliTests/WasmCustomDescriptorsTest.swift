@@ -327,7 +327,7 @@ struct WasmCustomDescriptorsTests {
                     let v2 = function.wasmStructGet(theStruct: castFromAbstract, fieldIndex: 0)
 
                     let superTypeRef = function.wasmRefCast(
-                        describedInst, refType: ILType.wasmRef(.Index(), nullability: false),
+                        describedInst, refType: ILType.anyNonNullableIndexRef,
                         typeDef: types[2])
                     let castFromSupertype = function.wasmRefCastDescEq(
                         superTypeRef, descriptorRef: descriptorInst,
@@ -388,7 +388,7 @@ struct WasmCustomDescriptorsTests {
                     let nullRef = function.wasmRefNull(typeDef: types[0])
                     _ = function.wasmRefCastDescEq(
                         nullRef, descriptorRef: descriptorInst,
-                        targetRefType: ILType.wasmRef(.Index(), nullability: false))
+                        targetRefType: ILType.anyNonNullableIndexRef)
                     return []
                 }
             }
@@ -741,7 +741,7 @@ struct WasmCustomDescriptorsTests {
                     fields: [
                         WasmStructTypeDescription.Field(type: .wasmi32, mutability: true),
                         WasmStructTypeDescription.Field(
-                            type: .wasmRef(.Index(), nullability: true), mutability: false),
+                            type: .anyIndexRef, mutability: false),
                     ],
                     indexTypes: [descriptor],
                     superTypeDef: described

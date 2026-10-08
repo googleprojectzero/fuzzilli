@@ -28,7 +28,7 @@ struct WasmGCTests {
             let typeGroup = b.wasmDefineTypeGroup {
                 let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
                 let arrayOfArrays = b.wasmDefineArrayType(
-                    elementType: .wasmRef(.Index(), nullability: false), mutability: true,
+                    elementType: .anyNonNullableIndexRef, mutability: true,
                     indexType: arrayi32)
                 return [arrayi32, arrayOfArrays]
             }
@@ -212,10 +212,10 @@ struct WasmGCTests {
                     ], superTypeDef: superStruct, isFinal: false)
 
                 let superArray = b.wasmDefineArrayType(
-                    elementType: .wasmRef(.Index(), nullability: true), mutability: false,
+                    elementType: .anyIndexRef, mutability: false,
                     indexType: superStruct, isFinal: false)
                 let subArray = b.wasmDefineArrayType(
-                    elementType: .wasmRef(.Index(), nullability: true), mutability: false,
+                    elementType: .anyIndexRef, mutability: false,
                     indexType: subStruct, superTypeDef: superArray, isFinal: true)
 
                 return [superStruct, subStruct, superArray, subArray]
@@ -311,14 +311,14 @@ struct WasmGCTests {
                 // Parameters are contravariant, return types are covariant.
                 // Super signature: [ref subStruct] => [ref superStruct]
                 let superSignatureType = b.wasmDefineSignatureType(
-                    signature: [.wasmRef(.Index(), nullability: true)] => [
-                        .wasmRef(.Index(), nullability: true)
+                    signature: [.anyIndexRef] => [
+                        .anyIndexRef
                     ],
                     indexTypes: [subStructType, superStructType])
                 // Sub signature: [ref superStruct] => [ref subStruct]
                 let subSignatureType = b.wasmDefineSignatureType(
-                    signature: [.wasmRef(.Index(), nullability: true)] => [
-                        .wasmRef(.Index(), nullability: true)
+                    signature: [.anyIndexRef] => [
+                        .anyIndexRef
                     ],
                     indexTypes: [superStructType, subStructType],
                     superTypeDef: superSignatureType)
@@ -337,7 +337,7 @@ struct WasmGCTests {
                     function, label, args in
                     // Downcast args[0] from superStructType to subStructType and return it.
                     let castResult = function.wasmRefCast(
-                        args[0], refType: .wasmRef(.Index(), nullability: true),
+                        args[0], refType: .anyIndexRef,
                         typeDef: subStructType)
                     return [castResult]
                 }
@@ -349,7 +349,7 @@ struct WasmGCTests {
 
                     let subFuncRef = function.wasmRefFunc(subFunc)
                     let superFuncRef = function.wasmRefCast(
-                        subFuncRef, refType: .wasmRef(.Index(), nullability: true),
+                        subFuncRef, refType: .anyIndexRef,
                         typeDef: superSignatureType)
                     let structInstance = function.wasmCallRef(
                         functionRef: superFuncRef, functionArgs: [subStructInstance])[0]
@@ -386,14 +386,14 @@ struct WasmGCTests {
 
                 // Super signature: [ref null subStruct] => [ref null superStruct]
                 let superSignatureType = b.wasmDefineSignatureType(
-                    signature: [.wasmRef(.Index(), nullability: true)] => [
-                        .wasmRef(.Index(), nullability: true)
+                    signature: [.anyIndexRef] => [
+                        .anyIndexRef
                     ],
                     indexTypes: [subStructType, superStructType])
                 // Sub signature: [ref null superStruct] => [ref null subStruct]
                 let subSignatureType = b.wasmDefineSignatureType(
-                    signature: [.wasmRef(.Index(), nullability: true)] => [
-                        .wasmRef(.Index(), nullability: true)
+                    signature: [.anyIndexRef] => [
+                        .anyIndexRef
                     ],
                     indexTypes: [superStructType, subStructType],
                     superTypeDef: superSignatureType)
@@ -412,7 +412,7 @@ struct WasmGCTests {
                 let subFunc = module.addWasmFunction(signature: subSignatureType) {
                     function, label, args in
                     let castResult = function.wasmRefCast(
-                        args[0], refType: .wasmRef(.Index(), nullability: true),
+                        args[0], refType: .anyIndexRef,
                         typeDef: subStructType)
                     return [castResult]
                 }
@@ -459,7 +459,7 @@ struct WasmGCTests {
                 let structOfStruct = b.wasmDefineStructType(
                     fields: [
                         WasmStructTypeDescription.Field(
-                            type: .wasmRef(.Index(), nullability: true), mutability: true)
+                            type: .anyIndexRef, mutability: true)
                     ], indexTypes: [structOfi32])
                 return [structOfi32, structOfStruct]
             }
@@ -508,7 +508,7 @@ struct WasmGCTests {
                 let structOfStruct = b.wasmDefineStructType(
                     fields: [
                         WasmStructTypeDescription.Field(
-                            type: .wasmRef(.Index(), nullability: true), mutability: true)
+                            type: .anyIndexRef, mutability: true)
                     ], indexTypes: [structOfi32])
                 return [structOfi32, structOfStruct]
             }
@@ -603,8 +603,8 @@ struct WasmGCTests {
                 let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
                 let selfRef = b.wasmDefineForwardOrSelfReference()
                 let signature = b.wasmDefineSignatureType(
-                    signature: [.wasmRef(.Index(), nullability: true), .wasmi32] => [
-                        .wasmi32, .wasmRef(.Index(), nullability: true),
+                    signature: [.anyIndexRef, .wasmi32] => [
+                        .wasmi32, .anyIndexRef,
                     ],
                     indexTypes: [arrayi32, selfRef])
                 return [arrayi32, signature]
@@ -639,8 +639,8 @@ struct WasmGCTests {
             let typeGroup = b.wasmDefineTypeGroup {
                 let arrayType = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
                 let signature = b.wasmDefineSignatureType(
-                    signature: [.wasmRef(.Index(), nullability: true)]
-                        => [.wasmRef(.Index(), nullability: true)],
+                    signature: [.anyIndexRef]
+                        => [.anyIndexRef],
                     indexTypes: [arrayType, arrayType])
                 return [arrayType, signature]
             }
@@ -729,7 +729,7 @@ struct WasmGCTests {
             let arrayType = b.wasmDefineTypeGroup {
                 let selfReference = b.wasmDefineForwardOrSelfReference()
                 let arrayOfSelf = b.wasmDefineArrayType(
-                    elementType: .wasmRef(.Index(), nullability: true), mutability: false,
+                    elementType: .anyIndexRef, mutability: false,
                     indexType: selfReference)
                 return [arrayOfSelf]
             }[0]
@@ -774,7 +774,7 @@ struct WasmGCTests {
             let typeGroup = b.wasmDefineTypeGroup {
                 let forwardReference = b.wasmDefineForwardOrSelfReference()
                 let arrayOfArrayi32 = b.wasmDefineArrayType(
-                    elementType: .wasmRef(.Index(), nullability: true), mutability: false,
+                    elementType: .anyIndexRef, mutability: false,
                     indexType: forwardReference)
                 let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
                 b.wasmResolveForwardReference(forwardReference, to: arrayi32)
@@ -818,17 +818,17 @@ struct WasmGCTests {
             let typeGroup = b.wasmDefineTypeGroup {
                 let forwardReference = b.wasmDefineForwardOrSelfReference()
                 let arrayOfArrayi32 = b.wasmDefineArrayType(
-                    elementType: .wasmRef(.Index(), nullability: true), mutability: true,
+                    elementType: .anyIndexRef, mutability: true,
                     indexType: forwardReference)
                 let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
                 b.wasmResolveForwardReference(forwardReference, to: arrayi32)
                 let arrayOfArrayOfArrayi32 = b.wasmDefineArrayType(
-                    elementType: .wasmRef(.Index(), nullability: true), mutability: true,
+                    elementType: .anyIndexRef, mutability: true,
                     indexType: forwardReference)
                 b.wasmResolveForwardReference(forwardReference, to: arrayOfArrayi32)
                 // Here the forward reference acts as a self reference as we don't resolve it again.
                 let arraySelf = b.wasmDefineArrayType(
-                    elementType: .wasmRef(.Index(), nullability: true), mutability: true,
+                    elementType: .anyIndexRef, mutability: true,
                     indexType: forwardReference)
 
                 return [arrayOfArrayi32, arrayi32, arrayOfArrayOfArrayi32, arraySelf]
@@ -895,7 +895,7 @@ struct WasmGCTests {
             }
             let typeGroupB = b.wasmDefineTypeGroup {
                 let typeWithDependency = b.wasmDefineArrayType(
-                    elementType: .wasmRef(.Index(), nullability: true), mutability: false,
+                    elementType: .anyIndexRef, mutability: false,
                     indexType: typeGroupA[0])
                 let arrayi64 = b.wasmDefineArrayType(elementType: .wasmi64, mutability: true)
                 return [arrayi64, typeWithDependency]
@@ -1239,8 +1239,8 @@ struct WasmGCTests {
                 wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
                     let array = function.wasmArrayNewFixed(arrayType: arrayType, elements: [])
                     let null = function.wasmRefNull(type: .wasmArrayRef())
-                    let refType = ILType.wasmRef(.Index(), nullability: false)
-                    let refNullType = ILType.wasmRef(.Index(), nullability: true)
+                    let refType = ILType.anyNonNullableIndexRef
+                    let refNullType = ILType.anyIndexRef
                     let results = [
                         function.wasmRefTest(array, refType: refType, typeDef: arrayType),
                         function.wasmRefTest(null, refType: refType, typeDef: arrayType),
@@ -1264,7 +1264,7 @@ struct WasmGCTests {
                 }
                 wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
                     let ref = function.wasmRefI31(function.consti32(0))
-                    let refType = ILType.wasmRef(.Index(), nullability: false)
+                    let refType = ILType.anyNonNullableIndexRef
                     let result = function.wasmRefTest(ref, refType: refType, typeDef: arrayType)
                     return [result]
                 }
@@ -1324,8 +1324,8 @@ struct WasmGCTests {
                 wasmModule.addWasmFunction(with: [.wasmEqRef()] => [.wasmi32]) {
                     function, label, args in
                     let (refType, nonNullRefType, abstractRefType) = (
-                        ILType.wasmRef(.Index(), nullability: true),
-                        ILType.wasmRef(.Index(), nullability: false),
+                        ILType.anyIndexRef,
+                        ILType.anyNonNullableIndexRef,
                         ILType.wasmRef(
                             .Abstract(HeapTypeInfo(.WasmArray, shared: false)), nullability: true),
                     )
@@ -1516,7 +1516,7 @@ struct WasmGCTests {
             }[0]
 
             let module = b.buildWasmModule { wasmModule in
-                let unresolvedType = ILType.wasmRef(.Index(), nullability: true)
+                let unresolvedType = ILType.anyIndexRef
                 wasmModule.addWasmFunction(
                     with: [.wasmAnyRef()] => [.wasmi32, unresolvedType], indexTypes: [structType]
                 ) {
@@ -1581,7 +1581,7 @@ struct WasmGCTests {
             }[0]
 
             let module = b.buildWasmModule { wasmModule in
-                let unresolvedType = ILType.wasmRef(.Index(), nullability: true)
+                let unresolvedType = ILType.anyIndexRef
 
                 wasmModule.addWasmFunction(
                     with: [.wasmAnyRef()] => [.wasmi32, .wasmAnyRef()], indexTypes: []
