@@ -397,4 +397,38 @@ struct AnalyzerTests {
             let _ = b.finalize()
         }
     }
+
+    @Test
+    func testDefUseAnalyzerWasmReassign() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            var paramVar: Variable?
+            var localVar: Variable?
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) {
+                    function, _, params in
+                    paramVar = params[0]
+                    let v = function.consti32(42)
+                    localVar = v
+                    function.wasmReassign(variable: params[0], to: v)
+                    return params
+                }
+            }
+
+            let program = b.finalize()
+            var analyzer = DefUseAnalyzer(for: program)
+            analyzer.analyze()
+
+            #expect(analyzer.numAssignments(of: paramVar!) == 2)
+            #expect(analyzer.numAssignments(of: localVar!) == 1)
+
+            let wasmReassignInstr = program.code.first(where: { $0.op is WasmReassign })!
+            #expect(wasmReassignInstr.reassigns(paramVar!))
+            #expect(!wasmReassignInstr.reassigns(localVar!))
+            #expect(wasmReassignInstr.mayMutate(paramVar!))
+            #expect(!wasmReassignInstr.mayMutate(localVar!))
+        }
+    }
 }

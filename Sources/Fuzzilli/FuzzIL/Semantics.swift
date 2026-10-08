@@ -46,7 +46,8 @@ extension Operation {
     func reassigns(input inputIdx: Int) -> Bool {
         switch opcode {
         case .reassign,
-            .update:
+            .update,
+            .wasmReassign:
             return inputIdx == 0
         case .unaryOperation(let op):
             return op.op.reassignsInput
