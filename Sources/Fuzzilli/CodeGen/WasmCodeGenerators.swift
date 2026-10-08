@@ -1037,8 +1037,9 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                     let actualEntryType = b.type(of: value)
                     let signature: Variable
                     if actualEntryType.Is(.wasmFunctionDef()) {
-                        signature = b.randomVariable(
-                            ofType: actualEntryType.wasmFunctionDef!.signatureType!)!
+                        // Use the function's signature, not a sub type's: call_indirect would trap.
+                        signature = b.getWasmTypeDef(
+                            for: actualEntryType.wasmFunctionDef!.signatureType!)
                     } else if let cachedSignature = cachedSignatures[
                         actualEntryType.signature ?? Signature.forUnknownFunction]
                     {
@@ -1787,11 +1788,20 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 provides: [.wasmFunction]
             ) { b in
                 let module = b.currentWasmModule
-                // TODO(mliedtke): If we want to allow non-nullable types, we'll need to ensure that
-                // we are able to also generate them in all cases and contexts.
-                let (signature, indexTypes) = b.randomWasmGcSignature(allowNonNullable: false)
-                let signatureDef = b.wasmDefineAdHocSignatureType(
-                    signature: signature, indexTypes: indexTypes)
+                let signatureDef: Variable
+                if probability(0.9), let typeGroupSignature = b.randomWasmFunctionSignatureTypeDef()
+                {
+                    // Unlike ad hoc signatures, signature types defined in type groups can have
+                    // super and sub types.
+                    signatureDef = typeGroupSignature
+                } else {
+                    // TODO(mliedtke): If we want to allow non-nullable types, we'll need to ensure
+                    // that we are able to also generate them in all cases and contexts.
+                    let (signature, indexTypes) = b.randomWasmGcSignature(allowNonNullable: false)
+                    signatureDef = b.wasmDefineAdHocSignatureType(
+                        signature: signature, indexTypes: indexTypes)
+                }
+                let signature = b.type(of: signatureDef).wasmFunctionSignatureDefSignature
                 b.emit(
                     BeginWasmFunction(parameterCount: signature.parameterTypes.count),
                     withInputs: [signatureDef])

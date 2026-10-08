@@ -7041,6 +7041,56 @@ public class ProgramBuilder {
         }
     }
 
+    /// Finds a random signature type definition from a type group that can be used as the
+    /// signature of a new Wasm function. Differently to ad hoc signatures, these signature types
+    /// can have super and sub types, so the function can be used as an instance of a super type at
+    /// runtime (e.g., in casts or when called through the signature of a super type).
+    public func randomWasmFunctionSignatureTypeDef() -> Variable? {
+        let isUsable = { (v: Variable) -> Bool in
+            guard
+                let desc = self.type(of: v).wasmTypeDefinition?.description
+                    as? WasmSignatureTypeDescription,
+                !desc.isAdHoc, !desc.hasUnresolvedSelfReferences()
+            else { return false }
+            let signature = desc.signature
+            // Functions with simd128 parameters or results can't be called from JS.
+            // TODO(mliedtke): They could be exported and then imported by another Wasm module once
+            // we preserve the correct import type. Allow these signatures once we stop losing
+            // the signature data when exporting the function to JS.
+            if (signature.parameterTypes + signature.outputTypes).contains(.wasmSimd128) {
+                return false
+            }
+            // The function needs to be able to produce its results.
+            return signature.outputTypes.allSatisfy { outputType in
+                // The parameters are visible in the whole function body, so they can be returned.
+                if signature.parameterTypes.contains(where: { $0.Is(outputType) }) {
+                    return true
+                }
+                // Otherwise the result has to be generated. As for ad hoc signatures, this is only
+                // done for non-reference types and nullable references.
+                if ILType.wasmNonRefValueTypes.contains(outputType) {
+                    return true
+                }
+                guard let refType = outputType.wasmReferenceType else { return false }
+                // TODO(pawkra): generateRandomWasmVar() doesn't support shared references yet.
+                if case .Abstract(let heapTypeInfo) = refType.kind, heapTypeInfo.shared {
+                    return false
+                }
+                return refType.nullability
+            }
+        }
+        // Prefer signatures with a super type, so that functions with a sub type signature exist.
+        if probability(0.5),
+            let def = findVariable(satisfying: {
+                self.type(of: $0).wasmTypeDefinition?.description?.concreteHeapSupertype != nil
+                    && isUsable($0)
+            })
+        {
+            return def
+        }
+        return findVariable(satisfying: isUsable)
+    }
+
     public func randomWasmSignature() -> WasmSignature {
         // TODO: generalize this to support more types. Also add support for simd128 and
         // (null)exnref, note however that these types raise exceptions when used from JS.
