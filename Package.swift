@@ -1,4 +1,4 @@
-// swift-tools-version:5.7
+// swift-tools-version:6.3
 //
 // Copyright 2019 Google LLC
 //
@@ -19,7 +19,7 @@ import PackageDescription
 let package = Package(
     name: "Fuzzilli",
     platforms: [
-        .macOS(.v13)
+        .macOS(.v15)
     ],
     products: [
         .library(name: "Fuzzilli", targets: ["Fuzzilli"])
@@ -105,5 +105,5 @@ let package = Package(
             dependencies: ["Fuzzilli", .product(name: "Algorithms", package: "swift-algorithms")],
             resources: [.copy("CompilerTests")]),
     ],
-    swiftLanguageVersions: [.v5]
+    swiftLanguageModes: [.v5]
 )
