@@ -955,6 +955,7 @@ public class OperationMutator: BaseInstructionMutator {
             .wasmArrayNewFixed(_),
             .wasmArrayNewDefault(_),
             .wasmArrayNewData(_),
+            .wasmArrayNewElem(_),
             .wasmArrayLen(_),
             .wasmArraySet(_),
             .wasmStructNewDefault(_),

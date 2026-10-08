@@ -2144,6 +2144,7 @@ public class JavaScriptLifter: Lifter {
                 .wasmArrayNewFixed(_),
                 .wasmArrayNewDefault(_),
                 .wasmArrayNewData(_),
+                .wasmArrayNewElem(_),
                 .wasmArrayLen(_),
                 .wasmArrayGet(_),
                 .wasmArraySet(_),

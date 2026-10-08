@@ -3933,6 +3933,7 @@ struct ProgramBuilderTests {
         "UnboundFunctionApplyGenerator",
         "UnboundFunctionBindGenerator",
         "UnboundFunctionCallGenerator",
+        "WasmArrayNewElemGenerator",
         "WasmBranchGenerator",
         "WasmBranchIfGenerator",
         "WasmBranchOnNullGenerator",

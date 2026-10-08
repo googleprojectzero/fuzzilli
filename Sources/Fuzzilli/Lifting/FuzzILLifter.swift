@@ -1724,6 +1724,11 @@ public class FuzzILLifter: Lifter {
                 "\(output()) <- WasmArrayNewData [\(input(0)), \(input(1)), \(input(2)), \(input(3))]"
             )
 
+        case .wasmArrayNewElem(_):
+            w.emit(
+                "\(output()) <- WasmArrayNewElem [\(input(0)), \(input(1)), \(input(2)), \(input(3))]"
+            )
+
         case .wasmArrayLen(_):
             w.emit("\(output()) <- WasmArrayLen \(input(0))")
 

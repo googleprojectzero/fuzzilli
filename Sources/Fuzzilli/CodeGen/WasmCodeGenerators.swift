@@ -278,6 +278,38 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             arrayType: arrayType, dataSegment: dataSegment, offset: offset, size: size)
     },
 
+    CodeGenerator(
+        "WasmArrayNewElemGenerator",
+        inContext: .single(.wasmFunction),
+        inputs: .requiredComplex(.init(.wasmTypeDef(), .IsWasmArray), .init(.wasmElementSegment()))
+    ) { b, _, elementSegment in
+        let elementSegmentTypeInfo = b.type(of: elementSegment).wasmElementSegmentType!
+        if elementSegmentTypeInfo.isDropped {
+            return
+        }
+
+        // Element segments currently only hold funcrefs, so the array's element type must also be funcref.
+        // TODO(bettscheider): Support non-funcref element segments and arrays in array.new_elem.
+        let maybeArrayType = b.findVariable { v in
+            let typeDesc =
+                b.type(of: v).wasmTypeDefinition?.description as? WasmArrayTypeDescription
+            return typeDesc?.elementType == .wasmFuncRef()
+        }
+        guard let arrayType = maybeArrayType else { return }
+
+        let function = b.currentWasmModule.currentWasmFunction
+
+        let segmentLength = Int64(elementSegmentTypeInfo.segmentLength)
+        let offsetValue = b.randomNonNegativeIndex(upTo: segmentLength)
+        let offset = function.consti32(Int32(offsetValue))
+
+        let maxElements = segmentLength - offsetValue
+        let size = function.consti32(Int32(b.randomSize(upTo: min(maxElements, 0x1000))))
+
+        function.wasmArrayNewElem(
+            arrayType: arrayType, elementSegment: elementSegment, offset: offset, size: size)
+    },
+
     // We use false nullability so we do not invoke null traps.
     // TODO(manoskouk): Express that only array types are .required (same with all relevant array and struct generators below).
     // TODO: make this produce an .wasmi32?

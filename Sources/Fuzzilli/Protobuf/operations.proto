@@ -1820,6 +1820,9 @@ message WasmTableFill {
 message WasmArrayNewData {
 }
 
+message WasmArrayNewElem {
+}
+
 message BeginBundleScript {
 }
 

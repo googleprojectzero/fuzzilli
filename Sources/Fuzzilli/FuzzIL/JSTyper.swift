@@ -1303,7 +1303,8 @@ public struct JSTyper: Analyzer {
         // No need to analyze this and add them to the DynamicObjectGroupManager.
         case .wasmArrayNewFixed(_),
             .wasmArrayNewDefault(_),
-            .wasmArrayNewData(_):
+            .wasmArrayNewData(_),
+            .wasmArrayNewElem(_):
             setReferenceType(
                 of: instr.output, typeDef: instr.input(0), nullability: false,
                 isExact: enableCustomDescriptors)

@@ -6550,6 +6550,20 @@ public class ProgramBuilder {
         }
 
         @discardableResult
+        public func wasmArrayNewElem(
+            arrayType: Variable, elementSegment: Variable, offset: Variable, size: Variable
+        ) -> Variable {
+            let arrayDesc = b.jsTyper.getTypeDescription(of: arrayType) as! WasmArrayTypeDescription
+            // TODO(bettscheider): Support more types than funcrefs.
+            assert(arrayDesc.elementType == .wasmFuncRef())
+            return b.emit(
+                WasmArrayNewElem(),
+                withInputs: [arrayType, elementSegment, offset, size],
+                types: [.wasmTypeDef(), .wasmElementSegment(), .wasmi32, .wasmi32]
+            ).output
+        }
+
+        @discardableResult
         public func wasmArrayLen(_ array: Variable) -> Variable {
             return b.emit(WasmArrayLen(), withInputs: [array]).output
         }

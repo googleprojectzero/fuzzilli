@@ -1862,6 +1862,8 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmArrayNewDefault = Fuzzilli_Protobuf_WasmArrayNewDefault()
             case .wasmArrayNewData(_):
                 $0.wasmArrayNewData = Fuzzilli_Protobuf_WasmArrayNewData()
+            case .wasmArrayNewElem(_):
+                $0.wasmArrayNewElem = Fuzzilli_Protobuf_WasmArrayNewElem()
             case .wasmArrayLen(_):
                 $0.wasmArrayLen = Fuzzilli_Protobuf_WasmArrayLen()
             case .wasmArrayGet(let op):
@@ -3150,6 +3152,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmArrayNewDefault()
         case .wasmArrayNewData(_):
             op = WasmArrayNewData()
+        case .wasmArrayNewElem(_):
+            op = WasmArrayNewElem()
         case .wasmArrayLen(_):
             op = WasmArrayLen()
         case .wasmArrayGet(let p):
