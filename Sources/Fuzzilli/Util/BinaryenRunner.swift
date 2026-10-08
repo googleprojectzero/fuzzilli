@@ -144,7 +144,10 @@ public struct BinaryenRunner {
         let seedBytes = (0..<seedSize).map { _ in UInt8.random(in: 0...255) }
         try! Data(seedBytes).write(to: URL(fileURLWithPath: seedFile))
 
-        var arguments = ["-ttf", seedFile, "-o", outputFile, "--fuzz-against-js", "-g"]
+        var arguments = [
+            "-ttf", seedFile, "-o", outputFile, "--fuzz-against-js", "-g",
+            "--fuzz-hang-limit=0", "--fuzz-no-invokes",
+        ]
 
         // Write input file if mutating
         if let input = inputBytes {
