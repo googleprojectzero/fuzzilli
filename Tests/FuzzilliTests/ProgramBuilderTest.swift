@@ -3660,6 +3660,48 @@ struct ProgramBuilderTests {
         }
     }
 
+    @Test(arguments: [false, true])
+    func testGenerateRandomWasmVarFuncRefWithSubtypeSignature(enableCustomDescriptors: Bool) {
+        let config = Configuration(
+            logLevel: .error, enableCustomDescriptors: enableCustomDescriptors)
+        let fuzzer = makeMockFuzzer(config: config)
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            let signatures = b.wasmDefineTypeGroup {
+                let superSignature = b.wasmDefineSignatureType(
+                    signature: [.wasmi32] => [.wasmi32], indexTypes: [])
+                let subSignature = b.wasmDefineSignatureType(
+                    signature: [.wasmi32] => [.wasmi32], indexTypes: [],
+                    superTypeDef: superSignature)
+                return [superSignature, subSignature]
+            }
+
+            let superDesc = b.type(of: signatures[0]).wasmTypeDefinition!.description!
+            let superRefType = ILType.wasmIndexRef(superDesc, nullability: false)
+
+            b.buildWasmModule { wasmModule in
+                let subFunction = wasmModule.addWasmFunction(signature: signatures[1]) {
+                    function, label, args in
+                    return [args[0]]
+                }
+                wasmModule.addWasmFunction(with: [] => []) { function, label, args in
+                    let ref = function.generateRandomWasmVar(ofType: superRefType)
+                    let refFunc = b.lastInstruction()
+                    #expect(
+                        refFunc.op is WasmRefFunc && refFunc.input(0) == subFunction
+                            && refFunc.output == ref)
+                    if enableCustomDescriptors {
+                        let exactSuperRefType = ILType.wasmIndexRef(
+                            superDesc, nullability: false, isExact: true)
+                        #expect(function.generateRandomWasmVar(ofType: exactSuperRefType) == nil)
+                    }
+                    return []
+                }
+            }
+        }
+    }
+
     @Test func testWasmBranchGeneratorSchedulingTest() {
         let fuzzer = makeMockFuzzer()
         fuzzer.sync {

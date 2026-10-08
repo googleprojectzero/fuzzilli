@@ -6279,7 +6279,7 @@ public class ProgramBuilder {
                         if type.wasmReferenceType!.nullability {
                             return wasmRefNull(type: type)
                         }
-                    case .Index(let desc, _):
+                    case .Index(let desc, let isExact):
                         let nullable = type.wasmReferenceType!.nullability
                         if probability(0.5) || !nullable, let desc = desc.get() {
                             let abstractSuper = desc.abstractHeapSupertype!.heapType
@@ -6297,12 +6297,10 @@ public class ProgramBuilder {
                                     b.jsTyper.getWasmTypeDef(for: type), structDesc)
                             }
                             if abstractSuper == .WasmFunc {
-                                let signatureType = b.type(of: b.jsTyper.getWasmTypeDef(for: type))
-                                if let f =
-                                    (b.findVariable {
-                                        b.type(of: $0).wasmFunctionDef?.signatureType
-                                            == signatureType
-                                    })
+                                // Functions with a sub type signature are valid as well, unless an
+                                // exact reference is requested.
+                                if let f = b.findWasmFunctionDef(
+                                    withSignature: desc, isExact: isExact)
                                 {
                                     return wasmRefFunc(f)
                                 }
@@ -7084,6 +7082,16 @@ public class ProgramBuilder {
             return def
         }
         return findVariable(satisfying: isUsable)
+    }
+
+    func findWasmFunctionDef(withSignature desc: WasmTypeDescription, isExact: Bool) -> Variable? {
+        findVariable {
+            guard
+                let functionDesc = self.type(of: $0).wasmFunctionDef?.signatureType?
+                    .wasmTypeDefinition?.description
+            else { return false }
+            return isExact ? functionDesc == desc : desc.subsumes(functionDesc)
+        }
     }
 
     /// Finds a random visible type definition of a proper super type of the type defined by
