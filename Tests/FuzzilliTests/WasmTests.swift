@@ -7050,6 +7050,80 @@ struct WasmGCTests {
         testForOutput(program: jsProg, runner: runner, outputString: "42\n")
     }
 
+    @Test func testCallIndirectWithSuperTypeSignature() throws {
+        let runner = JavaScriptExecutor()!
+
+        let jsProg = buildAndLiftProgram { b in
+            let types = b.wasmDefineTypeGroup {
+                let superStructType = b.wasmDefineStructType(
+                    fields: [.init(type: .wasmi32, mutability: true)])
+                let subStructType = b.wasmDefineStructType(
+                    fields: [
+                        .init(type: .wasmi32, mutability: true),
+                        .init(type: .wasmi64, mutability: true),
+                    ], superTypeDef: superStructType)
+
+                // Super signature: [ref null subStruct] => [ref null superStruct]
+                let superSignatureType = b.wasmDefineSignatureType(
+                    signature: [.wasmRef(.Index(), nullability: true)] => [
+                        .wasmRef(.Index(), nullability: true)
+                    ],
+                    indexTypes: [subStructType, superStructType])
+                // Sub signature: [ref null superStruct] => [ref null subStruct]
+                let subSignatureType = b.wasmDefineSignatureType(
+                    signature: [.wasmRef(.Index(), nullability: true)] => [
+                        .wasmRef(.Index(), nullability: true)
+                    ],
+                    indexTypes: [superStructType, subStructType],
+                    superTypeDef: superSignatureType)
+
+                return [superStructType, subStructType, superSignatureType, subSignatureType]
+            }
+
+            let superStructType = types[0]
+            let subStructType = types[1]
+            let superSignatureType = types[2]
+            let subSignatureType = types[3]
+
+            // This test calls a function with the sub signature from a table using call_indirect
+            // with the super signature.
+            let module = b.buildWasmModule { module in
+                let subFunc = module.addWasmFunction(signature: subSignatureType) {
+                    function, label, args in
+                    let castResult = function.wasmRefCast(
+                        args[0], refType: .wasmRef(.Index(), nullability: true),
+                        typeDef: subStructType)
+                    return [castResult]
+                }
+                let table = module.addTable(
+                    elementType: .wasmFuncRef(), minSize: 1,
+                    definedSignatures: [subFunc, subSignatureType], isTable64: false)
+
+                module.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                    let subStructInstance = function.wasmStructNewDefault(structType: subStructType)
+                    function.wasmStructSet(
+                        theStruct: subStructInstance, fieldIndex: 0, value: function.consti32(42))
+                    let results = function.wasmCallIndirect(
+                        signatureDef: superSignatureType, table: table,
+                        functionArgs: [subStructInstance], tableIndex: function.consti32(0))
+                    #expect(
+                        b.type(of: results[0])
+                            == b.type(of: superStructType).wasmTypeDefinition!.getReferenceTypeTo(
+                                nullability: true))
+                    return [function.wasmStructGet(theStruct: results[0], fieldIndex: 0)]
+                }
+            }
+
+            let exports = module.loadExports()
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+            let wasmOut = b.callMethod(
+                module.getExportedMethod(at: 1), on: exports, withArgs: [])
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+        }
+
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n")
+    }
+
     @Test func testStruct() throws {
         let runner = JavaScriptExecutor()!
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)

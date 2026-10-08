@@ -5404,16 +5404,19 @@ public class ProgramBuilder {
                 ).outputs)
         }
 
+        public func canReturnCall(_ signature: WasmSignature) -> Bool {
+            return self.signature.outputTypes.count == signature.outputTypes.count
+                && zip(self.signature.outputTypes, signature.outputTypes).allSatisfy {
+                    $0.subsumes($1)
+                }
+        }
+
         public func wasmReturnCallRef(
             functionRef: Variable, functionArgs: [Variable]
         ) {
             let signatureDef = b.getWasmTypeDef(for: b.type(of: functionRef))
             let signature = b.type(of: signatureDef).wasmFunctionSignatureDefSignature
-            assert(
-                self.signature.outputTypes.count == signature.outputTypes.count
-                    && zip(self.signature.outputTypes, signature.outputTypes).allSatisfy {
-                        $0.subsumes($1)
-                    })
+            assert(canReturnCall(signature))
             b.emit(
                 WasmReturnCallRef(parameterCount: signature.parameterTypes.count),
                 withInputs: functionArgs + [functionRef],
@@ -5422,11 +5425,7 @@ public class ProgramBuilder {
 
         public func wasmReturnCallDirect(function: Variable, functionArgs: [Variable]) {
             let signature = b.type(of: function).wasmFunctionDefSignature!
-            assert(
-                self.signature.outputTypes.count == signature.outputTypes.count
-                    && zip(self.signature.outputTypes, signature.outputTypes).allSatisfy {
-                        $0.subsumes($1)
-                    })
+            assert(canReturnCall(signature))
             b.emit(
                 WasmReturnCallDirect(parameterCount: signature.parameterTypes.count),
                 withInputs: [function] + functionArgs,
@@ -5437,12 +5436,8 @@ public class ProgramBuilder {
             signatureDef: Variable, table: Variable, functionArgs: [Variable], tableIndex: Variable
         ) {
             let signature = b.type(of: signatureDef).wasmFunctionSignatureDefSignature
+            assert(canReturnCall(signature))
             let addrType = b.type(of: table).wasmTableType!.addrType
-            assert(
-                self.signature.outputTypes.count == signature.outputTypes.count
-                    && zip(self.signature.outputTypes, signature.outputTypes).allSatisfy {
-                        $0.subsumes($1)
-                    })
             b.emit(
                 WasmReturnCallIndirect(parameterCount: signature.parameterTypes.count),
                 withInputs: [table, signatureDef] + functionArgs + [tableIndex],
@@ -7089,6 +7084,22 @@ public class ProgramBuilder {
             return def
         }
         return findVariable(satisfying: isUsable)
+    }
+
+    /// Finds a random visible type definition of a proper super type of the type defined by
+    /// `typeDef` that satisfies the given filter.
+    public func randomWasmSupertypeDef(
+        of typeDef: Variable, satisfying filter: (Variable) -> Bool = { _ in true }
+    ) -> Variable? {
+        guard let desc = type(of: typeDef).wasmTypeDefinition?.description,
+            desc.concreteHeapSupertype != nil
+        else { return nil }
+        return findVariable {
+            guard let superDesc = self.type(of: $0).wasmTypeDefinition?.description,
+                superDesc != desc, superDesc.subsumes(desc)
+            else { return false }
+            return filter($0)
+        }
     }
 
     public func randomWasmSignature() -> WasmSignature {

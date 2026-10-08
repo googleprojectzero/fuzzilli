@@ -1260,10 +1260,17 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             ? function.consti64(Int64(tableIndex))
             : function.consti32(Int32(tableIndex))
         let signatureDefType = tableType.knownEntrySignatures[tableIndex]
-        let signatureDef = b.getWasmTypeDef(for: signatureDefType)
-        let wasmSignature = signatureDefType.wasmFunctionSignatureDefSignature
+        var signatureDef = b.getWasmTypeDef(for: signatureDefType)
+        // The signature check of call_indirect is a sub type check, so we can also call the
+        // function through a super type of its signature.
+        if probability(0.5), let superDef = b.randomWasmSupertypeDef(of: signatureDef) {
+            signatureDef = superDef
+        }
+        let wasmSignature = b.type(of: signatureDef).wasmFunctionSignatureDefSignature
 
-        guard let functionArgs = b.randomWasmArguments(forWasmSignature: wasmSignature)
+        guard
+            let functionArgs = b.randomWasmArguments(
+                forWasmSignature: wasmSignature, generate: true)
         else { return }
 
         function.wasmCallIndirect(
@@ -1310,12 +1317,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 (b.findVariable { v in
                     let type = b.type(of: v)
                     return type.Is(.wasmFunctionDef())
-                        && type.wasmFunctionDefSignature!.outputTypes.count
-                            == function.signature.outputTypes.count
-                        && zip(
-                            function.signature.outputTypes,
-                            type.wasmFunctionDefSignature!.outputTypes
-                        ).allSatisfy { $0.subsumes($1) }
+                        && function.canReturnCall(type.wasmFunctionDefSignature!)
                 })
         else { return }
 
@@ -1340,12 +1342,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 (b.findVariable { v in
                     let type = b.type(of: v)
                     return type.Is(.wasmFunctionDef())
-                        && function.signature.outputTypes.count
-                            == type.wasmFunctionDefSignature!.outputTypes.count
-                        && zip(
-                            function.signature.outputTypes,
-                            type.wasmFunctionDefSignature!.outputTypes
-                        ).allSatisfy { $0.subsumes($1) }
+                        && function.canReturnCall(type.wasmFunctionDefSignature!)
                 })
         else { return }
         let signature = b.type(of: functionVar).wasmFunctionDefSignature!
@@ -1364,18 +1361,25 @@ public let WasmCodeGenerators: [CodeGenerator] = [
 
         let matchingIndices = tableType.knownEntrySignatures.enumerated().compactMap {
             (index, signatureDef) -> Int? in
-            let wasmSignature = signatureDef.wasmFunctionSignatureDefSignature
-            return
-                (function.signature.outputTypes.count == wasmSignature.outputTypes.count
-                && zip(function.signature.outputTypes, wasmSignature.outputTypes).allSatisfy {
-                    $0.subsumes($1)
-                }) ? index : nil
+            function.canReturnCall(signatureDef.wasmFunctionSignatureDefSignature) ? index : nil
         }
 
         guard let tableIndex = matchingIndices.randomElement() else { return }
         let signatureDefType = tableType.knownEntrySignatures[tableIndex]
-        let signatureDef = b.getWasmTypeDef(for: signatureDefType)
-        let wasmSignature = signatureDefType.wasmFunctionSignatureDefSignature
+        var signatureDef = b.getWasmTypeDef(for: signatureDefType)
+        // Similar to the WasmCallIndirectGenerator, sometimes call the function through a super
+        // type of its signature. The results of the super type signature need to be compatible
+        // with the results of the current function.
+        if probability(0.5),
+            let superDef = b.randomWasmSupertypeDef(
+                of: signatureDef,
+                satisfying: {
+                    function.canReturnCall(b.type(of: $0).wasmFunctionSignatureDefSignature)
+                })
+        {
+            signatureDef = superDef
+        }
+        let wasmSignature = b.type(of: signatureDef).wasmFunctionSignatureDefSignature
 
         let indexVar =
             tableType.isTable64
@@ -1383,7 +1387,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             : function.consti32(Int32(tableIndex))
         guard
             let functionArgs = b.randomWasmArguments(
-                forWasmSignature: wasmSignature)
+                forWasmSignature: wasmSignature, generate: true)
         else { return }
         function.wasmReturnCallIndirect(
             signatureDef: signatureDef, table: table,
