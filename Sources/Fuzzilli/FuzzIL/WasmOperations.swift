@@ -2070,6 +2070,16 @@ public enum WasmSimd128IntegerUnOpKind: Int, CaseIterable {
         case .relaxed_trunc_f64x2_u_zero: return shape == .i32x4
         }
     }
+
+    func outputType() -> ILType {
+        switch self {
+        case .all_true, .bitmask:
+            // Tests and bitmasks produce a boolean i32 result.
+            return .wasmi32
+        default:
+            return .wasmSimd128
+        }
+    }
 }
 
 final class WasmSimd128IntegerUnOp: WasmOperation {

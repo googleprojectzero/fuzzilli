@@ -571,11 +571,13 @@ public class OperationMutator: BaseInstructionMutator {
         case .constSimd128(_):
             newOp = ConstSimd128(
                 value: (0..<16).map { _ in UInt8.random(in: UInt8.min...UInt8.max) })
-        case .wasmSimd128IntegerUnOp(_):
+        case .wasmSimd128IntegerUnOp(let op):
             let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter { !$0.isFloat() })
+            // We can't convert between i32-producing operations (all_true, bitmask) and
+            // v128-producing operations.
             let unOpKind = chooseUniform(
                 from: WasmSimd128IntegerUnOpKind.allCases.filter {
-                    $0.isValidForShape(shape: shape)
+                    $0.isValidForShape(shape: shape) && $0.outputType() == op.unOpKind.outputType()
                 })
             newOp = WasmSimd128IntegerUnOp(shape: shape, unOpKind: unOpKind)
         case .wasmSimd128IntegerBinOp(let op):

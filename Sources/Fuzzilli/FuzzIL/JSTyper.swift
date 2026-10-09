@@ -1067,15 +1067,7 @@ public struct JSTyper: Analyzer {
             .wasmSimdReplaceLane(_):
             setType(of: instr.output, to: .wasmSimd128)
         case .wasmSimd128IntegerUnOp(let op):
-            var outputType: ILType = .wasmSimd128
-            switch op.unOpKind {
-            case .all_true, .bitmask:
-                // Tests and bitmasks produce a boolean i32 result
-                outputType = .wasmi32
-            default:
-                break
-            }
-            setType(of: instr.output, to: outputType)
+            setType(of: instr.output, to: op.unOpKind.outputType())
         case .wasmSimdExtractLane(let op):
             setType(of: instr.output, to: op.kind.laneType())
         case .wasmDefineGlobal(let op):
