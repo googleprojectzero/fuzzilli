@@ -72,6 +72,10 @@ if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 
                                            Requires --storagePath.
             --statisticsExportInterval=n : Interval in minutes for saving fuzzing statistics to disk (default: 10).
                                            Requires --exportStatistics.
+            --execPurposeStats           : Log the number of executions and the execution time per purpose (fuzzing, minimization,
+                                           determinism check, import, ...) summed over all instances of this process. With
+                                           --corpus=rarity, also log how often a program picked for mutation was picked by another
+                                           instance shortly before. Logged every 10 minutes and on shutdown.
             --shutdownAfterImport        : Terminate the fuzzer after the initial corpus import is complete.
                                            Requires --resume or --importCorpus.
             --importCorpus=path          : Imports an existing corpus of FuzzIL programs to build the initial corpus for fuzzing.
@@ -191,6 +195,7 @@ let staticCorpus = args.has("--staticCorpus")
 let trackConvergencePatterns = args.has("--trackConvergencePatterns")
 let exportStatistics = args.has("--exportStatistics")
 let statisticsExportInterval = args.uint(for: "--statisticsExportInterval") ?? 10
+let execPurposeStatistics = args.has("--execPurposeStats") ? ExecutionPurposeStatistics() : nil
 let shutdownAfterImport = args.has("--shutdownAfterImport")
 let corpusImportPath = args["--importCorpus"]
 let corpusImportModeName = args["--corpusImportMode"] ?? "default"
@@ -819,6 +824,9 @@ shutdownGroup.notify(queue: DispatchQueue.main) {
 fuzzer.sync {
     // Always want some statistics.
     fuzzer.addModule(Statistics())
+    if let execPurposeStatistics {
+        fuzzer.addModule(execPurposeStatistics)
+    }
 
     // ---- Marker for patch insertion ----
     // An internal V8 component needs to insert a module for the ClusterFuzz uploader.
@@ -1030,6 +1038,9 @@ for i in 1..<numJobs {
             guard !worker.isStopped else { return }
 
             worker.addModule(Statistics())
+            if let execPurposeStatistics {
+                worker.addModule(ExecutionPurposeStatistics(addingTo: execPurposeStatistics))
+            }
             worker.addModule(ThreadChild(for: worker, parent: fuzzer))
             worker.initialize()
             worker.start()

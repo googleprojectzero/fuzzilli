@@ -297,6 +297,13 @@ public class RarityCorpus: ComponentBase, Collection, Corpus {
     }
 
     public func randomElementForMutating() -> Program {
+        let program = pickForMutating()
+        ExecutionPurposeStatistics.instance(for: fuzzer)?.recordMutationPick(
+            of: program, by: fuzzer.id)
+        return program
+    }
+
+    private func pickForMutating() -> Program {
         assert(!seeds.isEmpty)
         ensureHeapUpdated()
 
