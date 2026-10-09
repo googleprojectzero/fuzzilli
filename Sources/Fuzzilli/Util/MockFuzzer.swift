@@ -101,7 +101,7 @@ func findWasmOptInPath() -> String? {
 /// Create a fuzzer instance usable for testing.
 public func makeMockFuzzer(
     config maybeConfiguration: Configuration? = nil, engine maybeEngine: FuzzEngine? = nil,
-    runner maybeRunner: ScriptRunner? = nil,
+    runner maybeRunner: ScriptRunner? = nil, referenceRunner: ScriptRunner? = nil,
     environment maybeEnvironment: JavaScriptEnvironment? = nil,
     evaluator maybeEvaluator: ProgramEvaluator? = nil, corpus maybeCorpus: Corpus? = nil,
     codeGenerators additionalCodeGenerators: [(CodeGenerator, Int)] = [],
@@ -176,7 +176,7 @@ public func makeMockFuzzer(
     let fuzzer = Fuzzer(
         configuration: configuration,
         scriptRunner: runner,
-        referenceScriptRunner: nil,
+        referenceScriptRunner: referenceRunner,
         engine: engine,
         mutators: mutators,
         codeGenerators: codeGenerators,

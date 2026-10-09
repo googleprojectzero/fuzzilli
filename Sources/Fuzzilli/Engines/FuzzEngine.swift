@@ -74,7 +74,8 @@ public class FuzzEngine: ComponentBase {
                         at: .header)
                 }
                 isInteresting = fuzzer.processMaybeInteresting(
-                    program, havingAspects: aspects, origin: .local)
+                    program, havingAspects: aspects, origin: .local,
+                    withExectime: execution.execTime)
             }
 
             if isInteresting {

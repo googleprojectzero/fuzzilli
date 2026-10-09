@@ -3983,6 +3983,143 @@ struct MinimizerTests {
         }
     }
 
+    /// Returns `outcome` with the run times in `execTimes` (10 ms when empty) and records the timeouts.
+    class RecordingScriptRunner: MockScriptRunner {
+        var outcome = ExecutionOutcome.succeeded
+        var execTimes = [TimeInterval]()
+        var timeouts = [UInt32]()
+
+        override func run(_ script: String, withTimeout timeout: UInt32) -> Execution {
+            timeouts.append(timeout)
+            let execTime = execTimes.isEmpty ? 0.01 : execTimes.removeFirst()
+            return MockExecution(
+                outcome: outcome, stdout: "", stderr: "", fuzzout: "", execTime: execTime)
+        }
+    }
+
+    /// Like ProgramCoverageEvaluator, but only compares the outcome.
+    class OutcomeEvaluator: MockEvaluator {
+        weak var fuzzer: Fuzzer?
+
+        override func initialize(with fuzzer: Fuzzer) {
+            self.fuzzer = fuzzer
+        }
+
+        override func hasAspects(_ execution: Execution, _ aspects: ProgramAspects) -> Bool {
+            return execution.outcome == aspects.outcome
+        }
+
+        override func computeAspectIntersection(
+            of program: Program, with aspects: ProgramAspects
+        ) -> ProgramAspects? {
+            let execution = fuzzer!.execute(program, purpose: .checkForDeterministicBehavior)
+            return execution.outcome == aspects.outcome ? aspects : nil
+        }
+    }
+
+    @Test func testCandidateTimeoutFollowsTheParentRunTime() {
+        let runner = RecordingScriptRunner()
+        let fuzzer = makeMockFuzzer(runner: runner, evaluator: OutcomeEvaluator())
+        let maxTimeout = fuzzer.config.timeout * 2
+        fuzzer.sync {
+            let code = fuzzer.makeBuilder().finalize().code
+            let helper = MinimizationHelper(
+                for: ProgramAspects(outcome: .succeeded), forCode: code, of: fuzzer,
+                runningOnFuzzerQueue: true)
+
+            // 2 × the slowest run of the last commit + 50 ms.
+            runner.execTimes = [0.02, 0.03, 0.01, 0.1, 0.24]
+            helper.testAndCommit(code, numExecutions: 3)
+            helper.testAndCommit(code)
+            helper.testAndCommit(code)
+            helper.testAndCommit(code)
+            #expect(runner.timeouts == [maxTimeout, maxTimeout, maxTimeout, 110, 250, maxTimeout])
+
+            // Crash minimization keeps the fixed timeout.
+            let crashHelper = MinimizationHelper(
+                for: ProgramAspects(outcome: .crashed(11)), forCode: code, of: fuzzer,
+                runningOnFuzzerQueue: true)
+            runner.outcome = .crashed(11)
+            runner.timeouts = []
+            crashHelper.testAndCommit(code)
+            crashHelper.testAndCommit(code)
+            #expect(runner.timeouts == [maxTimeout, maxTimeout])
+        }
+    }
+
+    @Test func testDifferentialFuzzingKeepsTheFixedTimeout() {
+        let runner = RecordingScriptRunner()
+        runner.outcome = .failed(1)  // Skips the reference run.
+        let fuzzer = makeMockFuzzer(runner: runner, referenceRunner: MockScriptRunner())
+        fuzzer.sync {
+            let code = fuzzer.makeBuilder().finalize().code
+            let helper = MinimizationHelper(
+                for: ProgramAspects(outcome: .succeeded), forCode: code, of: fuzzer,
+                runningOnFuzzerQueue: true, parentExecTime: 0.01)
+
+            helper.testAndCommit(code)
+
+            #expect(runner.timeouts == [fuzzer.config.timeout * 2])
+        }
+    }
+
+    @Test func testTimedOutCandidatesAreNotRunAgain() {
+        let runner = RecordingScriptRunner()
+        let fuzzer = makeMockFuzzer(runner: runner, evaluator: OutcomeEvaluator())
+        let maxTimeout = fuzzer.config.timeout * 2
+        fuzzer.sync {
+            let other = fuzzer.makeBuilder().finalize().code
+            let b = fuzzer.makeBuilder()
+            b.loadInt(42)
+            let hanging = b.finalize().code
+            let helper = MinimizationHelper(
+                for: ProgramAspects(outcome: .succeeded), forCode: other, of: fuzzer,
+                runningOnFuzzerQueue: true)
+
+            runner.execTimes = [0.01]
+            helper.testAndCommit(other)  // Sets the timeout to 70 ms.
+            runner.outcome = .timedOut
+            runner.execTimes = [0.07]
+            helper.testAndCommit(hanging)  // Doesn't change the timeout.
+            #expect(!helper.testAndCommit(hanging))  // Skipped.
+            #expect(helper.lastCandidateTimedOut)
+            runner.outcome = .succeeded
+            runner.execTimes = [0.02]
+            helper.testAndCommit(other)  // Raises the timeout to 90 ms.
+            runner.outcome = .timedOut
+            helper.testAndCommit(hanging)  // Runs again.
+
+            #expect(runner.timeouts == [maxTimeout, 70, 70, 90])
+        }
+    }
+
+    @Test func testFirstParentRunTimeIsTheSlowestKnownRun() {
+        let runner = RecordingScriptRunner()
+        let fuzzer = makeMockFuzzer(runner: runner, evaluator: OutcomeEvaluator())
+        let minimized = DispatchSemaphore(value: 0)
+        fuzzer.sync {
+            fuzzer.registerEventListener(for: fuzzer.events.InterestingProgramFound) { _ in
+                minimized.signal()
+            }
+        }
+
+        // The slowest of the original run and the 5 determinism runs sets the first timeout,
+        // and doesn't carry over to the next sample.
+        for (originalRun, firstTimeout) in [(0.03, 110), (0.005, 90)] as [(TimeInterval, UInt32)] {
+            fuzzer.sync {
+                runner.timeouts = []
+                runner.execTimes = [0.01, 0.02, 0.01, 0.01, 0.01]
+                let b = fuzzer.makeBuilder()
+                b.loadInt(42)
+                fuzzer.processMaybeInteresting(
+                    b.finalize(), havingAspects: ProgramAspects(outcome: .succeeded),
+                    origin: .local, withExectime: originalRun)
+            }
+            #expect(minimized.wait(timeout: .now() + 5) == .success)
+            #expect(runner.timeouts.dropFirst(5).first == firstTimeout)
+        }
+    }
+
     /// An `.object` pattern with one property per (key, target) pair.
     private func objectPattern(
         _ properties: [(String, DestructuringPattern.Target)], hasDefaultValue: Bool = false

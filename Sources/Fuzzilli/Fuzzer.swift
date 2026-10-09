@@ -183,6 +183,9 @@ public class Fuzzer {
     private var iterations = 0
     private var iterationOfLastInterestingSample = 0
 
+    /// The slowest run of the program in the current determinism check, including its original run.
+    private var slowestDeterminismRun: TimeInterval = 0
+
     /// Currently active corpus import job, if any.
     private var currentCorpusImportJob = CorpusImportJob(corpus: [], mode: .full)
 
@@ -541,7 +544,8 @@ public class Fuzzer {
         case .succeeded:
             if let aspects = evaluator.evaluate(execution) {
                 wasImported = processMaybeInteresting(
-                    program, havingAspects: aspects, origin: origin)
+                    program, havingAspects: aspects, origin: origin,
+                    withExectime: execution.execTime)
             }
 
             if case .corpusImport(let mode) = origin, mode == .full, !wasImported {
@@ -802,6 +806,9 @@ public class Fuzzer {
         dispatchEvent(events.PreExecute, data: (program, purpose))
         let execution = runner.run(script, withTimeout: timeout ?? config.timeout)
         dispatchEvent(events.PostExecute, data: execution)
+        if purpose == .checkForDeterministicBehavior {
+            slowestDeterminismRun = max(slowestDeterminismRun, execution.execTime)
+        }
 
         if isDifferentialFuzzing && purpose.supportsDifferentialRun
             && execution.outcome == .succeeded
@@ -818,10 +825,12 @@ public class Fuzzer {
     /// Returns true if this program was interesting (i.e. had at least some interesting aspects that are triggered reliably), false if not.
     @discardableResult
     func processMaybeInteresting(
-        _ program: Program, havingAspects aspects: ProgramAspects, origin: ProgramOrigin
+        _ program: Program, havingAspects aspects: ProgramAspects, origin: ProgramOrigin,
+        withExectime exectime: TimeInterval
     ) -> Bool {
         var aspects = aspects
         var pattern = ""
+        slowestDeterminismRun = exectime
 
         // Determine which (if any) aspects of the program are triggered deterministically.
         // For that, the sample is executed a few more times and the intersection of the interesting aspects of each execution is computed.
@@ -891,7 +900,9 @@ public class Fuzzer {
             // Minimization should be performed as part of the fuzzing dispatch group. This way, the next fuzzing iteration
             // will only start once the curent sample has been fully processed and inserted into the corpus.
             fuzzGroup.enter()
-            minimizer.withMinimizedCopy(program, withAspects: aspects) { minimizedProgram in
+            minimizer.withMinimizedCopy(
+                program, withAspects: aspects, parentExecTime: slowestDeterminismRun
+            ) { minimizedProgram in
                 self.fuzzGroup.leave()
                 finishProcessing(minimizedProgram)
             }

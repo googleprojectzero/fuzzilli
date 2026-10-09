@@ -169,7 +169,8 @@ class TestAspects: ProgramAspects {
             let initialAspects = TestAspects(outcome: .succeeded, count: 5)
             let result = fuzzer.processMaybeInteresting(
                 prog, havingAspects: initialAspects,
-                origin: .corpusImport(mode: .interestingOnly(shouldMinimize: false)))
+                origin: .corpusImport(mode: .interestingOnly(shouldMinimize: false)),
+                withExectime: 0)
 
             #expect(result == true)
             #expect(fuzzer.getConvergencePatternsForTesting()["00111"] == 1)
@@ -209,7 +210,8 @@ class TestAspects: ProgramAspects {
             let initialAspects = TestAspects(outcome: .succeeded, count: 5)
             let result = fuzzer.processMaybeInteresting(
                 prog, havingAspects: initialAspects,
-                origin: .corpusImport(mode: .interestingOnly(shouldMinimize: false)))
+                origin: .corpusImport(mode: .interestingOnly(shouldMinimize: false)),
+                withExectime: 0)
 
             #expect(result == false)
             #expect(stats.compute().aspectIntersectionNilCount == 1)

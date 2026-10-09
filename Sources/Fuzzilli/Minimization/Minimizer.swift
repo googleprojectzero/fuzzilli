@@ -38,11 +38,11 @@ public class Minimizer: ComponentBase {
     /// Once minimization is finished, the passed block will be invoked on the fuzzer's queue with the minimized program.
     func withMinimizedCopy(
         _ program: Program, withAspects aspects: ProgramAspects,
-        block: @escaping (Program) -> Void
+        parentExecTime: TimeInterval? = nil, block: @escaping (Program) -> Void
     ) {
         minimizationQueue.async {
             let minimizedCode = self.internalMinimize(
-                program, withAspects: aspects,
+                program, withAspects: aspects, parentExecTime: parentExecTime,
                 performPostprocessing: true, runningSynchronously: false)
             self.fuzzer.async {
                 let minimizedProgram: Program
@@ -72,16 +72,18 @@ public class Minimizer: ComponentBase {
 
     private func internalMinimize(
         _ program: Program, withAspects aspects: ProgramAspects,
-        performPostprocessing: Bool, runningSynchronously: Bool
+        parentExecTime: TimeInterval? = nil, performPostprocessing: Bool,
+        runningSynchronously: Bool
     ) -> Code {
         let helper = MinimizationHelper(
             for: aspects, forCode: program.code, of: fuzzer,
-            runningOnFuzzerQueue: runningSynchronously)
+            runningOnFuzzerQueue: runningSynchronously, parentExecTime: parentExecTime)
 
         var iterations = 0
-        repeat {
-            helper.didReduce = false
-
+        // Once every reducer has run on the current code without changing it, another pass would only
+        // repeat the same attempts. Stop right there instead of finishing the pass.
+        var reducersSinceLastChange = 0
+        fixpoint: while true {
             // Notes on reducer scheduling:
             //  - The ReplaceReducer should run before the InliningReducer as it changes "special" functions into plain functions, which the inlining reducer inlines.
             //  - The ReassignmentReducer should run right after the InliningReducer as inlining produces new Reassign instructions.
@@ -99,8 +101,15 @@ public class Minimizer: ComponentBase {
                 WasmTypeGroupReducer(),
             ]
             for reducer in reducers {
+                helper.didReduce = false
                 reducer.reduce(with: helper)
                 helper.code.assertIsStaticallyValid()
+                if helper.didReduce {
+                    reducersSinceLastChange = 0
+                } else {
+                    reducersSinceLastChange += 1
+                    if reducersSinceLastChange == reducers.count { break fixpoint }
+                }
             }
             iterations += 1
             guard iterations < 100 else {
@@ -110,7 +119,7 @@ public class Minimizer: ComponentBase {
                 )
                 break
             }
-        } while helper.didReduce
+        }
 
         // Most reducers replace instructions with NOPs instead of deleting them. Remove those NOPs now.
         helper.removeNops()
