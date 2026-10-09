@@ -65,6 +65,12 @@ public class Statistics: Module {
     /// The IDs of nodes that are currently inactive.
     private var inactiveNodes = Set<UUID>()
 
+    /// Number of programs received from other instances (including initial synchronization).
+    private var instanceImportedProgramsReceived: UInt64 = 0
+
+    /// Number of programs from other instances that were accepted into the corpus.
+    private var instanceImportedProgramsAccepted: UInt64 = 0
+
     public init() {}
 
     public static func percentageOrNa(_ percentage: Double?, _ padding: Int) -> String {
@@ -88,6 +94,15 @@ public class Statistics: Module {
         ownData.minimizationOverhead = minimizationOverheadAvg.currentValue
         ownData.correctnessRate = correctnessRate.currentValue
         ownData.timeoutRate = timeoutRate.currentValue
+
+        let localInstanceImportRate =
+            instanceImportedProgramsReceived != 0
+            ? Double(instanceImportedProgramsAccepted)
+                / Double(instanceImportedProgramsReceived) : 1.0
+        ownData.parentInstanceImportRate = localInstanceImportRate
+        ownData.avgWorkerInstanceImportRate = localInstanceImportRate
+        ownData.instanceImportedProgramsReceived = instanceImportedProgramsReceived
+        ownData.instanceImportedProgramsAccepted = instanceImportedProgramsAccepted
 
         if let fuzzer = fuzzer {
             let contributorsList: [(prefix: String?, list: [Contributor], isCodeGenerator: Bool)] =
@@ -123,6 +138,9 @@ public class Statistics: Module {
         var contributorStatsByName = Dictionary(
             uniqueKeysWithValues: ownData.contributorStats.map { ($0.name, $0) }
         )
+
+        var instanceImportedTotalWorkerReceived: UInt64 = 0
+        var instanceImportedTotalWorkerAccepted: UInt64 = 0
 
         for (id, node) in nodes {
             // Add "global" fields, even from nodes that are no longer active
@@ -169,6 +187,9 @@ public class Statistics: Module {
                 data.minimizationOverhead += node.minimizationOverhead * numNodesRepresentedByData
                 data.correctnessRate += node.correctnessRate * numNodesRepresentedByData
                 data.timeoutRate += node.timeoutRate * numNodesRepresentedByData
+
+                instanceImportedTotalWorkerReceived += node.instanceImportedProgramsReceived
+                instanceImportedTotalWorkerAccepted += node.instanceImportedProgramsAccepted
             }
 
             // All other fields are already indirectly synchronized (e.g. number of interesting samples founds)
@@ -186,6 +207,15 @@ public class Statistics: Module {
         data.minimizationOverhead /= totalNumberOfNodes
         data.correctnessRate /= totalNumberOfNodes
         data.timeoutRate /= totalNumberOfNodes
+
+        if !nodes.isEmpty {
+            data.instanceImportedProgramsReceived = instanceImportedTotalWorkerReceived
+            data.instanceImportedProgramsAccepted = instanceImportedTotalWorkerAccepted
+            data.avgWorkerInstanceImportRate =
+                instanceImportedTotalWorkerReceived > 0
+                ? Double(instanceImportedTotalWorkerAccepted)
+                    / Double(instanceImportedTotalWorkerReceived) : 1.0
+        }
 
         return data
     }
@@ -249,6 +279,19 @@ public class Statistics: Module {
         }
         fuzzer.registerEventListener(for: fuzzer.events.AspectIntersectionNil) { _ in
             self.ownData.aspectIntersectionNilCount += 1
+        }
+        fuzzer.registerEventListener(for: fuzzer.events.Synchronized) {
+            let initialSamples = UInt64(fuzzer.corpus.size)
+            self.instanceImportedProgramsReceived += initialSamples
+            self.instanceImportedProgramsAccepted += initialSamples
+        }
+        fuzzer.registerEventListener(for: fuzzer.events.ProgramImported) { ev in
+            if ev.origin.isFromOtherInstance() {
+                self.instanceImportedProgramsReceived += 1
+                if ev.wasImported {
+                    self.instanceImportedProgramsAccepted += 1
+                }
+            }
         }
         fuzzer.registerEventListener(for: fuzzer.events.ChildNodeConnected) { id in
             self.ownData.numChildNodes += 1

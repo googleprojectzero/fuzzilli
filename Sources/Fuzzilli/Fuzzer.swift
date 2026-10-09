@@ -479,12 +479,16 @@ public class Fuzzer {
     }
 
     /// Tuple containing the result of importing a program.
-    public enum ImportResult {
+    public enum ImportResult: Equatable {
         case imported
         case dropped
         case needsWasm
         case needsBundles
         case failed(ExecutionOutcome)
+
+        public var wasImported: Bool {
+            return self == .imported
+        }
     }
 
     private func containsWasm(_ program: Program) -> Bool {
@@ -505,8 +509,14 @@ public class Fuzzer {
     ) -> ImportResult {
         dispatchPrecondition(condition: .onQueue(queue))
 
+        func finish(_ result: ImportResult) -> ImportResult {
+            dispatchEvent(
+                events.ProgramImported, data: (program, origin, result.wasImported))
+            return result
+        }
+
         if enableDropout && probability(config.dropoutRate) {
-            return .dropped
+            return finish(.dropped)
         }
 
         if !config.isWasmEnabled && containsWasm(program) {
@@ -519,11 +529,11 @@ public class Fuzzer {
                     program,
                     as: "program_\(program.id).fzil", in: dirName)
             }
-            return .needsWasm
+            return finish(.needsWasm)
         }
 
         if !config.generateBundle && program.code.isBundle {
-            return .needsBundles
+            return finish(.needsBundles)
         }
 
         let execution = execute(program, purpose: .programImport)
@@ -560,7 +570,7 @@ public class Fuzzer {
             break
         }
 
-        return wasImported ? .imported : .failed(execution.outcome)
+        return finish(wasImported ? .imported : .failed(execution.outcome))
     }
 
     /// Imports a crashing program into this fuzzer.

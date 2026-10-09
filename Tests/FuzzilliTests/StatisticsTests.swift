@@ -217,4 +217,118 @@ class TestAspects: ProgramAspects {
             #expect(stats.compute().aspectIntersectionNilCount == 1)
         }
     }
+
+    @Test func testImportAcceptanceTracking() {
+        let liveTestConfig = Configuration(
+            logLevel: .error,
+            enableInspection: true
+        )
+        let fuzzer = makeMockFuzzer(config: liveTestConfig)
+
+        fuzzer.sync {
+            let stats = Statistics()
+            stats.initialize(with: fuzzer)
+
+            let b = fuzzer.makeBuilder()
+            b.loadInt(42)
+            let prog = b.finalize()
+
+            // 1. Initial state: no imports yet (defaults to 100%).
+            var data = stats.compute()
+            #expect(data.parentInstanceImportRate == 1.0)
+            #expect(data.avgWorkerInstanceImportRate == 1.0)
+
+            // 2. Initial synchronization: 5 programs in the corpus.
+            for i in 0..<5 {
+                let b = fuzzer.makeBuilder()
+                b.loadInt(Int64(i))
+                fuzzer.corpus.add(b.finalize(), ProgramAspects(outcome: .succeeded))
+            }
+            #expect(fuzzer.corpus.size == 5)
+
+            fuzzer.dispatchEvent(fuzzer.events.Synchronized, data: ())
+            data = stats.compute()
+            #expect(data.parentInstanceImportRate == 1.0)
+            #expect(data.avgWorkerInstanceImportRate == 1.0)
+
+            // 3. ProgramImported events from other instances.
+            // A program accepted from parent.
+            fuzzer.dispatchEvent(
+                fuzzer.events.ProgramImported,
+                data: (program: prog, origin: .parent, wasImported: true))
+            data = stats.compute()
+            #expect(data.avgWorkerInstanceImportRate == 1.0)
+
+            // A program rejected from parent (5 initial + 1 accepted + 1 rejected = 7 received, 6 accepted).
+            fuzzer.dispatchEvent(
+                fuzzer.events.ProgramImported,
+                data: (program: prog, origin: .parent, wasImported: false))
+            data = stats.compute()
+            #expect(data.parentInstanceImportRate == 6.0 / 7.0)
+            #expect(data.avgWorkerInstanceImportRate == 6.0 / 7.0)
+
+            // A program from local or disk corpus import should NOT affect the counters.
+            fuzzer.dispatchEvent(
+                fuzzer.events.ProgramImported,
+                data: (program: prog, origin: .local, wasImported: true))
+            fuzzer.dispatchEvent(
+                fuzzer.events.ProgramImported,
+                data: (
+                    program: prog,
+                    origin: .corpusImport(mode: .interestingOnly(shouldMinimize: false)),
+                    wasImported: false
+                ))
+            data = stats.compute()
+            #expect(data.parentInstanceImportRate == 6.0 / 7.0)
+            #expect(data.avgWorkerInstanceImportRate == 6.0 / 7.0)
+
+            // 4. Test aggregation on parent node with child workers using absolute numbers.
+            let child1UUID = UUID()
+            let child2UUID = UUID()
+            fuzzer.dispatchEvent(fuzzer.events.ChildNodeConnected, data: child1UUID)
+            fuzzer.dispatchEvent(fuzzer.events.ChildNodeConnected, data: child2UUID)
+
+            // Child 1 has corpus size / imports: 10 received, 9 accepted (90%)
+            let child1Stats = Fuzzilli_Protobuf_Statistics.with {
+                $0.instanceImportedProgramsReceived = 10
+                $0.instanceImportedProgramsAccepted = 9
+                $0.avgWorkerInstanceImportRate = 0.90
+            }
+            // Child 2 has larger corpus / imports: 90 received, 45 accepted (50%)
+            let child2Stats = Fuzzilli_Protobuf_Statistics.with {
+                $0.instanceImportedProgramsReceived = 90
+                $0.instanceImportedProgramsAccepted = 45
+                $0.avgWorkerInstanceImportRate = 0.50
+            }
+
+            stats.importData(child1Stats, from: child1UUID)
+            stats.importData(child2Stats, from: child2UUID)
+
+            let globalData = stats.compute()
+            #expect(globalData.numChildNodes == 2)
+            #expect(globalData.parentInstanceImportRate == 6.0 / 7.0)
+            // Absolute total: (9 + 45) / (10 + 90) = 54 / 100 = 0.54 (54%), not unsound average (90% + 50%) / 2 = 70%!
+            #expect(abs(globalData.avgWorkerInstanceImportRate - 0.54) < 1e-9)
+            #expect(globalData.instanceImportedProgramsReceived == 100)
+            #expect(globalData.instanceImportedProgramsAccepted == 54)
+
+            // Disconnect child 2 and check that active worker average updates.
+            fuzzer.dispatchEvent(fuzzer.events.ChildNodeDisconnected, data: child2UUID)
+            let activeGlobalData = stats.compute()
+            #expect(activeGlobalData.numChildNodes == 1)
+            #expect(activeGlobalData.parentInstanceImportRate == 6.0 / 7.0)
+            #expect(abs(activeGlobalData.avgWorkerInstanceImportRate - 0.90) < 1e-9)
+            #expect(activeGlobalData.instanceImportedProgramsReceived == 10)
+            #expect(activeGlobalData.instanceImportedProgramsAccepted == 9)
+
+            // 5. End-to-end check: invoking importProgram with .child origin updates parentInstanceImportRate.
+            // Reset to standalone by disconnecting remaining child.
+            fuzzer.dispatchEvent(fuzzer.events.ChildNodeDisconnected, data: child1UUID)
+            #expect(stats.compute().numChildNodes == 0)
+            #expect(stats.compute().parentInstanceImportRate == 6.0 / 7.0)
+            fuzzer.importProgram(prog, origin: .child(id: child1UUID))
+            let postImportRate = stats.compute().parentInstanceImportRate
+            #expect(postImportRate == 7.0 / 8.0 || postImportRate == 6.0 / 8.0)
+        }
+    }
 }

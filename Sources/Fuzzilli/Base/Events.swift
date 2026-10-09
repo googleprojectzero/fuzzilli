@@ -96,6 +96,11 @@ public class Events {
 
     /// Signals that a corpus import is complete.
     public let CorpusImportComplete = Event<()>()
+
+    /// Signals that a program was evaluated for import.
+    public let ProgramImported = Event<
+        (program: Program, origin: ProgramOrigin, wasImported: Bool)
+    >()
 }
 
 /// Crash behavior of a program.

@@ -163,6 +163,8 @@ class TerminalUI {
             Last Interesting Sample:      \(formatTimeInterval(timeSinceLastInterestingProgram))
             Valid Samples Found:          \(stats.validSamples)
             Corpus Size:                  \(fuzzer.corpus.size)\(maybeAvgCorpusSize)
+            Parent Instance Import Rate:  \(String(format: "%.2f%%", stats.parentInstanceImportRate * 100))
+            Worker Instance Import Rate:  \(String(format: "%.2f%%", stats.avgWorkerInstanceImportRate * 100))
             Correctness Rate:             \(String(format: "%.2f%%", stats.correctnessRate * 100)) (overall: \(String(format: "%.2f%%", stats.overallCorrectnessRate * 100)))
             Timeout Rate:                 \(String(format: "%.2f%%", stats.timeoutRate * 100)) (overall: \(String(format: "%.2f%%", stats.overallTimeoutRate * 100)))
             Crashes Found:                \(stats.crashingSamples)\(differentialsLine)

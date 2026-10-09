@@ -106,4 +106,16 @@ message Statistics {
 
         /// The number of times the aspect intersection was nil when analyzing an interesting sample.
         uint64 aspectIntersectionNilCount = 20;
+
+        /// The instance import acceptance rate of the parent instance.
+        double parentInstanceImportRate = 21;
+
+        /// The average instance import acceptance rate across active worker threads.
+        double avgWorkerInstanceImportRate = 22;
+
+        /// The number of programs received from other instances (including initial synchronization).
+        uint64 instanceImportedProgramsReceived = 23;
+
+        /// The number of programs from other instances that were accepted into the corpus.
+        uint64 instanceImportedProgramsAccepted = 24;
 }
