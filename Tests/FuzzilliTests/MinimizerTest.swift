@@ -4063,36 +4063,6 @@ struct MinimizerTests {
         }
     }
 
-    @Test func testTimedOutCandidatesAreNotRunAgain() {
-        let runner = RecordingScriptRunner()
-        let fuzzer = makeMockFuzzer(runner: runner, evaluator: OutcomeEvaluator())
-        let maxTimeout = fuzzer.config.timeout * 2
-        fuzzer.sync {
-            let other = fuzzer.makeBuilder().finalize().code
-            let b = fuzzer.makeBuilder()
-            b.loadInt(42)
-            let hanging = b.finalize().code
-            let helper = MinimizationHelper(
-                for: ProgramAspects(outcome: .succeeded), forCode: other, of: fuzzer,
-                runningOnFuzzerQueue: true)
-
-            runner.execTimes = [0.01]
-            helper.testAndCommit(other)  // Sets the timeout to 70 ms.
-            runner.outcome = .timedOut
-            runner.execTimes = [0.07]
-            helper.testAndCommit(hanging)  // Doesn't change the timeout.
-            #expect(!helper.testAndCommit(hanging))  // Skipped.
-            #expect(helper.lastCandidateTimedOut)
-            runner.outcome = .succeeded
-            runner.execTimes = [0.02]
-            helper.testAndCommit(other)  // Raises the timeout to 90 ms.
-            runner.outcome = .timedOut
-            helper.testAndCommit(hanging)  // Runs again.
-
-            #expect(runner.timeouts == [maxTimeout, 70, 70, 90])
-        }
-    }
-
     @Test func testFirstParentRunTimeIsTheSlowestKnownRun() {
         let runner = RecordingScriptRunner()
         let fuzzer = makeMockFuzzer(runner: runner, evaluator: OutcomeEvaluator())

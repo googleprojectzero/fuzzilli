@@ -44,9 +44,6 @@ class MinimizationHelper {
     /// The slowest known run of the current code in seconds, if any.
     private var parentExecTime: TimeInterval?
 
-    /// The candidates that timed out (FuzzIL text), with their timeout in milliseconds.
-    private var timedOutCandidates = [String: UInt32]()
-
     /// How many times we execute the modified code by default to determine whether its (relevant) behaviour has changed due to a modification.
     private static let defaultNumExecutions = 1
 
@@ -117,16 +114,6 @@ class MinimizationHelper {
         if aspects.outcome == .succeeded, !fuzzer.isDifferentialFuzzing, let parentExecTime {
             timeoutMs = min(timeoutMs, UInt32(2 * parentExecTime * 1000) + 50)
         }
-        // Skip a candidate that already timed out with at least this timeout.
-        // The isEmpty check avoids lifting the code when no candidate has timed out yet.
-        lazy var key = FuzzILLifter().lift(newCode)
-        if !timedOutCandidates.isEmpty, let previousTimeoutMs = timedOutCandidates[key],
-            timeoutMs <= previousTimeoutMs
-        {
-            lastCandidateTimedOut = true
-            failedReductions += 1
-            return false
-        }
 
         // Run the modified program and see if the reduction altered its behaviour
         var stillHasAspects = false
@@ -137,9 +124,6 @@ class MinimizationHelper {
                     Program(with: newCode), withTimeout: timeoutMs, purpose: .minimization)
                 slowestRun = max(slowestRun, execution.execTime)
                 lastCandidateTimedOut = execution.outcome == .timedOut
-                if lastCandidateTimedOut {
-                    timedOutCandidates[key] = timeoutMs
-                }
                 stillHasAspects = fuzzer.evaluator.hasAspects(execution, aspects)
                 guard stillHasAspects else { break }
             }
