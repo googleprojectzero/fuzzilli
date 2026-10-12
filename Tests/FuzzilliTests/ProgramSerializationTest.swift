@@ -12,13 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import SwiftProtobuf
 import Testing
 
 @testable import Fuzzilli
 
 func testAndCompareSerialization(program: Program) {
-    let data1 = try! program.asProtobuf().serializedData()
-    let data2 = try! program.asProtobuf().serializedData()
+    var options = BinaryEncodingOptions()
+    options.useDeterministicOrdering = true
+    let data1 = try! program.asProtobuf().serializedData(options: options)
+    let data2 = try! program.asProtobuf().serializedData(options: options)
     // We need to compare on a binary level as the Protobuf datastructure can contain floats for i.e. LoadFloat and Constf64 instructions. If those contain a NaN, they won't be equal to one another although we only care about their binary representation being equal.
     #expect(data1 == data2)
 
@@ -274,6 +277,30 @@ func testAndCompareSerialization(program: Program) {
                 }
             }
 
+            let program = b.finalize()
+            testAndCompareSerialization(program: program)
+        }
+    }
+
+    @Test func testDestructuringParameterSerialization() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            let pattern = DestructuringPattern.ArrayPattern(
+                elements: [.init(target: .flatBinding, hasDefaultValue: false)],
+                restTarget: nil
+            )
+            var destructuringParams = [Int: DestructuringPattern]()
+            for i in 0..<6 {
+                destructuringParams[i] = .array(pattern)
+            }
+            let parameters = Parameters(
+                count: 6,
+                destructuringParameters: destructuringParams
+            )
+            _ = b.buildPlainFunction(with: .parameters(parameters)) { args in
+                b.doReturn(args[0])
+            }
             let program = b.finalize()
             testAndCompareSerialization(program: program)
         }

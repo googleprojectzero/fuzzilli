@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import Foundation
+import SwiftProtobuf
 import Testing
 
 @testable import Fuzzilli
@@ -26,11 +27,13 @@ extension Program: Equatable {
         }
 
         do {
+            var options = BinaryEncodingOptions()
+            options.useDeterministicOrdering = true
             for (instrA, instrB) in zip(lhs.code, rhs.code) {
                 // We need to compare on a binary level as the Protobuf datastructure can contain floats for i.e. LoadFloat and Constf64 instructions. If those contain a NaN, they won't be equal to one another although we only care about their binary representation being equal.
                 // This might also flake and not deterministically serialize super small floats(?)
-                let instrASerialized = try instrA.asProtobuf().serializedData()
-                let instrBSerialized = try instrB.asProtobuf().serializedData()
+                let instrASerialized = try instrA.asProtobuf().serializedData(options: options)
+                let instrBSerialized = try instrB.asProtobuf().serializedData(options: options)
                 if instrASerialized != instrBSerialized {
                     return false
                 }
