@@ -17,7 +17,7 @@ import Testing
 
 @testable import Fuzzilli
 
-extension Program: @retroactive Equatable {
+extension Program: Equatable {
     // Fairly expensive equality testing, but it's only needed for testing anyway... :)
     public static func == (lhs: Program, rhs: Program) -> Bool {
         // Quick check, they have to be of equal length.
