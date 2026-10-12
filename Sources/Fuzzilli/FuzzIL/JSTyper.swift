@@ -25,8 +25,6 @@ public struct JSTyper: Analyzer {
     // The current state
     private var state = AnalyzerState()
 
-    private var defUseAnalyzer: DefUseAnalyzer
-
     // Parameter types for subroutines defined in the analyzed program.
     // These are keyed by the index of the start of the subroutine definition.
     private var signatures = [Int: ParameterList]()
@@ -50,43 +48,14 @@ public struct JSTyper: Analyzer {
     /// This tracks program local object groups (WasmModules, JS Classes and Object literals).
     private var dynamicObjectGroupManager = ObjectGroupManager()
 
+    /// The imports and definitions of the Wasm module that is currently being analyzed.
+    private var activeWasmModuleInterface = WasmModuleInterface()
+
     private var seenExports: [(String, Variable)] = []
 
     public class ObjectGroupManager {
         /// The finalized object groups that we can query through the Typer.
         var finalizedObjectGroups = [ObjectGroup]()
-
-        struct SeenWasmVariables {
-            var globalImports: [Variable] = []
-            var globalDefines: [Variable] = []
-            var tableImports: [Variable] = []
-            var tableDefines: [Variable] = []
-            var tagImports: [Variable] = []
-            var tagDefines: [Variable] = []
-            var memoryImports: [Variable] = []
-            var memoryDefines: [Variable] = []
-            // For function imports we also need to discriminate on their signature as we can have multiple different callsites with different Signatures for a single function outside of Wasm.
-            var functionImports: [(Variable, Signature)] = []
-            var functionDefines: [Variable] = []
-
-            var globals: [Variable] {
-                return globalImports + globalDefines
-            }
-
-            var tables: [Variable] {
-                return tableImports + tableDefines
-            }
-
-            var tags: [Variable] {
-                return tagImports + tagDefines
-            }
-
-            var memories: [Variable] {
-                return memoryImports + memoryDefines
-            }
-        }
-
-        var seenWasmVars = SeenWasmVariables()
 
         public var top: ObjectGroup {
             return activeObjectGroups.top
@@ -161,8 +130,6 @@ public struct JSTyper: Analyzer {
             addProperty(propertyName: "exports")
             updatePropertyType(propertyName: "exports", type: exportsInstanceType)
 
-            // Clear the seenWasmVariables
-            seenWasmVars = SeenWasmVariables()
             return finalize()
         }
 
@@ -301,125 +268,6 @@ public struct JSTyper: Analyzer {
             activeClasses.top.objectGroup.instanceType = newType
         }
 
-        // For all of the functions below the following holds which is why we can check the required context on an instruction.
-        //
-        // module A {
-        //   globalA = ...                                <- goes out of scope.
-        // }
-        //
-        // globalA = loadProperty "wg0" moduleA.exports   <- Source of the global is here now.
-        //
-        // module B {
-        //   functionA = {
-        //     WasmGlobalGet input=globalA                <- globalA seems to come from "JS"
-        //    }
-        // }
-        //
-        // This works because the definition of the import is always the result of
-        // a "getProperty" instruction in JS. In a way it is similar to the TypeGroups.
-        // globalA ceases to exist after module A ends, yet we can access it through the getProperty instruction,
-        // as such "defined in Wasm" (i.e. requiredContext contains wasm) below means "defined in this module".
-        // This is a feature as the module doesn't care as these imports always have to come from JS.
-
-        public func addWasmFunction(
-            withSignature signature: Signature, forDefinition instr: Instruction,
-            forVariable variable: Variable
-        ) {
-            // The instruction might have multiple outputs, i.e. a DestructObject, which is why we cannot know which output variable the correct one is.
-
-            let haveFunction =
-                seenWasmVars.functionImports.contains(where: {
-                    $0.0 == variable && $0.1 == signature
-                }) || seenWasmVars.functionDefines.contains(variable)
-
-            if !haveFunction {
-                if instr.op.requiredContext.inWasm {
-                    let methodName = "w\(seenWasmVars.functionDefines.count)"
-                    seenWasmVars.functionDefines.append(variable)
-                    addMethod(methodName: methodName)
-                    updateMethodSignature(methodName: methodName, signature: signature)
-                } else {
-                    let methodName = "iw\(seenWasmVars.functionImports.count)"
-                    seenWasmVars.functionImports.append((variable, signature))
-                    addMethod(methodName: methodName)
-                    updateMethodSignature(methodName: methodName, signature: signature)
-                }
-            }
-        }
-
-        public func addWasmGlobal(
-            withType type: ILType, forDefinition instr: Instruction, forVariable variable: Variable
-        ) {
-            // The instruction might have multiple outputs, i.e. a DestructObject, which is why we cannot know which output variable the correct one is.
-            // Add this property only if we have not seen it before
-            if !seenWasmVars.globals.contains(variable) {
-                // Check where this global comes from, i.e. if it is imported or internally defined.
-                var propertyName: String
-                if instr.op.requiredContext.inWasm {
-                    propertyName = "wg\(seenWasmVars.globalDefines.count)"
-                    seenWasmVars.globalDefines.append(variable)
-                } else {
-                    propertyName = "iwg\(seenWasmVars.globalImports.count)"
-                    seenWasmVars.globalImports.append(variable)
-                }
-                addProperty(propertyName: propertyName, withType: type)
-            }
-        }
-
-        public func addWasmTable(
-            withType type: ILType, forDefinition instr: Instruction, forVariable variable: Variable
-        ) {
-            // The instruction might have multiple outputs, i.e. a DestructObject, which is why we cannot know which output variable the correct one is.
-            // Add this property only if we have not seen it before
-            var propertyName: String
-            if !seenWasmVars.tables.contains(variable) {
-                if instr.op.requiredContext.inWasm {
-                    propertyName = "wt\(seenWasmVars.tableDefines.count)"
-                    seenWasmVars.tableDefines.append(variable)
-                } else {
-                    propertyName = "iwt\(seenWasmVars.tableImports.count)"
-                    seenWasmVars.tableImports.append(variable)
-                }
-                addProperty(propertyName: propertyName, withType: type)
-            }
-        }
-
-        public func addWasmMemory(
-            withType type: ILType, forDefinition instr: Instruction, forVariable variable: Variable
-        ) {
-            // The instruction might have multiple outputs, i.e. a DestructObject, which is why we cannot know which output variable the correct one is.
-            // Add this property only if we have not seen it before
-            var propertyName: String
-            if !seenWasmVars.memories.contains(variable) {
-                if instr.op.requiredContext.inWasm {
-                    propertyName = "wm\(seenWasmVars.memoryDefines.count)"
-                    seenWasmVars.memoryDefines.append(variable)
-                } else {
-                    propertyName = "iwm\(seenWasmVars.memoryImports.count)"
-                    seenWasmVars.memoryImports.append(variable)
-                }
-                addProperty(propertyName: propertyName, withType: type)
-            }
-        }
-
-        public func addWasmTag(
-            withType type: ILType, forDefinition instr: Instruction, forVariable variable: Variable
-        ) {
-            // The instruction might have multiple outputs, i.e. a DestructObject, which is why we cannot know which output variable the correct one is.
-            // Add this property only if we have not seen it before
-            var propertyName: String
-            if !seenWasmVars.tags.contains(variable) {
-                if instr.op.requiredContext.inWasm {
-                    propertyName = "wex\(seenWasmVars.tagDefines.count)"
-                    seenWasmVars.tagDefines.append(variable)
-                } else {
-                    propertyName = "iwex\(seenWasmVars.tagImports.count)"
-                    seenWasmVars.tagImports.append(variable)
-                }
-                addProperty(propertyName: propertyName, withType: type)
-            }
-        }
-
         public func addMethod(methodName: String) {
             let topGroup = activeObjectGroups.top
             let newType =
@@ -494,13 +342,10 @@ public struct JSTyper: Analyzer {
     // The index of the last instruction that was processed. Just used for debug assertions.
     private var indexOfLastInstruction = -1
 
-    private let isBundle: Bool
     let enableCustomDescriptors: Bool
 
-    init(for environ: JavaScriptEnvironment, isBundle: Bool) {
+    init(for environ: JavaScriptEnvironment) {
         self.environment = environ
-        self.isBundle = isBundle
-        self.defUseAnalyzer = DefUseAnalyzer(isBundle: isBundle)
         self.enableCustomDescriptors = Fuzzer.current?.config.enableCustomDescriptors == true
     }
 
@@ -510,43 +355,50 @@ public struct JSTyper: Analyzer {
         signatures.removeAll()
         typeGroups.removeAll()
         wasmTypeDefMap.removeAll()
-        defUseAnalyzer = DefUseAnalyzer(isBundle: isBundle)
         isWithinTypeGroup = false
         dynamicObjectGroupManager = ObjectGroupManager()
+        activeWasmModuleInterface = WasmModuleInterface()
         assert(activeFunctionDefinitions.isEmpty)
         assert(activePendingBundleModule == nil)
         assert(dynamicObjectGroupManager.isEmpty)
         seenExports = []
     }
 
-    /// Registers the tables, memories, globals and tags used by the given Wasm instruction with the
-    /// current Wasm module. Objects that aren't defined in this module are registered as imports,
-    /// which the lifted module re-exports as `iwt<n>`, `iwm<n>`, `iwg<n>` and `iwex<n>`.
-    ///
-    /// The index in these names is the order in which the WasmLifter first encounters each import:
-    /// `WasmLifter.importAnalysis` imports every input of these object groups, in instruction and
-    /// input order, regardless of the operation.
-    private func registerWasmObjectsUsed(by instr: Instruction) {
-        for input in instr.inputs {
-            let inputType = type(of: input)
-            if inputType.Is(.object(ofGroup: "WasmTable")) {
-                dynamicObjectGroupManager.addWasmTable(
-                    withType: inputType, forDefinition: defUseAnalyzer.definition(of: input),
-                    forVariable: input)
-            } else if inputType.Is(.object(ofGroup: "WasmMemory")) {
-                dynamicObjectGroupManager.addWasmMemory(
-                    withType: inputType, forDefinition: defUseAnalyzer.definition(of: input),
-                    forVariable: input)
-            } else if inputType.Is(.object(ofGroup: "WasmGlobal")) {
-                dynamicObjectGroupManager.addWasmGlobal(
-                    withType: inputType, forDefinition: defUseAnalyzer.definition(of: input),
-                    forVariable: input)
-            } else if inputType.Is(.object(ofGroup: "WasmTag")) {
-                dynamicObjectGroupManager.addWasmTag(
-                    withType: inputType, forDefinition: defUseAnalyzer.definition(of: input),
-                    forVariable: input)
+    /// Adds the exports of the given Wasm module to the exports object group of the active module.
+    private func addExports(of interface: WasmModuleInterface) {
+        for export in interface.exports {
+            switch export.kind {
+            case .function:
+                dynamicObjectGroupManager.addMethod(methodName: export.name)
+                dynamicObjectGroupManager.updateMethodSignature(
+                    methodName: export.name, signature: jsSignature(ofExportedFunction: export))
+            case .global, .table, .memory, .tag:
+                dynamicObjectGroupManager.addProperty(
+                    propertyName: export.name, withType: type(of: export.variable))
             }
         }
+    }
+
+    /// Returns the signature of an exported Wasm function when it's called from JavaScript.
+    private func jsSignature(ofExportedFunction export: WasmModuleInterface.Export) -> Signature {
+        // A re-exported JavaScript function behaves like a Wasm function with the signature of the
+        // import: its arguments and its result are converted to and from that signature's types.
+        let wasmSignature: WasmSignature?
+        switch export.reexportedImport?.functionSignature {
+        case nil:
+            let functionType = type(of: export.variable)
+            wasmSignature =
+                functionType.isWasmFunctionDef ? functionType.wasmFunctionDefSignature : nil
+        case .wasmSignature(let signature):
+            wasmSignature = signature
+        case .signatureDef(let signatureDef):
+            let signatureType = type(of: signatureDef)
+            wasmSignature =
+                signatureType.isWasmSignatureTypeDef
+                ? signatureType.wasmFunctionSignatureDefSignature : nil
+        }
+        return wasmSignature.map(ProgramBuilder.convertWasmSignatureToJsSignature)
+            ?? .forUnknownFunction
     }
 
     // Array for collecting type changes during instruction execution.
@@ -912,7 +764,6 @@ public struct JSTyper: Analyzer {
     public mutating func analyze(_ instr: Instruction) {
         assert(instr.index == indexOfLastInstruction + 1)
         indexOfLastInstruction += 1
-        defUseAnalyzer.analyze(instr)
 
         // This typer is currently "Outside" of the wasm module, we just type
         // the instructions here such that we can set the type of the module at
@@ -924,6 +775,7 @@ public struct JSTyper: Analyzer {
                 }
             } else {
                 analyzeWasmInstruction(instr)
+                activeWasmModuleInterface.record(instr, typeOf: { [state] in state.type(of: $0) })
             }
         }
 
@@ -940,8 +792,10 @@ public struct JSTyper: Analyzer {
         case .beginWasmModule(_):
             dynamicObjectGroupManager.createNewWasmModule()
         case .endWasmModule(_):
+            addExports(of: activeWasmModuleInterface)
             let instanceType = dynamicObjectGroupManager.finalizeWasmModule()
             setType(of: instr.output, to: instanceType)
+            activeWasmModuleInterface = WasmModuleInterface()
         case .beginBundleModule(_):
             assert(seenExports.isEmpty)
         case .endBundleModule(_):
@@ -978,7 +832,6 @@ public struct JSTyper: Analyzer {
     }
 
     private mutating func analyzeWasmInstruction(_ instr: Instruction) {
-        registerWasmObjectsUsed(by: instr)
         switch instr.op.opcode {
         case .consti64(_):
             setType(of: instr.output, to: .wasmi64)
@@ -1085,8 +938,6 @@ public struct JSTyper: Analyzer {
                 ofGroup: "WasmGlobal", withProperties: ["value"], withMethods: ["valueOf"],
                 withWasmType: WasmGlobalType(
                     valueType: valueType, isMutable: op.isMutable))
-            dynamicObjectGroupManager.addWasmGlobal(
-                withType: type, forDefinition: instr, forVariable: instr.output)
             setType(of: instr.output, to: type)
         case .wasmDefineTable(let op):
             let knownSignatures = instr.inputs.enumerated().filter { $0.offset % 2 == 1 }.map {
@@ -1098,31 +949,12 @@ public struct JSTyper: Analyzer {
                     wasmTableType: WasmTableType(
                         elementType: op.elementType, limits: op.limits, isTable64: op.isTable64,
                         knownEntrySignatures: knownSignatures)))
-            dynamicObjectGroupManager.addWasmTable(
-                withType: type(of: instr.output), forDefinition: instr,
-                forVariable: instr.output)
-            // Also re-export all functions that we now import through the activeElementSection
-            var i = 0
-            while i < instr.inputs.count {
-                let fct = instr.input(i)
-                let definingInstruction = defUseAnalyzer.definition(of: fct)
-                let signature = type(of: instr.input(i + 1)).wasmFunctionSignatureDefSignature
-                // TODO(cffsmith): Once we change the way we track signatures, we should also store the JS Signature here if we have one. The table might contain JS functions but we lose that signature in the entries. Which is why we convert back into JS Signatures here.
-                let jsSignature = ProgramBuilder.convertWasmSignatureToJsSignature(signature)
-                dynamicObjectGroupManager.addWasmFunction(
-                    withSignature: jsSignature, forDefinition: definingInstruction,
-                    forVariable: fct)
-                i += 2
-            }
         case .wasmDefineElementSegment(let op):
             setType(of: instr.output, to: .wasmElementSegment(segmentLength: Int(op.size)))
         case .wasmDropElementSegment(_):
             type(of: instr.input(0)).wasmElementSegmentType!.markAsDropped()
         case .wasmDefineMemory(let op):
             setType(of: instr.output, to: op.wasmMemory)
-            dynamicObjectGroupManager.addWasmMemory(
-                withType: type(of: instr.output), forDefinition: instr,
-                forVariable: instr.output)
         case .wasmDefineDataSegment(let op):
             setType(of: instr.output, to: .wasmDataSegment(segmentLength: op.segment.count))
         case .wasmDropDataSegment(_):
@@ -1133,9 +965,6 @@ public struct JSTyper: Analyzer {
                 of: instr.output,
                 to: .object(
                     ofGroup: "WasmTag", withWasmType: WasmTagType(signature.parameterTypes)))
-            dynamicObjectGroupManager.addWasmTag(
-                withType: type(of: instr.output), forDefinition: instr,
-                forVariable: instr.output)
         case .wasmLoadGlobal(_):
             let globalVarType = type(of: instr.input(0))
             if let wasmGlobalType = globalVarType.wasmGlobalType {
@@ -1170,22 +999,12 @@ public struct JSTyper: Analyzer {
             if !sigOutputTypes.isEmpty {
                 setType(of: instr.output, to: sigOutputTypes[0])
             }
-            let definingInstruction = defUseAnalyzer.definition(of: instr.input(1))
-            // Here we query the typer for the signature of the instruction as that is the correct "JS" Signature instead of taking the call-site specific converted wasm signature.
-            dynamicObjectGroupManager.addWasmFunction(
-                withSignature: type(of: instr.input(1)).signature
-                    ?? Signature.forUnknownFunction, forDefinition: definingInstruction,
-                forVariable: instr.input(1))
         case .beginWasmFunction(_):
             let signature = type(of: instr.input(0)).wasmFunctionSignatureDefSignature
             wasmTypeBeginBlock(instr, signature)
         case .endWasmFunction(_):
             let signatureType = type(of: instr.input(0))
-            let signature = signatureType.wasmFunctionSignatureDefSignature
             setType(of: instr.output, to: .wasmFunctionDef(signatureType))
-            dynamicObjectGroupManager.addWasmFunction(
-                withSignature: ProgramBuilder.convertWasmSignatureToJsSignature(signature),
-                forDefinition: instr, forVariable: instr.output)
         case .wasmSelect(_):
             // Both inputs must share a single encodable Wasm value type (which may fail after cross-module global minimization).
             let outputType = type(of: instr.input(0)) | type(of: instr.input(1))
@@ -1269,7 +1088,6 @@ public struct JSTyper: Analyzer {
             for (output, outputType) in zip(instr.outputs, signature.outputTypes) {
                 setType(of: output, to: outputType)
             }
-        // We don't need to update the DynamicObjectGroupManager, as all functions that can be called here are .wasmFunctionDef types, this means we have already added them when we saw the EndWasmFunction instruction.
         case .wasmCallIndirect(_):
             let signature = type(of: instr.input(1)).wasmFunctionSignatureDefSignature
             for (output, outputType) in zip(instr.outputs, signature.outputTypes) {
@@ -1291,8 +1109,6 @@ public struct JSTyper: Analyzer {
             for (output, outputType) in zip(instr.outputs, signature.outputTypes) {
                 setType(of: output, to: outputType)
             }
-        // Functions that can be called through a table are also already added by the wasmDefineTable instruction.
-        // No need to analyze this and add them to the DynamicObjectGroupManager.
         case .wasmArrayNewFixed(_),
             .wasmArrayNewDefault(_),
             .wasmArrayNewData(_),

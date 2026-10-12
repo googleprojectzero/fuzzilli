@@ -171,7 +171,7 @@ struct InstructionSimplifier: Reducer {
             return nextFreeVariable
         }
 
-        var typer = JSTyper(for: helper.fuzzer.environment, isBundle: helper.code.isBundle)
+        var typer = JSTyper(for: helper.fuzzer.environment)
         func isKnownArray(_ v: Variable) -> Bool {
             let type = typer.type(of: v)
             if type.Is(.object(ofGroup: "Array")) { return true }

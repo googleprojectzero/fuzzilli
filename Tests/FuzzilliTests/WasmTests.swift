@@ -52,6 +52,18 @@ func testForErrorOutput(
         "Error messages don't match, got stdout:\n\(result.output)\nstderr:\n\(result.error)")
 }
 
+/// Emits code that outputs the sorted names of all exports of a Wasm module, given its exports
+/// object. Returns the output line that the typer's view of the exports object predicts.
+func outputExportNames(of exports: Variable, using b: ProgramBuilder) -> String {
+    let outputFunc = b.createNamedVariable(forBuiltin: "output")
+    let object = b.createNamedVariable(forBuiltin: "Object")
+    let names = b.callMethod("keys", on: object, withArgs: [exports])
+    let sortedNames = b.callMethod("sort", on: names)
+    b.callFunction(outputFunc, withArgs: [b.arrayToStringForTesting(sortedNames)])
+    let exportsType = b.type(of: exports)
+    return exportsType.properties.union(exportsType.methods).sorted().joined(separator: ",") + "\n"
+}
+
 struct WasmSignatureConversionTests {
     @Test func testJsSignatureConversion() {
         #expect(
@@ -6462,6 +6474,67 @@ struct WasmFoundationTests {
             return fuzzer.lifter.lift(prog)
         }
         testForOutput(program: jsProg, runner: runner, outputString: "42\n42\n")
+    }
+
+    // A module imports a JS function once per signature with which it calls the function and once
+    // per signature definition with which it puts the function into a table. It re-exports each of
+    // these imports.
+    @Test func testReexportedJSFunctionOncePerSignature() throws {
+        let runner = JavaScriptExecutor()!
+        var expectedOutput = ""
+
+        let jsProg = buildAndLiftProgram { b in
+            let identity = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+                b.doReturn(args[0])
+            }
+            let makeObject = b.buildPlainFunction(with: .parameters(n: 0)) { _ in
+                b.doReturn(b.buildObjectLiteral { _ in })
+            }
+
+            let module = b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => []) { function, _, _ in
+                    // Imports iw0.
+                    function.wasmJsCall(
+                        function: identity, withArgs: [function.consti32(1)],
+                        withWasmSignature: [.wasmi32] => [])
+                    // Imports iw1.
+                    function.wasmJsCall(
+                        function: identity, withArgs: [function.consti64(2)],
+                        withWasmSignature: [.wasmi64] => [.wasmi64])
+                    // Uses iw0 again.
+                    function.wasmJsCall(
+                        function: identity, withArgs: [function.consti32(3)],
+                        withWasmSignature: [.wasmi32] => [])
+                    // Imports iw2.
+                    function.wasmJsCall(
+                        function: makeObject, withArgs: [], withWasmSignature: [] => [.wasmi32])
+                    return []
+                }
+                // Imports iw3: the signature definition of the table entries gets its own import,
+                // even though the signature equals the one of iw2.
+                let signature = wasmModule.wasmDefineAdHocSignatureType(
+                    signature: [] => [.wasmi32])
+                wasmModule.addTable(
+                    elementType: .wasmFuncRef(), minSize: 2,
+                    definedSignatures: [makeObject, signature, makeObject, signature],
+                    isTable64: false)
+            }
+
+            let exports = module.loadExports()
+            expectedOutput += outputExportNames(of: exports, using: b)
+
+            // The re-exported functions convert their arguments and results according to the
+            // signature of the import.
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+            let bigint = b.callMethod("iw1", on: exports, withArgs: [b.loadBigInt(42)])
+            b.callFunction(outputFunc, withArgs: [b.typeof(bigint)])
+            expectedOutput += "bigint\n"
+            let integer = b.callMethod("iw2", on: exports)
+            b.callFunction(outputFunc, withArgs: [integer])
+            expectedOutput += "0\n"
+        }
+
+        testForOutput(program: jsProg, runner: runner, outputString: expectedOutput)
     }
 
     @Test func testDefineElementSegments() throws {

@@ -31,7 +31,7 @@
 /// roughly the right type.
 struct DataFlowSimplifier: Reducer {
     func reduce(with helper: MinimizationHelper) {
-        var typer = JSTyper(for: helper.fuzzer.environment, isBundle: helper.code.isBundle)
+        var typer = JSTyper(for: helper.fuzzer.environment)
         var candidates = [Int]()
         var uses = VariableMap<Int>()
         for instr in helper.code {

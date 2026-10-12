@@ -2356,8 +2356,9 @@ struct JSTyperTests {
             #expect(fun3 == [[.jsAnything] => .jsArray])
             #expect(fun4 == [[] => .jsAnything])
             #expect(fun5 == [[] => .jsAnything])
-            // Here the typer should be able to see the full JS signature.
-            #expect(reexportedFunction == [[] => .object(ofGroup: "_fuzz_Object0")])
+            // The re-exported function converts its arguments and its result according to the
+            // signature of the import, like a Wasm function with that signature.
+            #expect(reexportedFunction == [[] => .jsAnything])
 
             let glob0 = b.getProperty("wg0", of: exports)
             #expect(
@@ -2492,6 +2493,49 @@ struct JSTyperTests {
             #expect(memorySizes == [7, 6, 5, 4, 3, 2, 1])
             // In particular, the element and data segments are not exported.
             #expect(b.type(of: exports).properties.count == tables.count + memories.count)
+        }
+    }
+
+    @Test func testWasmModuleReexportsJSFunctionOncePerImportSignature() {
+        let fuzzer = makeMockFuzzer(environment: JavaScriptEnvironment())
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            let f = b.buildPlainFunction(with: .parameters(n: 1)) { args in b.doReturn(args[0]) }
+            let g = b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
+
+            let module = b.buildWasmModule { wasmModule in
+                // The module imports a JS function once per signature with which it calls it, ...
+                wasmModule.addWasmFunction(with: [] => []) { function, _, _ in
+                    function.wasmJsCall(
+                        function: f, withArgs: [function.consti32(1)],
+                        withWasmSignature: [.wasmi32] => [])
+                    function.wasmJsCall(
+                        function: f, withArgs: [function.consti64(2)],
+                        withWasmSignature: [.wasmi64] => [.wasmi64])
+                    function.wasmJsCall(
+                        function: f, withArgs: [function.consti32(3)],
+                        withWasmSignature: [.wasmi32] => [])
+                    function.wasmJsCall(function: g, withArgs: [], withWasmSignature: [] => [])
+                    return []
+                }
+                // ... and separately for the signature definition with which it puts it into a
+                // table, even though the signature equals the one of the WasmJsCall above.
+                let signature = wasmModule.wasmDefineAdHocSignatureType(signature: [] => [])
+                wasmModule.addTable(
+                    elementType: .wasmFuncRef(), minSize: 2,
+                    definedSignatures: [g, signature, g, signature], isTable64: false)
+            }
+
+            let exports = module.loadExports()
+            #expect(b.type(of: exports).properties == ["wt0"])
+            #expect(b.type(of: exports).methods == ["w0", "iw0", "iw1", "iw2", "iw3"])
+            // The re-exported functions convert their arguments and results according to the
+            // signature of the import.
+            #expect(b.methodSignatures(of: "iw0", on: exports) == [[.integer] => .undefined])
+            #expect(b.methodSignatures(of: "iw1", on: exports) == [[.bigint] => .bigint])
+            #expect(b.methodSignatures(of: "iw2", on: exports) == [[] => .undefined])
+            #expect(b.methodSignatures(of: "iw3", on: exports) == [[] => .undefined])
         }
     }
 

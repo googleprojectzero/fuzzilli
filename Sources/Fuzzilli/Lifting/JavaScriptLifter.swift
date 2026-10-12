@@ -177,7 +177,7 @@ public class JavaScriptLifter: Lifter {
 
         if needToSupportWasm {
             // If we need to support Wasm we need to type all instructions outside of Wasm such that the WasmLifter can access extra type information during lifting.
-            typer = JSTyper(for: environment, isBundle: program.code.isBundle)
+            typer = JSTyper(for: environment)
         }
 
         var w = JavaScriptWriter(

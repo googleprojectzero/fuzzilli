@@ -599,8 +599,9 @@ public let ProgramTemplates = [
 
         // 2. In JavaScript, obtain references to the exported Wasm function and memory.
         let exports = module.loadExports()
-        let wasmFunc = b.getProperty("w0", of: exports)
-        let exportedMem = b.getProperty("wm0", of: exports)
+        let wasmFunc = b.getProperty(module.getExportedMethod(at: 0), of: exports)
+        let exportedMem = b.getProperty(
+            WasmModuleInterface.exportName(of: .memory, index: 0, isImport: false), of: exports)
 
         // 3. Create a ResizableArrayBuffer (RAB) and a random TypedArray view on the Wasm memory.
         let rab = b.callMethod("toResizableBuffer", on: exportedMem)
@@ -652,8 +653,9 @@ public let ProgramTemplates = [
             }
         }
         let exports = module.loadExports()
-        let memory = b.getProperty("wm0", of: exports)
-        let wasmGrow = b.getProperty("w0", of: exports)
+        let memory = b.getProperty(
+            WasmModuleInterface.exportName(of: .memory, index: 0, isImport: false), of: exports)
+        let wasmGrow = b.getProperty(module.getExportedMethod(at: 0), of: exports)
 
         // 2. JS Loop
         b.buildRepeatLoop(n: 20) { _ in

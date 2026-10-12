@@ -70,14 +70,8 @@ struct WasmTableTests {
             // the output expected based on the typer's view of the exports.
             func outputExports(of module: ProgramBuilder.WasmModule) {
                 let exports = module.loadExports()
-                let exportsType = b.type(of: exports)
-                let object = b.createNamedVariable(forBuiltin: "Object")
-                let names = b.callMethod("keys", on: object, withArgs: [exports])
-                let sortedNames = b.callMethod("sort", on: names)
-                b.callFunction(outputFunc, withArgs: [b.arrayToStringForTesting(sortedNames)])
-                let expectedNames = exportsType.properties.union(exportsType.methods).sorted()
-                expectedOutput += expectedNames.joined(separator: ",") + "\n"
-                for name in exportsType.properties.sorted() {
+                expectedOutput += outputExportNames(of: exports, using: b)
+                for name in b.type(of: exports).properties.sorted() {
                     guard let tableType = b.type(ofProperty: name, on: exports).wasmTableType
                     else { continue }
                     let length = b.getProperty("length", of: b.getProperty(name, of: exports))

@@ -37,22 +37,15 @@ extension Analyzer {
 struct DefUseAnalyzer: Analyzer {
     private var assignments = VariableMap<[Int]>()
     private var uses = VariableMap<[Int]>()
-    private var code: Code
-    private var isRunning = true
+    private let code: Code
     private var analysisDone = false
 
     init(for program: Program) {
         self.code = program.code
-        self.isRunning = false
-    }
-
-    init(isBundle: Bool) {
-        self.code = Code(isBundle: isBundle)
     }
 
     mutating func finishAnalysis() {
         analysisDone = true
-        isRunning = false
     }
 
     mutating func analyze() {
@@ -61,9 +54,6 @@ struct DefUseAnalyzer: Analyzer {
     }
 
     mutating func analyze(_ instr: Instruction) {
-        if isRunning {
-            code.append(instr)
-        }
         assert(code[instr.index].op === instr.op)  // Must be operating on the program passed in during construction
         assert(!analysisDone)
         for v in instr.allOutputs {

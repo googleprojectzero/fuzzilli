@@ -226,7 +226,7 @@ public class ProgramBuilder {
     /// Constructs a new program builder for the given fuzzer.
     init(for fuzzer: Fuzzer, parent: Program?, isBundle: Bool) {
         self.fuzzer = fuzzer
-        self.jsTyper = JSTyper(for: fuzzer.environment, isBundle: isBundle)
+        self.jsTyper = JSTyper(for: fuzzer.environment)
         self.parent = parent
         self.isBundle = isBundle
 
@@ -1842,7 +1842,7 @@ public class ProgramBuilder {
         // Step (2): determine which instructions can be part of the slice and attempt to find replacement variables for the outputs of instructions that cannot be included.
         //
         // We need a typer to be able to find compatible replacement variables if we are merging the dataflows of the two programs.
-        var typer = JSTyper(for: fuzzer.environment, isBundle: program.code.isBundle)
+        var typer = JSTyper(for: fuzzer.environment)
         // The set of variables that are available for a slice. A variable is available either because the instruction that outputs
         // it can be part of the slice or because the variable has been remapped to a host variable.
         var availableVariables = VariableSet()
@@ -8122,7 +8122,9 @@ public class ProgramBuilder {
             activeWasmModule!.setModuleVariable(variable: instr.output)
             activeWasmModule = nil
         case .endWasmFunction:
-            activeWasmModule!.methods.append("w\(activeWasmModule!.methods.count)")
+            activeWasmModule!.methods.append(
+                WasmModuleInterface.exportName(
+                    of: .function, index: activeWasmModule!.methods.count, isImport: false))
         case .wasmDefineGlobal(_),
             .wasmDefineTable(_),
             .wasmDefineMemory(_),
