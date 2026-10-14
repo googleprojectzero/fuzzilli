@@ -18,9 +18,9 @@ import OrderedCollections
 /// names under which the lifted module exports its imports and definitions.
 ///
 /// The JSTyper records the interface while it analyzes a Wasm module and derives the type of the
-/// `exports` object of the module's instance from it. The interface decides the imports and the
-/// export names with the same rules as the WasmLifter, so that the typer's view of the exports
-/// matches the actual exports of the lifted module.
+/// `exports` object of the module's instance from it. The WasmLifter builds the import and export
+/// sections of the module from the typer's interface, so the typer's view of the exports can't get
+/// out of sync with the actual exports of the lifted module.
 public struct WasmModuleInterface {
     /// The kinds of objects that a Wasm module imports, defines and exports.
     public enum Kind: CaseIterable {

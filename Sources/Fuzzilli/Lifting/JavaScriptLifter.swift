@@ -1826,10 +1826,12 @@ public class JavaScriptLifter: Lifter {
                 let V = w.declare(instr.output, as: "v\(instr.output.number)")
                 // TODO: support a better diagnostics mode which stores the .wasm binary file alongside the samples.
                 do {
+                    // The typer has already analyzed this EndWasmModule instruction above.
+                    let moduleInterface = typer!.wasmModuleInterface(of: instr.output)!
                     let (bytecode, importRefs, didUseJSStringBuiltins, didImportStringConstants) =
                         try WasmLifter(
                             withTyper: typer!, withWasmCode: wasmInstructions,
-                            startFunction: startFunction
+                            moduleInterface: moduleInterface, startFunction: startFunction
                         ).lift()
                     // Get and check that we have the imports here as expressions and fail otherwise.
                     let imports: [(Variable, Expression)] = try importRefs.map { ref in

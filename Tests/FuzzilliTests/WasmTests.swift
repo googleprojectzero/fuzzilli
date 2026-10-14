@@ -804,6 +804,27 @@ struct WasmFoundationTests {
         testForOutput(program: jsProg, runner: runner, outputString: "true\n")
     }
 
+    // The imported string constants are globals, too, so the defined globals come after them in the
+    // global index space.
+    @Test func testExportedGlobalWithStringConstants() throws {
+        let runner = JavaScriptExecutor()!
+        let jsProg = buildAndLiftProgram { b in
+            let module = b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmRefJSString()]) { function, _, _ in
+                    [function.wasmStringConstant("Hello")]
+                }
+                wasmModule.addGlobal(wasmGlobal: .wasmi32(42), isMutable: false)
+            }
+
+            let exports = module.loadExports()
+            let global = b.getProperty(
+                WasmModuleInterface.exportName(of: .global, index: 0, isImport: false), of: exports)
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+            b.callFunction(outputFunc, withArgs: [b.getProperty("value", of: global)])
+        }
+        testForOutput(program: jsProg, runner: runner, outputString: "42\n")
+    }
+
     @Test func testImports() throws {
         let runner = JavaScriptExecutor()!
         let jsProg = buildAndLiftProgram { b in

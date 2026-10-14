@@ -204,4 +204,41 @@ struct WasmTableTests {
 
         testForOutput(program: js, runner: runner, outputString: expectedOutput)
     }
+
+    // A JS function in a table has to refer to the import of the function with the signature of the
+    // table entry, even if the module also imports the function with another signature.
+    @Test func testTableEntryOfJSFunctionImportedWithMultipleSignatures() throws {
+        let runner = JavaScriptExecutor()!
+
+        let js = buildAndLiftProgram { b in
+            let jsFunction = b.buildPlainFunction(with: .parameters(n: 1)) { _ in
+                b.doReturn(b.loadInt(42))
+            }
+            let module = b.buildWasmModule { wasmModule in
+                // This imports the function with the signature [i32] => [].
+                wasmModule.addWasmFunction(with: [] => []) { f, _, _ in
+                    f.wasmJsCall(
+                        function: jsFunction, withArgs: [f.consti32(1)],
+                        withWasmSignature: [.wasmi32] => [])
+                    return []
+                }
+                // This imports the function again with the signature [] => [i32].
+                let signature = wasmModule.wasmDefineAdHocSignatureType(signature: [] => [.wasmi32])
+                let table = wasmModule.addTable(
+                    elementType: .wasmFuncRef(), minSize: 1,
+                    definedSignatures: [jsFunction, signature], isTable64: false)
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { f, _, _ in
+                    f.wasmCallIndirect(
+                        signatureDef: signature, table: table, functionArgs: [],
+                        tableIndex: f.consti32(0))
+                }
+            }
+            let exports = module.loadExports()
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+            b.callFunction(
+                outputFunc, withArgs: [b.callMethod(module.getExportedMethod(at: 1), on: exports)])
+        }
+
+        testForOutput(program: js, runner: runner, outputString: "42\n")
+    }
 }

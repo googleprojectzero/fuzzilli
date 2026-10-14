@@ -50,6 +50,8 @@ public struct JSTyper: Analyzer {
 
     /// The imports and definitions of the Wasm module that is currently being analyzed.
     private var activeWasmModuleInterface = WasmModuleInterface()
+    /// The interfaces of the analyzed Wasm modules, keyed by the output of their EndWasmModule.
+    private var wasmModuleInterfaces = [Variable: WasmModuleInterface]()
 
     private var seenExports: [(String, Variable)] = []
 
@@ -358,10 +360,16 @@ public struct JSTyper: Analyzer {
         isWithinTypeGroup = false
         dynamicObjectGroupManager = ObjectGroupManager()
         activeWasmModuleInterface = WasmModuleInterface()
+        wasmModuleInterfaces.removeAll()
         assert(activeFunctionDefinitions.isEmpty)
         assert(activePendingBundleModule == nil)
         assert(dynamicObjectGroupManager.isEmpty)
         seenExports = []
+    }
+
+    /// Returns the imports and exports of the Wasm module with the given EndWasmModule output.
+    public func wasmModuleInterface(of module: Variable) -> WasmModuleInterface? {
+        return wasmModuleInterfaces[module]
     }
 
     /// Adds the exports of the given Wasm module to the exports object group of the active module.
@@ -795,6 +803,7 @@ public struct JSTyper: Analyzer {
             addExports(of: activeWasmModuleInterface)
             let instanceType = dynamicObjectGroupManager.finalizeWasmModule()
             setType(of: instr.output, to: instanceType)
+            wasmModuleInterfaces[instr.output] = activeWasmModuleInterface
             activeWasmModuleInterface = WasmModuleInterface()
         case .beginBundleModule(_):
             assert(seenExports.isEmpty)
