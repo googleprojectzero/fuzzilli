@@ -403,7 +403,7 @@ struct WasmFoundationTests {
                 b.type(of: exports)
                     == .object(
                         ofGroup: "_fuzz_WasmExports0", withProperties: ["iwg0", "iwg1", "wg0"],
-                        withMethods: ["w1", "w0"]))
+                        withMethods: ["wf1", "wf0"]))
 
             let outputFunc = b.createNamedVariable(forBuiltin: "output")
 
@@ -1005,15 +1005,15 @@ struct WasmFoundationTests {
 
             let exports = module.loadExports()
 
-            let out = b.callMethod("w0", on: exports, withArgs: [b.loadBigInt(10)])
+            let out = b.callMethod("wf0", on: exports, withArgs: [b.loadBigInt(10)])
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: out)])
 
-            b.callMethod("w1", on: exports, withArgs: [b.loadBigInt(20)])
+            b.callMethod("wf1", on: exports, withArgs: [b.loadBigInt(20)])
 
-            let outLoop = b.callMethod("w2", on: exports, withArgs: [])
+            let outLoop = b.callMethod("wf2", on: exports, withArgs: [])
             b.callFunction(outputFunc, withArgs: [outLoop])
 
-            let outCatchReassign = b.callMethod("w3", on: exports, withArgs: [])
+            let outCatchReassign = b.callMethod("wf3", on: exports, withArgs: [])
             b.callFunction(outputFunc, withArgs: [outCatchReassign])
 
             let prog = b.finalize()
@@ -1074,7 +1074,7 @@ struct WasmFoundationTests {
             let out = b.callMethod(module.getExportedMethod(at: 2), on: exports)
 
             let nameOfExportedGlobals = ["iwg0", "wg0"]
-            let nameOfExportedFunctions = ["w0", "w1", "w2"]
+            let nameOfExportedFunctions = ["wf0", "wf1", "wf2"]
 
             #expect(
                 b.type(of: exports)
@@ -1596,9 +1596,9 @@ struct WasmFoundationTests {
                 b.type(of: exports)
                     == .object(
                         ofGroup: "_fuzz_WasmExports0", withProperties: ["wt0"],
-                        withMethods: ["w0", "iw0"]))
+                        withMethods: ["wf0", "iwf0"]))
 
-            let importedFunction = b.getProperty("iw0", of: exports)
+            let importedFunction = b.getProperty("iwf0", of: exports)
 
             #expect(b.type(of: importedFunction) == .function([] => .bigint))
 
@@ -6093,7 +6093,7 @@ struct WasmFoundationTests {
                 }
             }
 
-            let throwFct = b.getProperty("w0", of: moduleThrow.loadExports())
+            let throwFct = b.getProperty("wf0", of: moduleThrow.loadExports())
             #expect(b.type(of: throwFct) == .function([.integer] => .nullish))
             let wasmTagExported = b.getProperty("wex0", of: moduleThrow.loadExports())
             // The re-exported tag is prefixed with the `i` for `imported`.
@@ -6129,7 +6129,7 @@ struct WasmFoundationTests {
                 }
             }
 
-            let catchFct = b.getProperty("w0", of: moduleCatch.loadExports())
+            let catchFct = b.getProperty("wf0", of: moduleCatch.loadExports())
             let result = b.callFunction(catchFct, withArgs: [throwFct])
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: result)])
 
@@ -6466,12 +6466,12 @@ struct WasmFoundationTests {
             }
 
             let exportsA = moduleA.loadExports()
-            let reexportedJSFct = b.getProperty("iw0", of: exportsA)
+            let reexportedJSFct = b.getProperty("iwf0", of: exportsA)
             // Test that the type system knows about the re-exported function, so that it is
             // discoverable by code generators.
             #expect(
                 b.type(of: exportsA).Is(
-                    .object(ofGroup: nil, withProperties: [], withMethods: ["w0", "iw0"])))
+                    .object(ofGroup: nil, withProperties: [], withMethods: ["wf0", "iwf0"])))
             #expect(b.type(of: reexportedJSFct).Is(.function([] => .bigint)))
 
             let moduleB = b.buildWasmModule { wasmModule in
@@ -6486,9 +6486,9 @@ struct WasmFoundationTests {
             let exportsB = moduleB.loadExports()
 
             let outputFunc = b.createNamedVariable(forBuiltin: "output")
-            let wasmOutA = b.callMethod("iw0", on: exportsA, withArgs: [])
+            let wasmOutA = b.callMethod("iwf0", on: exportsA, withArgs: [])
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOutA)])
-            let wasmOutB = b.callMethod("w0", on: exportsB)
+            let wasmOutB = b.callMethod("wf0", on: exportsB)
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOutB)])
 
             let prog = b.finalize()
@@ -6514,19 +6514,19 @@ struct WasmFoundationTests {
 
             let module = b.buildWasmModule { wasmModule in
                 wasmModule.addWasmFunction(with: [] => []) { function, _, _ in
-                    // Imports iw0.
+                    // Imports iwf0.
                     function.wasmJsCall(
                         function: identity, withArgs: [function.consti32(1)],
                         withWasmSignature: [.wasmi32] => [])
-                    // Imports iw1.
+                    // Imports iwf1.
                     function.wasmJsCall(
                         function: identity, withArgs: [function.consti64(2)],
                         withWasmSignature: [.wasmi64] => [.wasmi64])
-                    // Uses iw0 again.
+                    // Uses iwf0 again.
                     function.wasmJsCall(
                         function: identity, withArgs: [function.consti32(3)],
                         withWasmSignature: [.wasmi32] => [])
-                    // Imports iw2.
+                    // Imports iwf2.
                     function.wasmJsCall(
                         function: makeObject, withArgs: [], withWasmSignature: [] => [.wasmi32])
                     return []
@@ -6547,10 +6547,10 @@ struct WasmFoundationTests {
             // The re-exported functions convert their arguments and results according to the
             // signature of the import.
             let outputFunc = b.createNamedVariable(forBuiltin: "output")
-            let bigint = b.callMethod("iw1", on: exports, withArgs: [b.loadBigInt(42)])
+            let bigint = b.callMethod("iwf1", on: exports, withArgs: [b.loadBigInt(42)])
             b.callFunction(outputFunc, withArgs: [b.typeof(bigint)])
             expectedOutput += "bigint\n"
-            let integer = b.callMethod("iw2", on: exports)
+            let integer = b.callMethod("iwf2", on: exports)
             b.callFunction(outputFunc, withArgs: [integer])
             expectedOutput += "0\n"
         }

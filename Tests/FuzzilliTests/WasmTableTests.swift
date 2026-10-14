@@ -46,12 +46,12 @@ struct WasmTableTests {
             let exports = module.loadExports()
             let outputFunc = b.createNamedVariable(forBuiltin: "output")
 
-            let w0 = b.getProperty("w0", of: exports)
-            let r0 = b.callFunction(w0)
+            let wf0 = b.getProperty("wf0", of: exports)
+            let r0 = b.callFunction(wf0)
             b.callFunction(outputFunc, withArgs: [r0])
 
-            let w1 = b.getProperty("w1", of: exports)
-            let r1 = b.callFunction(w1)
+            let wf1 = b.getProperty("wf1", of: exports)
+            let r1 = b.callFunction(wf1)
             b.callFunction(outputFunc, withArgs: [b.arrayToStringForTesting(r1)])
         }
 
@@ -158,7 +158,7 @@ struct WasmTableTests {
             let exports = module.loadExports()
             let outputFunc = b.createNamedVariable(forBuiltin: "output")
 
-            let w2 = b.getProperty("w2", of: exports)
+            let w2 = b.getProperty("wf2", of: exports)
             let res = b.callFunction(w2)
             b.callFunction(outputFunc, withArgs: [res])
         }
@@ -197,7 +197,7 @@ struct WasmTableTests {
             let exports = module.loadExports()
             let outputFunc = b.createNamedVariable(forBuiltin: "output")
 
-            let w0 = b.getProperty("w0", of: exports)
+            let w0 = b.getProperty("wf0", of: exports)
             let res = b.callFunction(w0, withArgs: [b.loadInt(42)])
             b.callFunction(outputFunc, withArgs: [b.arrayToStringForTesting(res)])
         }

@@ -2340,7 +2340,7 @@ struct JSTyperTests {
                     == .object(
                         ofGroup: "_fuzz_WasmExports1",
                         withProperties: ["wg0", "iwg0", "wm0", "iwm0", "wex0", "iwex0"],
-                        withMethods: ["w0", "w1", "w2", "w3", "w4", "w5", "iw0"]))
+                        withMethods: ["wf0", "wf1", "wf2", "wf3", "wf4", "wf5", "iwf0"]))
 
             let fun0 = b.methodSignatures(of: module.getExportedMethod(at: 0), on: exports)
             let fun1 = b.methodSignatures(of: module.getExportedMethod(at: 1), on: exports)
@@ -2348,7 +2348,7 @@ struct JSTyperTests {
             let fun3 = b.methodSignatures(of: module.getExportedMethod(at: 3), on: exports)
             let fun4 = b.methodSignatures(of: module.getExportedMethod(at: 4), on: exports)
             let fun5 = b.methodSignatures(of: module.getExportedMethod(at: 5), on: exports)
-            let reexportedFunction = b.methodSignatures(of: "iw0", on: exports)
+            let reexportedFunction = b.methodSignatures(of: "iwf0", on: exports)
 
             #expect(fun0 == [[] => .undefined])
             #expect(fun1 == [[.integer] => .bigint])
@@ -2529,13 +2529,14 @@ struct JSTyperTests {
 
             let exports = module.loadExports()
             #expect(b.type(of: exports).properties == ["wt0"])
-            #expect(b.type(of: exports).methods == ["w0", "iw0", "iw1", "iw2", "iw3"])
+            #expect(
+                b.type(of: exports).methods == ["wf0", "iwf0", "iwf1", "iwf2", "iwf3"])
             // The re-exported functions convert their arguments and results according to the
             // signature of the import.
-            #expect(b.methodSignatures(of: "iw0", on: exports) == [[.integer] => .undefined])
-            #expect(b.methodSignatures(of: "iw1", on: exports) == [[.bigint] => .bigint])
-            #expect(b.methodSignatures(of: "iw2", on: exports) == [[] => .undefined])
-            #expect(b.methodSignatures(of: "iw3", on: exports) == [[] => .undefined])
+            #expect(b.methodSignatures(of: "iwf0", on: exports) == [[.integer] => .undefined])
+            #expect(b.methodSignatures(of: "iwf1", on: exports) == [[.bigint] => .bigint])
+            #expect(b.methodSignatures(of: "iwf2", on: exports) == [[] => .undefined])
+            #expect(b.methodSignatures(of: "iwf3", on: exports) == [[] => .undefined])
         }
     }
 

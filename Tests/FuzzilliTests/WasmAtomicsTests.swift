@@ -67,7 +67,7 @@ struct WasmAtomicsTests {
             ]
 
             for (i, result) in expectedResults.enumerated() {
-                let w = b.getProperty("w\(i)", of: exports)
+                let w = b.getProperty("wf\(i)", of: exports)
                 let r = b.callFunction(w)
                 b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: r)])
                 expectedOutput += result + "\n"
@@ -127,7 +127,7 @@ struct WasmAtomicsTests {
 
             let expectedResults = ["255", "255", "239", "239"]
             for (i, result) in expectedResults.enumerated() {
-                let w = b.getProperty("w\(i)", of: exports)
+                let w = b.getProperty("wf\(i)", of: exports)
                 let r = b.callFunction(w)
                 b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: r)])
                 expectedOutput += result + "\n"
@@ -203,7 +203,7 @@ struct WasmAtomicsTests {
             let outputFunc = b.createNamedVariable(forBuiltin: "output")
 
             for i in 0..<8 {
-                let w = b.getProperty("w\(i)", of: exports)
+                let w = b.getProperty("wf\(i)", of: exports)
                 b.buildTryCatchFinally {
                     b.callFunction(w)
                 } catchBody: { _ in
@@ -303,7 +303,7 @@ struct WasmAtomicsTests {
             let outputFunc = b.createNamedVariable(forBuiltin: "output")
 
             for (i, results) in expectedResults.enumerated() {
-                let w = b.getProperty("w\(i)", of: exports)
+                let w = b.getProperty("wf\(i)", of: exports)
                 let r = b.callFunction(w)
                 b.callFunction(outputFunc, withArgs: [b.arrayToStringForTesting(r)])
                 expectedOutput += results
@@ -400,7 +400,7 @@ struct WasmAtomicsTests {
             let outputFunc = b.createNamedVariable(forBuiltin: "output")
 
             for (i, results) in expectedResults.enumerated() {
-                let w = b.getProperty("w\(i)", of: exports)
+                let w = b.getProperty("wf\(i)", of: exports)
                 let r = b.callFunction(w)
                 b.callFunction(outputFunc, withArgs: [b.arrayToStringForTesting(r)])
                 expectedOutput += results
@@ -442,8 +442,8 @@ struct WasmAtomicsTests {
             }
             let exports = module.loadExports()
             let outputFunc = b.createNamedVariable(forBuiltin: "output")
-            let w0 = b.getProperty("w0", of: exports)
-            let r = b.callFunction(w0)
+            let wf0 = b.getProperty("wf0", of: exports)
+            let r = b.callFunction(wf0)
             b.callFunction(outputFunc, withArgs: [b.arrayToStringForTesting(r)])
         }
         testForOutput(program: js, runner: runner, outputString: "42,1337\n")
@@ -477,8 +477,8 @@ struct WasmAtomicsTests {
             }
             let exports = module.loadExports()
             let outputFunc = b.createNamedVariable(forBuiltin: "output")
-            let w0 = b.getProperty("w0", of: exports)
-            let r = b.callFunction(w0)
+            let wf0 = b.getProperty("wf0", of: exports)
+            let r = b.callFunction(wf0)
             b.callFunction(outputFunc, withArgs: [b.arrayToStringForTesting(r)])
         }
         testForOutput(program: js, runner: runner, outputString: "42,52\n")
@@ -513,8 +513,8 @@ struct WasmAtomicsTests {
             }
             let exports = module.loadExports()
             let outputFunc = b.createNamedVariable(forBuiltin: "output")
-            let w0 = b.getProperty("w0", of: exports)
-            let r = b.callFunction(w0)
+            let wf0 = b.getProperty("wf0", of: exports)
+            let r = b.callFunction(wf0)
             b.callFunction(outputFunc, withArgs: [b.arrayToStringForTesting(r)])
         }
         testForOutput(program: js, runner: runner, outputString: "42,1337\n")

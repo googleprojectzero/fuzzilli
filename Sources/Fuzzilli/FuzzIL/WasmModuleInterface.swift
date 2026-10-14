@@ -33,7 +33,7 @@ public struct WasmModuleInterface {
 
         fileprivate var exportNamePrefix: String {
             switch self {
-            case .function: return "w"
+            case .function: return "wf"
             case .global: return "wg"
             case .table: return "wt"
             case .memory: return "wm"
@@ -64,7 +64,7 @@ public struct WasmModuleInterface {
     }
 
     public struct Export {
-        /// The name under which the lifted module exports the object, e.g. "w0" or "iwt1".
+        /// The name under which the lifted module exports the object, e.g. "wf0" or "iwt1".
         public let name: String
         public let kind: Kind
         /// The exported variable, which is either imported or the output of a definition.
@@ -169,8 +169,9 @@ public struct WasmModuleInterface {
         return exports
     }
 
-    /// The name under which the lifted module exports its `index`-th import or definition of the
-    /// given kind, e.g. "w0" for the first defined function or "iwt1" for the second imported table.
+    /// The name under which the lifted module exports its `index`-th import or definition of
+    /// the given kind, e.g. "wf0" for the first defined function or "iwt1" for the second
+    /// imported table.
     public static func exportName(of kind: Kind, index: Int, isImport: Bool) -> String {
         return (isImport ? "i" : "") + kind.exportNamePrefix + String(index)
     }
