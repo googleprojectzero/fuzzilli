@@ -12,7 +12,7 @@ Use this skill to perform high-assurance, high-precision code reviews on Fuzzill
 ## I. Multi-Agent Audit Protocol
 
 ### Step 0: Change Intent Extraction
-Before defining or invoking any subagents, inspect the target changes yourself using `run_command` (with `Cwd` set to the target repository/worktree):
+Before defining or invoking any subagents, inspect the target changes in the target repository/worktree yourself:
 1. Run `git status` and `git show --stat <commit>` or `git show <commit>` to identify the exact list of modified files (`[FILES]`) and modified line ranges as well as the commit message.
 2. Formulate a concise, 2–4 sentence **Change Intent Summary** covering:
    - **Objective**: What problem is this change solving or what feature/instruction is it adding?
@@ -24,39 +24,33 @@ Before defining or invoking any subagents, inspect the target changes yourself u
 ### Step 1: Define Specialized Subagents
 Define the three subagents using `define_subagent` (if not already defined in the conversation).
 
-> **Important Tool Rule**: Keep `enable_write_tools: true` on all subagents so they have access to `run_command` for read-only Git and search commands (like `git diff`, `git show`, `git log`, `git grep`). Do not use the `code_search` tool as it uses remote indexes which are non-existent for Fuzzilli.
+> **Important Tool Rule**: Keep `EnableWriteTools: true` on all subagents so they have access to `run_command` for read-only Git and search commands (like `git diff`, `git show`, `git log`, `git grep`). Do not use the `code_search` tool as it uses remote indexes which are non-existent for Fuzzilli.
 
 1. `architectural_auditor`:
-   - `name`: `"architectural_auditor"`
-   - `description`: `"Audits structural integrity, FuzzIL/TypeSystem invariants, fan-out propagation, and dual-path symmetry."`
-   - `enable_write_tools`: `true`
-   - `system_prompt`: `"Perform static architectural and invariant analysis on Fuzzilli code. Use view_file and read-only run_command calls (like git show, git diff, git status, git log, git grep) to inspect the diff and search the Fuzzilli repository. Do NOT use code_search for local Fuzzilli files. Do NOT edit or create files, and do NOT run swift build or swift test."`
+   - `Name`: `"architectural_auditor"`
+   - `Description`: `"Audits structural integrity, FuzzIL/TypeSystem invariants, fan-out propagation, and dual-path symmetry."`
+   - `EnableWriteTools`: `true`
+   - `SystemPrompt`: `"Perform static architectural and invariant analysis on Fuzzilli code. Read files directly and run read-only Git commands (like git show, git diff, git status, git log, git grep) to inspect the diff and search the Fuzzilli repository. Do NOT use code_search for local Fuzzilli files. Do NOT edit or create files, and do NOT run swift build or swift test."`
 
 2. `code_reviewer`:
-   - `name`: `"code_reviewer"`
-   - `description`: `"Performs line-by-line logic review, companion test verification, presubmit checks, and unit test execution."`
-   - `enable_write_tools`: `true`
-   - `system_prompt`: `"Perform line-by-line code review, style/presubmit verification (Tools/presubmit.py), companion test verification, and test execution (swift test). Use view_file and run_command (like git show, git diff, git grep, Tools/presubmit.py, swift test) as primary tools. Do NOT use code_search for local Fuzzilli files, and do NOT modify workspace files."`
+   - `Name`: `"code_reviewer"`
+   - `Description`: `"Performs line-by-line logic review, companion test verification, presubmit checks, and unit test execution."`
+   - `EnableWriteTools`: `true`
+   - `SystemPrompt`: `"Perform line-by-line code review, style/presubmit verification (Tools/presubmit.py), companion test verification, and test execution (swift test). Read files directly and run commands (like git show, git diff, git grep, Tools/presubmit.py, swift test) as primary tools. Do NOT use code_search for local Fuzzilli files, and do NOT modify workspace files."`
 
 3. `spec_conformance_auditor`:
-   - `name`: `"spec_conformance_auditor"`
-   - `description`: `"Audits runtime semantics, type lattices, and language features against official ECMA-262 and WebAssembly specifications."`
-   - `enable_write_tools`: `true`
-   - `system_prompt`: `"Audit Fuzzilli language feature modeling against official ECMA-262, WebAssembly, and WebIDL specifications and active proposals. Use search_web and read_url_content to reference spec texts, and use view_file and read-only run_command (like git show, git diff, git grep) to inspect local Fuzzilli code. Do NOT use code_search for local Fuzzilli files, do NOT modify files, and do NOT run swift build or swift test."`
+   - `Name`: `"spec_conformance_auditor"`
+   - `Description`: `"Audits runtime semantics, type lattices, and language features against official ECMA-262 and WebAssembly specifications."`
+   - `EnableWriteTools`: `true`
+   - `SystemPrompt`: `"Audit Fuzzilli language feature modeling against official ECMA-262, WebAssembly, and WebIDL specifications and active proposals. Use web search and URL fetching tools to reference spec texts, and read files directly and run read-only Git commands (like git show, git diff, git grep) to inspect local Fuzzilli code. Do NOT use code_search for local Fuzzilli files, do NOT modify files, and do NOT run swift build or swift test."`
 
 ---
 
 ### Step 2: Invoke Subagents in Parallel
-Invoke all three subagents in a single `invoke_subagent` call using their registered `TypeName`s:
-```json
-{
-  "Subagents": [
-    { "TypeName": "architectural_auditor", "Role": "Architectural & Logic Auditor", "Prompt": "..." },
-    { "TypeName": "code_reviewer", "Role": "Code Reviewer", "Prompt": "..." },
-    { "TypeName": "spec_conformance_auditor", "Role": "Language Spec Auditor", "Prompt": "..." }
-  ]
-}
-```
+Invoke all three subagents in parallel in the same turn using `invoke_subagent`:
+- **`architectural_auditor`** (Role: `"Architectural & Logic Auditor"`) with Prompt `2.1`
+- **`code_reviewer`** (Role: `"Code Reviewer"`) with Prompt `2.2`
+- **`spec_conformance_auditor`** (Role: `"Language Spec Auditor"`) with Prompt `2.3`
 
 In each prompt template replace `[REQUIRED_EVIDENTIARY_FORMAT]` with:
 ```text
@@ -64,7 +58,7 @@ Required Evidentiary Format for Every Finding:
 For each issue or hypothesis reported, you MUST explicitly state:
 - **Location**: Exact `file:line` references (and spec/proposal section if applicable).
 - **Trigger & Reachability**: Exact sequence of generator, mutator, reducer, or API calls that reaches the defective state.
-- **Testable Hypothesis & Concrete Impact**: How and under what conditions this causes invalid code, validation failure, or wrong behavior, plus proposed remediation code.
+- **Testable Hypothesis & Concrete Impact**: How and under what conditions this causes invalid code, validation failure, or wrong behavior.
 - **Proposed remediation code**: The proposed change to fix the issue.
 ```
 
@@ -127,7 +121,7 @@ For each issue or hypothesis reported, you MUST explicitly state:
        - Check for code duplication (DRY violations), leftover debug statements, unresolved FIXME comments, and adherence to workspace naming/style conventions.
 
     2. Companion Test Suite Verification:
-       - Before claiming a change lacks unit tests, use `git grep` and `view_file` to search `Tests/FuzzilliTests/` for existing companion test suites covering the modified subsystem.
+       - Before claiming a change lacks unit tests, use `git grep` and read files in `Tests/FuzzilliTests/` to check for existing companion test suites covering the modified subsystem.
        - Verify whether new features or bug fixes have corresponding unit/regression test coverage, and whether assertions in new tests actually exercise the edge cases of the change.
 
     3. Build & Unit Test Execution:
@@ -181,7 +175,7 @@ For each issue or hypothesis reported, you MUST explicitly state:
          b. Intentional Sound Abstractions (where FuzzIL intentionally uses coarse approximations, such as open object bounds or `.jsAnything`, to balance fuzzer performance and state complexity). Do NOT flag intentional sound abstractions as violations unless they lead to invalid code, broken invariants or ineffective fuzzing.
 
     Grounding & Active Proposal Lookup Protocol:
-    - Always use `search_web` to verify complex grammar rules, Wasm binary encodings, or newly proposed features (e.g., active Wasm or TC39 Stage 1–4 proposals, V8 `d8.test` builtins or `%` prefixed builtins) rather than guessing from memory.
+    - Always use web search to verify complex grammar rules, Wasm binary encodings, or newly proposed features (e.g., active Wasm or TC39 Stage 1–4 proposals, V8 `d8.test` builtins or `%` prefixed builtins) rather than guessing from memory.
     - Only flag a feature/instruction as non-existent if NO finalized spec, active proposal, or V8 engine implementation exists for it.
 
     [REQUIRED_EVIDENTIARY_FORMAT]
@@ -204,7 +198,7 @@ Subagent findings and hypotheses are **untrusted leads**, NEVER direct outputs. 
 For every candidate finding, asymmetry, or hypothesis raised by any subagent:
 
 1. **Live Codebase & False-Positive Verification (Derive from Code, Never Assume)**:
-   - Use `view_file` and `git grep` to inspect the exact lines, callers, helper wrappers, and sibling implementations in the repository yourself.
+   - Read the relevant files and use `git grep` to inspect the exact lines, callers, helper wrappers, and sibling implementations in the repository yourself.
    - Apply these **General False-Positive Verification Checks**:
      1. *Shared Helper vs. Specialized Handler*: Is one path a general routine handling multiple operations/variants (requiring a guard) while the other is a specialized handler where that condition is intrinsically guaranteed?
      2. *Inspect Actual Producer / Mutator / Reducer Guards*: Never guess what states a mutator or reducer can produce, and never assume a validation check is missing. Read the relevant mutators, reducers, and validators in the codebase to determine whether the hypothesized state is prevented by an existing guard or is genuinely reachable.
