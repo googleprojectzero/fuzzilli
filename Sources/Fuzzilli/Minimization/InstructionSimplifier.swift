@@ -374,6 +374,15 @@ struct InstructionSimplifier: Reducer {
     }
 
     func simplifyWasmInstructions(with helper: MinimizationHelper) {
+        // Maps struct types to their descriptor (if any). The described struct type is the input
+        // following the descriptor's optional supertype.
+        var descriptors = VariableMap<Instruction>()
+        for instr in helper.code {
+            if let op = instr.op as? WasmDefineStructType, op.hasDescribes {
+                descriptors[instr.input(op.hasSuperType ? 1 : 0)] = instr
+            }
+        }
+
         for instr in helper.code {
             switch instr.op.opcode {
             case .wasmDefineArrayType(let op):
@@ -387,14 +396,29 @@ struct InstructionSimplifier: Reducer {
                         with: Instruction(newOp, inouts: Array(newInouts)))
                 }
             case .wasmDefineStructType(let op):
-                if op.hasSuperType {
+                // Try to drop the supertype of the struct type.
+                // With custom descriptors, a struct type S and its descriptor D need matching
+                // supertypes (S <: S' requires D <: D' where D' describes S', and vice versa), so we
+                // have to drop both supertypes together.
+                // Descriptors are handled together with the struct type they describe.
+                if op.hasDescribes { break }
+                var replacements = [(Int, Instruction)]()
+                var structTypes = [instr]
+                if let descriptor = descriptors[instr.output] {
+                    structTypes.append(descriptor)
+                }
+                for structType in structTypes {
+                    let structOp = structType.op as! WasmDefineStructType
+                    guard structOp.hasSuperType else { continue }
                     let newOp = WasmDefineStructType(
-                        fields: op.fields, hasSuperType: false, isFinal: op.isFinal,
-                        hasDescribes: op.hasDescribes)
-                    let newInouts = instr.inputs.dropFirst() + instr.outputs
-                    helper.tryReplacing(
-                        instructionAt: instr.index,
-                        with: Instruction(newOp, inouts: Array(newInouts)))
+                        fields: structOp.fields, hasSuperType: false, isFinal: structOp.isFinal,
+                        hasDescribes: structOp.hasDescribes)
+                    let newInouts = structType.inputs.dropFirst() + structType.outputs
+                    replacements.append(
+                        (structType.index, Instruction(newOp, inouts: Array(newInouts))))
+                }
+                if !replacements.isEmpty {
+                    helper.tryReplacements(replacements)
                 }
             case .wasmDefineSignatureType(let op):
                 if op.hasSuperType {

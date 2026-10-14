@@ -3401,6 +3401,92 @@ struct MinimizerTests {
         }
     }
 
+    @Test func testInstructionSimplifierDropsStructSupertypes() {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            let fields = [WasmStructTypeDescription.Field(type: .wasmi32, mutability: true)]
+
+            // Build input program to be minimized.
+            b.wasmDefineTypeGroup {
+                let plainSuper = b.wasmDefineStructType(fields: fields)
+                let plainSub = b.wasmDefineStructType(fields: fields, superTypeDef: plainSuper)
+                let superStruct = b.wasmDefineStructType(fields: fields)
+                let superDescriptor = b.wasmDefineStructType(fields: fields, describes: superStruct)
+                let subStruct = b.wasmDefineStructType(fields: fields, superTypeDef: superStruct)
+                let subDescriptor = b.wasmDefineStructType(
+                    fields: fields, superTypeDef: superDescriptor, describes: subStruct)
+                return [
+                    plainSuper, plainSub, superStruct, superDescriptor, subStruct, subDescriptor,
+                ]
+            }
+            let originalProgram = b.finalize()
+
+            // Build expected output program: all supertypes are dropped.
+            b.wasmDefineTypeGroup {
+                let plainSuper = b.wasmDefineStructType(fields: fields)
+                let plainSub = b.wasmDefineStructType(fields: fields)
+                let superStruct = b.wasmDefineStructType(fields: fields)
+                let superDescriptor = b.wasmDefineStructType(fields: fields, describes: superStruct)
+                let subStruct = b.wasmDefineStructType(fields: fields)
+                let subDescriptor = b.wasmDefineStructType(fields: fields, describes: subStruct)
+                return [
+                    plainSuper, plainSub, superStruct, superDescriptor, subStruct, subDescriptor,
+                ]
+            }
+            let expectedProgram = b.finalize()
+
+            evaluator.setOriginalProgram(originalProgram)
+            let helper = MinimizationHelper(
+                for: ProgramAspects(outcome: .succeeded), forCode: originalProgram.code, of: fuzzer,
+                runningOnFuzzerQueue: true)
+            InstructionSimplifier().reduce(with: helper)
+
+            #expect(expectedProgram == Program(code: helper.code))
+        }
+    }
+
+    // A struct type and its descriptor need matching supertypes, so the InstructionSimplifier must
+    // never drop only one of them. Otherwise, it produces an invalid type hierarchy if V8 doesn't
+    // validate the type group, e.g. because it isn't used by any Wasm module.
+    @Test(arguments: [false, true])
+    func testInstructionSimplifierKeepsCustomDescriptorSupertypesInSync(
+        descriptorIsImportant: Bool
+    ) {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            let fields = [WasmStructTypeDescription.Field(type: .wasmi32, mutability: true)]
+
+            b.wasmDefineTypeGroup {
+                let superStruct = b.wasmDefineStructType(fields: fields)
+                let superDescriptor = b.wasmDefineStructType(fields: fields, describes: superStruct)
+                // The evaluator rejects every reduction that modifies an important instruction.
+                // This simulates a reduction that (e.g. due to flakiness) loses the interesting
+                // coverage.
+                if !descriptorIsImportant { evaluator.nextInstructionIsImportant(in: b) }
+                let subStruct = b.wasmDefineStructType(fields: fields, superTypeDef: superStruct)
+                if descriptorIsImportant { evaluator.nextInstructionIsImportant(in: b) }
+                let subDescriptor = b.wasmDefineStructType(
+                    fields: fields, superTypeDef: superDescriptor, describes: subStruct)
+                return [superStruct, superDescriptor, subStruct, subDescriptor]
+            }
+            let originalProgram = b.finalize()
+
+            evaluator.setOriginalProgram(originalProgram)
+            let helper = MinimizationHelper(
+                for: ProgramAspects(outcome: .succeeded), forCode: originalProgram.code, of: fuzzer,
+                runningOnFuzzerQueue: true)
+            InstructionSimplifier().reduce(with: helper)
+
+            // Dropping only one of the two supertypes would produce an invalid type hierarchy.
+            #expect(!helper.didReduce)
+            #expect(originalProgram == Program(code: helper.code))
+        }
+    }
+
     @Test func testWasmArrayNewFixedReduction() {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)
