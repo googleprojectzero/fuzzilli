@@ -17,6 +17,10 @@ import Foundation
 // The TypeGroupReducer removes unused type definition. A type definition is considered unused if it
 // is not used by any other operation but the WasmEndTypeGroup and if the corresponding output
 // of the WasmEndTypeGroup is not used anywhere inside the program.
+// Usages by unused type definitions don't count. With custom descriptors, if B <: A and DA
+// describes A, then B needs a descriptor DB <: DA. So DB is also used if DA and B are used.
+// TODO(bettscheider): Track that WasmRefGetDesc implicitly uses the descriptor of its input's
+// struct type. Currently, that descriptor may be removed, which makes the program fail to lift.
 //
 // This reducer preserves the invariant that each type defined inside a type group is also exposed
 // by the WasmEndTypeGroup operation.
@@ -25,36 +29,49 @@ import Foundation
 // WasmResolveForwardReference, so this is not an issue.
 struct WasmTypeGroupReducer: Reducer {
     func reduce(with helper: MinimizationHelper) {
-        var useCount = VariableMap<Int>()
+        var usedDefinitions = IndexSet()
         var definitions = VariableMap<Int>()
 
-        // Count all usages of Wasm type definitions.
+        func markUsed(_ type: Variable) {
+            if let definition = definitions[type], usedDefinitions.insert(definition).inserted {
+                helper.code[definition].inputs.forEach(markUsed)
+            }
+        }
+        func isUsed(_ type: Variable) -> Bool { usedDefinitions.contains(definitions[type]!) }
+
         for instr in helper.code {
             if instr.op is WasmTypeOperation {
                 for output in instr.outputs {
-                    useCount[output] = 0
                     definitions[output] = instr.index
                 }
             }
 
             if instr.op is WasmEndTypeGroup {
-                // Propagate usage counts from the input to the output variables. Note that the
-                // WasmEndTypeGroup ends the scope in which the inputs are defined (meaning there)
-                // can't be any usages after the WasmEndTypeGroup instruction.
                 for (input, output) in zip(instr.inputs, instr.outputs) {
-                    useCount[output] = useCount[input]!
+                    definitions[output] = definitions[input]!
                 }
-            } else {
-                // Any usage but the WasmEndTypeGroup should be tracked.
+            } else if !(instr.op is WasmTypeOperation) || instr.op is WasmResolveForwardReference {
+                // Any usage but by the WasmEndTypeGroup and type definitions should be tracked.
                 // (This includes WasmResolveForwardReference.)
                 for input in instr.inputs {
-                    useCount[input]? += 1
+                    markUsed(input)
                 }
             }
         }
 
         if definitions.isEmpty {
             return
+        }
+
+        // Custom descriptors rule (see above): DB's inputs 0 and 1 are DA and B. Marking DB can
+        // make more types used, so search again after each one.
+        while let descriptor = helper.code.first(where: {
+            guard let op = $0.op as? WasmDefineStructType, op.hasSuperType, op.hasDescribes else {
+                return false
+            }
+            return !isUsed($0.output) && isUsed($0.input(0)) && isUsed($0.input(1))
+        }) {
+            markUsed(descriptor.output)
         }
 
         // Create replacements for WasmEndTypeGroup and collect type definitions to remove.
@@ -64,11 +81,11 @@ struct WasmTypeGroupReducer: Reducer {
         for instr in helper.code {
             guard case .wasmEndTypeGroup = instr.op.opcode else { continue }
 
-            let keptInoutsMap = zip(instr.inputs, instr.outputs).filter { useCount[$0.1]! > 0 }
+            let keptInoutsMap = zip(instr.inputs, instr.outputs).filter { isUsed($0.1) }
             if keptInoutsMap.count == instr.inputs.count { continue }
 
             let unusedInputs =
-                zip(instr.inputs, instr.outputs).filter { useCount[$0.1]! == 0 }.map { $0.0 }
+                zip(instr.inputs, instr.outputs).filter { !isUsed($0.1) }.map { $0.0 }
             for input in unusedInputs {
                 toRemove.insert(definitions[input]!)
             }

@@ -3401,6 +3401,67 @@ struct MinimizerTests {
         }
     }
 
+    // With custom descriptors, where B <: A, DB <: DA and DX describes X:
+    //   A <- DA
+    //   ^     ^
+    //   B <- DB
+    // The test arguments (L1, L2) mean:
+    // If the struct types in L1 are used (=marked as important), the result should be L2.
+    @Test(arguments: [
+        (["A"], ["A"]),
+        (["B"], ["A", "B"]),
+        (["DA"], ["A", "DA"]),
+        (["DB"], ["A", "DA", "B", "DB"]),
+        (["A", "B"], ["A", "B"]),
+        (["A", "DA"], ["A", "DA"]),
+        (["A", "DB"], ["A", "DA", "B", "DB"]),
+        (["B", "DA"], ["A", "DA", "B", "DB"]),  // DB is unused but has to be kept.
+        (["B", "DB"], ["A", "DA", "B", "DB"]),
+    ])
+    func testWasmTypeGroupReducerCustomDescriptors(usedTypes: [String], keptTypes: [String]) {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            let fields = [WasmStructTypeDescription.Field(type: .wasmi32, mutability: true)]
+            let typeNames = ["A", "DA", "B", "DB"]
+            let types = b.wasmDefineTypeGroup {
+                let superStruct = b.wasmDefineStructType(fields: fields)
+                let superDescriptor = b.wasmDefineStructType(fields: fields, describes: superStruct)
+                let subStruct = b.wasmDefineStructType(fields: fields, superTypeDef: superStruct)
+                let subDescriptor = b.wasmDefineStructType(
+                    fields: fields, superTypeDef: superDescriptor, describes: subStruct)
+                return [superStruct, superDescriptor, subStruct, subDescriptor]
+            }
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => []) { function, _, _ in
+                    for (name, type) in zip(typeNames, types) {
+                        if usedTypes.contains(name) {
+                            evaluator.nextInstructionIsImportant(in: b)
+                        }
+                        function.wasmRefNull(typeDef: type)
+                    }
+                    return []
+                }
+            }
+            let originalProgram = b.finalize()
+
+            // Remove the ref.nulls not marked as important, then the unused types.
+            evaluator.setOriginalProgram(originalProgram)
+            let helper = MinimizationHelper(
+                for: ProgramAspects(outcome: .succeeded), forCode: originalProgram.code, of: fuzzer,
+                runningOnFuzzerQueue: true)
+            GenericInstructionReducer().reduce(with: helper)
+            WasmTypeGroupReducer().reduce(with: helper)
+
+            let typeDefinitions = originalProgram.code.filter { $0.op is WasmDefineStructType }
+            let remainingTypes = helper.code.compactMap { instr in
+                typeDefinitions.firstIndex { $0.op === instr.op }.map { typeNames[$0] }
+            }
+            #expect(remainingTypes == keptTypes)
+        }
+    }
+
     @Test func testInstructionSimplifierDropsStructSupertypes() {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)
