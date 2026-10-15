@@ -1002,7 +1002,8 @@ public class WasmLifter {
 
         let functions = self.definitions.filter({ $0.kind == .function })
 
-        let importedFunctionCount = moduleInterface.imports.count { $0.kind == .function }
+        let importedFunctionCount =
+            moduleInterface.imports.count { $0.kind == .function } + jsStringBuiltins.count
 
         for (defIndex, definition) in functions.enumerated() {
             guard case .function(let functionInfo) = definition else {
