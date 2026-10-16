@@ -785,7 +785,7 @@ struct WasmFoundationTests {
                 wasmModule.addWasmFunction(with: [] => [.wasmRefJSString()]) {
                     function, _, args in
                     let str1 = function.wasmStringConstant("Hello, ")
-                    let str2 = function.wasmStringConstant("World!")
+                    let str2 = function.wasmStringConstant("World! ß🤯🙌🏿")
                     let result = function.wasmJSStringConcat(str1, str2)
                     return [result]
                 }
@@ -796,7 +796,7 @@ struct WasmFoundationTests {
 
             let res = b.callMethod(main, on: exports, withArgs: [])
 
-            let expected = b.loadString("Hello, World!")
+            let expected = b.loadString("Hello, World! ß🤯🙌🏿")
             let areEqual = b.compare(expected, with: res, using: .strictEqual)
             let outputFunc = b.createNamedVariable(forBuiltin: "output")
             b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: areEqual)])

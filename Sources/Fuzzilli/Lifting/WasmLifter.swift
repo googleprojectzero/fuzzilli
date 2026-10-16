@@ -745,10 +745,10 @@ public class WasmLifter {
                 print(imp.variable)
             }
             // Append the name as a vector
-            temp += Leb128.unsignedEncode("imports".count)
+            temp += Leb128.unsignedEncode("imports".utf8.count)
             temp += "imports".data(using: .utf8)!
             let importName = "import_\(idx)_\(imp.variable)"
-            temp += Leb128.unsignedEncode(importName.count)
+            temp += Leb128.unsignedEncode(importName.utf8.count)
             temp += importName.data(using: .utf8)!
             temp += Leb128.unsignedEncode(imp.kind.externalKindByte)
             let type = typer.type(of: imp.variable)
@@ -798,9 +798,9 @@ public class WasmLifter {
         for i in 0..<jsStringBuiltins.count {
             let moduleName = "wasm:js-string"
             let fieldName = jsStringBuiltins[i].field
-            temp += Leb128.unsignedEncode(moduleName.count)
+            temp += Leb128.unsignedEncode(moduleName.utf8.count)
             temp += moduleName.data(using: .utf8)!
-            temp += Leb128.unsignedEncode(fieldName.count)
+            temp += Leb128.unsignedEncode(fieldName.utf8.count)
             temp += fieldName.data(using: .utf8)!
 
             let sigIdx = getSignatureIndexStrict(jsStringBuiltins[i].signature)
@@ -809,9 +809,9 @@ public class WasmLifter {
 
         for stringConstant in importedStringConstants {
             let moduleName = "\""
-            temp += Leb128.unsignedEncode(moduleName.count)
+            temp += Leb128.unsignedEncode(moduleName.utf8.count)
             temp += moduleName.data(using: .utf8)!
-            temp += Leb128.unsignedEncode(stringConstant.count)
+            temp += Leb128.unsignedEncode(stringConstant.utf8.count)
             temp += stringConstant.data(using: .utf8)!
 
             temp += [0x3]  // global import
@@ -1062,7 +1062,7 @@ public class WasmLifter {
             self.bytecode += [WasmSection.custom.rawValue]
             let name = "metadata.code.branch_hint"
             let sectionContent =
-                Leb128.unsignedEncode(name.count) + Data(name.data(using: .ascii)!)
+                Leb128.unsignedEncode(name.utf8.count) + Data(name.data(using: .ascii)!)
                 + Leb128.unsignedEncode(functionBranchHints.count) + functionBranchHints.joined()
             self.bytecode.append(Leb128.unsignedEncode(sectionContent.count))
             self.bytecode.append(sectionContent)
@@ -1287,7 +1287,7 @@ public class WasmLifter {
 
         for export in moduleExports {
             // Append the name as a vector
-            temp += Leb128.unsignedEncode(export.name.count)
+            temp += Leb128.unsignedEncode(export.name.utf8.count)
             temp += export.name.data(using: .utf8)!
             // The imports come first in each index space, followed by the JS string builtins and
             // the imported string constants, which we don't export, and then the definitions.
