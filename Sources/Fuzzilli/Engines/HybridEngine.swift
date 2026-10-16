@@ -143,6 +143,7 @@ public class HybridEngine: FuzzEngine {
         let refinedProgram: Program
         if let result = fixupMutator.mutate(generatedProgram, for: fuzzer) {
             result.checkOrDie(onFailure: "Program after HybridEngine fixup is statically invalid")
+            result.contributors.formUnion(generatedProgram.contributors)
             refinedProgram = result
             percentageOfGuardedOperationsAfterCodeRefining.add(
                 computePercentageOfGuardedOperations(in: refinedProgram))

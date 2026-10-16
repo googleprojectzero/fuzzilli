@@ -99,6 +99,52 @@ struct EngineTests {
         }
     }
 
+    @Test
+    func testPostProcessorPreservesContributors() {
+        class RebuildingPostProcessor: FuzzingPostProcessor {
+            func process(_ program: Program, for fuzzer: Fuzzer) throws -> Program {
+                let b = fuzzer.makeBuilder(forMutating: program)
+                b.adopting {
+                    for instr in program.code {
+                        b.adopt(instr)
+                    }
+                }
+                b.loadString("post-processed")
+                return b.finalize()
+            }
+        }
+
+        let engine = MutationEngine(numConsecutiveMutations: 1)
+        engine.registerPostProcessor(RebuildingPostProcessor())
+        let q = DispatchQueue(label: "fuzzerQueue")
+        let fuzzer = makeMockFuzzer(engine: engine, queue: q)
+
+        fuzzer.sync {
+            var generatedPrograms = [Program]()
+            fuzzer.registerEventListener(for: fuzzer.events.ValidProgramFound) { program in
+                generatedPrograms.append(program)
+            }
+
+            let b = fuzzer.makeBuilder()
+            b.buildPrefix()
+            b.build(n: 5, by: .generating)
+            let seed = b.finalize()
+            #expect(!seed.contributors.isEmpty)
+            fuzzer.corpus.add(seed, ProgramAspects(outcome: .succeeded))
+
+            engine.fuzzOne()
+
+            #expect(generatedPrograms.count == 1)
+            let executedProgram = generatedPrograms[0]
+            #expect(!executedProgram.contributors.isEmpty)
+            #expect(
+                executedProgram.contributors.contains(where: { contributor in
+                    fuzzer.mutators.contains(where: { $0 === contributor })
+                }))
+            #expect(executedProgram.contributors.allSatisfy { $0.validSamples >= 1 })
+        }
+    }
+
     // Test that certain usages of "arguments" are rejected by the Dumpling
     // post processor.
     @Test

@@ -45,6 +45,9 @@ public class FuzzEngine: ComponentBase {
         } catch {
             fatalError("Unexpected error in post processor.")
         }
+        if program !== rawProgram {
+            program.contributors.formUnion(rawProgram.contributors)
+        }
 
         fuzzer.dispatchEvent(fuzzer.events.ProgramGenerated, data: program)
 
