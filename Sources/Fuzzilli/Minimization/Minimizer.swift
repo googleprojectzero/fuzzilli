@@ -40,10 +40,28 @@ public class Minimizer: ComponentBase {
         _ program: Program, withAspects aspects: ProgramAspects,
         parentExecTime: TimeInterval? = nil, block: @escaping (Program) -> Void
     ) {
+        withMinimizedCopy(
+            program, withAspects: aspects, parentExecTime: parentExecTime,
+            collectingCoverageOf: nil
+        ) {
+            minimizedProgram, _ in
+            block(minimizedProgram)
+        }
+    }
+
+    /// Like `withMinimizedCopy(_:withAspects:parentExecTime:block:)`. If `coverageEvaluator` is given, also passes the
+    /// coverage of the minimized code to the block, or nil if no reduction was committed.
+    func withMinimizedCopy(
+        _ program: Program, withAspects aspects: ProgramAspects,
+        parentExecTime: TimeInterval? = nil,
+        collectingCoverageOf coverageEvaluator: ProgramCoverageEvaluator?,
+        block: @escaping (Program, CoverageBitmap?) -> Void
+    ) {
         minimizationQueue.async {
-            let minimizedCode = self.internalMinimize(
+            let (minimizedCode, coverage) = self.internalMinimize(
                 program, withAspects: aspects, parentExecTime: parentExecTime,
-                performPostprocessing: true, runningSynchronously: false)
+                performPostprocessing: true, runningSynchronously: false,
+                coverageEvaluator: coverageEvaluator)
             self.fuzzer.async {
                 let minimizedProgram: Program
                 if self.fuzzer.config.enableInspection {
@@ -54,7 +72,7 @@ public class Minimizer: ComponentBase {
                     minimizedProgram = Program(
                         code: minimizedCode, contributors: program.contributors)
                 }
-                block(minimizedProgram)
+                block(minimizedProgram, coverage)
             }
         }
     }
@@ -64,7 +82,7 @@ public class Minimizer: ComponentBase {
         _ program: Program, withAspects aspects: ProgramAspects,
         performPostprocessing: Bool = true
     ) -> Program {
-        let minimizedCode = internalMinimize(
+        let (minimizedCode, _) = internalMinimize(
             program, withAspects: aspects,
             performPostprocessing: performPostprocessing, runningSynchronously: true)
         return Program(code: minimizedCode, parent: program, contributors: program.contributors)
@@ -73,11 +91,13 @@ public class Minimizer: ComponentBase {
     private func internalMinimize(
         _ program: Program, withAspects aspects: ProgramAspects,
         parentExecTime: TimeInterval? = nil, performPostprocessing: Bool,
-        runningSynchronously: Bool
-    ) -> Code {
+        runningSynchronously: Bool,
+        coverageEvaluator: ProgramCoverageEvaluator? = nil
+    ) -> (Code, CoverageBitmap?) {
         let helper = MinimizationHelper(
             for: aspects, forCode: program.code, of: fuzzer,
-            runningOnFuzzerQueue: runningSynchronously, parentExecTime: parentExecTime)
+            runningOnFuzzerQueue: runningSynchronously, parentExecTime: parentExecTime,
+            collectCoverageOf: coverageEvaluator)
 
         var iterations = 0
         // Once every reducer has run on the current code without changing it, another pass would only
@@ -135,6 +155,7 @@ public class Minimizer: ComponentBase {
         helper.code.assertIsStaticallyValid()
         assert(!helper.code.contains(where: { $0.isNop }))
 
-        return helper.finalize()
+        let coverage = helper.lastCommittedCoverage
+        return (helper.finalize(), coverage)
     }
 }

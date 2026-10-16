@@ -47,9 +47,16 @@ class MinimizationHelper {
     /// How many times we execute the modified code by default to determine whether its (relevant) behaviour has changed due to a modification.
     private static let defaultNumExecutions = 1
 
+    /// If set, the coverage of every committed reduction is copied to `lastCommittedCoverage`, so the final
+    /// code does not need to run again.
+    private let coverageEvaluator: ProgramCoverageEvaluator?
+    /// Coverage of the last committed reduction. Nil if no reduction was committed (yet).
+    private(set) var lastCommittedCoverage: CoverageBitmap? = nil
+
     init(
         for aspects: ProgramAspects, forCode code: Code, of fuzzer: Fuzzer,
-        runningOnFuzzerQueue: Bool, parentExecTime: TimeInterval? = nil
+        runningOnFuzzerQueue: Bool, parentExecTime: TimeInterval? = nil,
+        collectCoverageOf coverageEvaluator: ProgramCoverageEvaluator? = nil
     ) {
         assert(code.filter({ $0.isNop }).count == 0)
         self.aspects = aspects
@@ -57,6 +64,7 @@ class MinimizationHelper {
         self.runningOnFuzzerQueue = runningOnFuzzerQueue
         self.code = code
         self.parentExecTime = parentExecTime
+        self.coverageEvaluator = coverageEvaluator
     }
 
     func performOnFuzzerQueue(_ task: () -> Void) {
@@ -126,6 +134,15 @@ class MinimizationHelper {
                 lastCandidateTimedOut = execution.outcome == .timedOut
                 stillHasAspects = fuzzer.evaluator.hasAspects(execution, aspects)
                 guard stillHasAspects else { break }
+            }
+            // Copy coverage on the fuzzer queue before another execution overwrites it.
+            // `context.shmem->edges` still holds the coverage of the last execution above until the
+            // next `PreExecute` clears it, and `makeCoverageBitmap()` only allocates a buffer.
+            if stillHasAspects, let evaluator = coverageEvaluator {
+                if lastCommittedCoverage == nil {
+                    lastCommittedCoverage = evaluator.makeCoverageBitmap()
+                }
+                evaluator.copyCurrentCoverage(into: lastCommittedCoverage!)
             }
         }
 

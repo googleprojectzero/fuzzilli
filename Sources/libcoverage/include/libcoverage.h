@@ -91,6 +91,11 @@ void cov_clear_bitmap(struct cov_context*);
 
 int cov_get_edge_counts(struct cov_context* context, struct edge_counts* edges);
 int cov_get_current_edges(struct cov_context* context, struct edge_set* edges);
+int cov_get_edges_in_bitmap(struct cov_context* context, const uint8_t* bits, const uint8_t* mask, struct edge_set* edges);
+// Copies the coverage bitmap of the last execution (bitmap_size bytes) to dst.
+void cov_copy_current_bitmap(struct cov_context* context, uint8_t* dst);
+// Intersects dst (bitmap_size bytes) with the coverage bitmap of the last execution.
+void cov_intersect_current_bitmap(struct cov_context* context, uint8_t* dst);
 void cov_clear_edge_data(struct cov_context* context, uint32_t index);
 void cov_reset_state(struct cov_context* context);
 

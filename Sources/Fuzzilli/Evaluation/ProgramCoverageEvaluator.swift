@@ -44,7 +44,7 @@ public class CovEdgeSet: ProgramAspects {
     ///
     /// This adds additional copies, but is only hit when new programs are added to the corpus
     /// It is used by corpus schedulers such as MarkovCorpus that require knowledge of which samples trigger which edges
-    public func getEdges() -> [UInt32] {
+    public func getNewEdges() -> [UInt32] {
         return Array(UnsafeBufferPointer(start: edges, count: Int(count)))
     }
 
@@ -69,9 +69,29 @@ public class CovEdgeSet: ProgramAspects {
     }
 }
 
+/// A copy of (or an intersection of several) coverage bitmaps of past executions.
+public final class CoverageBitmap {
+    fileprivate let bits: UnsafeMutablePointer<UInt8>
+    fileprivate let size: Int
+
+    fileprivate init(size: Int) {
+        self.size = size
+        // At least 8 bytes, so that `bits` is always valid, and 8-byte aligned, because libcoverage
+        // reads it as 64-bit words.
+        let byteCount = Swift.max(size, 8)
+        self.bits = UnsafeMutableRawPointer.allocate(byteCount: byteCount, alignment: 8)
+            .initializeMemory(as: UInt8.self, repeating: 0, count: byteCount)
+    }
+
+    deinit {
+        bits.deallocate()
+    }
+}
+
 public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     /// Counts the number of instances. Used to create unique shared memory regions in every instance.
     private static var instances = 0
+    private static let instancesLock = NSLock()
 
     /// Whether per-edge hit counts should be tracked as well.
     /// These are expensive to compute, so this need to be enabled explicitly.
@@ -100,8 +120,11 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
 
         super.init(name: "Coverage")
 
-        let id = ProgramCoverageEvaluator.instances
-        ProgramCoverageEvaluator.instances += 1
+        // Locked because tests create evaluators in parallel.
+        let id = Self.instancesLock.withLock {
+            defer { Self.instances += 1 }
+            return Self.instances
+        }
 
         context.id = Int32(id)
         guard libcoverage.cov_initialize(&context) == 0 else {
@@ -123,6 +146,11 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
 
     deinit {
         shutdown()
+    }
+
+    /// The coverage shared memory, for tests that write coverage like an instrumented engine.
+    var sharedMemory: UnsafeMutableRawPointer {
+        return UnsafeMutableRawPointer(context.shmem)
     }
 
     public func enableEdgeTracking() {
@@ -150,11 +178,16 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         return edgeArray
     }
 
-    public func getCurrentEdges() -> [UInt32] {
+    public func getAllEdges() -> [UInt32] {
         var edgeSet = libcoverage.edge_set()
         let result = libcoverage.cov_get_current_edges(&context, &edgeSet)
+        return takeEdges(edgeSet, result: result)
+    }
+
+    /// Frees `edgeSet` and returns its edges, without those reset `maxResetCount` times.
+    private func takeEdges(_ edgeSet: libcoverage.edge_set, result: Int32) -> [UInt32] {
         if result == -1 {
-            logger.error("Error retrieving current edges")
+            logger.error("Error retrieving edges")
             return []
         }
         defer { free(edgeSet.edge_indices) }
@@ -163,6 +196,62 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
             return Array(buffer)
         }
         return buffer.filter { (resetCounts[$0] ?? 0) < maxResetCount }
+    }
+
+    /// Returns a new, empty bitmap that can hold the coverage of one execution.
+    public func makeCoverageBitmap() -> CoverageBitmap {
+        return CoverageBitmap(size: Int(context.bitmap_size))
+    }
+
+    /// Copies the coverage bitmap of the last execution into `bitmap`.
+    public func copyCurrentCoverage(into bitmap: CoverageBitmap) {
+        precondition(bitmap.size == Int(context.bitmap_size))
+        libcoverage.cov_copy_current_bitmap(&context, bitmap.bits)
+    }
+
+    /// Returns the edges set in `bitmap` (and in `mask`, if given). Like `getAllEdges`, skips edges
+    /// reset `maxResetCount` times.
+    public func getAllDeterministicEdges(
+        in bitmap: CoverageBitmap, intersectedWith mask: CoverageBitmap? = nil
+    )
+        -> [UInt32]
+    {
+        precondition(bitmap.size == Int(context.bitmap_size))
+        precondition(mask == nil || mask!.size == Int(context.bitmap_size))
+        var edgeSet = libcoverage.edge_set()
+        let result = libcoverage.cov_get_edges_in_bitmap(
+            &context, bitmap.bits, mask?.bits, &edgeSet)
+        return takeEdges(edgeSet, result: result)
+    }
+
+    /// Intersection of the coverage of all `computeAspectIntersection` runs since
+    /// `startCollectingDeterministicCoverage`. Nil when not collecting.
+    private var deterministicCoverage: CoverageBitmap? = nil
+    private var deterministicCoverageRuns = 0
+
+    /// Starts intersecting the full coverage of every `computeAspectIntersection` run.
+    public func startCollectingDeterministicCoverage() {
+        deterministicCoverage = makeCoverageBitmap()
+        deterministicCoverageRuns = 0
+    }
+
+    /// Stops collecting and returns the intersection, or nil if there was no run.
+    public func stopCollectingDeterministicCoverage() -> CoverageBitmap? {
+        let result = deterministicCoverageRuns > 0 ? deterministicCoverage : nil
+        deterministicCoverage = nil
+        deterministicCoverageRuns = 0
+        return result
+    }
+
+    /// Reads `context.shmem->edges`, which `PreExecute` clears before every execution.
+    private func collectDeterministicCoverage() {
+        guard let bitmap = deterministicCoverage else { return }
+        if deterministicCoverageRuns == 0 {
+            libcoverage.cov_copy_current_bitmap(&context, bitmap.bits)
+        } else {
+            libcoverage.cov_intersect_current_bitmap(&context, bitmap.bits)
+        }
+        deterministicCoverageRuns += 1
     }
 
     override func initialize() {
@@ -249,6 +338,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         // Execute the program and collect coverage information.
         let execution = fuzzer.execute(program, purpose: .checkForDeterministicBehavior)
         guard execution.outcome == .succeeded else { return nil }
+        collectDeterministicCoverage()
         guard let secondCovEdgeSet = evaluate(execution) as? CovEdgeSet else { return nil }
 
         let firstEdgeSet = Set(

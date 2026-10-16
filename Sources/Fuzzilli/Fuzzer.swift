@@ -842,6 +842,12 @@ public class Fuzzer {
         var pattern = ""
         slowestDeterminismRun = exectime
 
+        // If the corpus is a RarityCorpus, intersect the full coverage of the determinism check runs below
+        // and, later, of the minimized program.
+        let rarityCorpus = corpus as? RarityCorpus
+        rarityCorpus?.startCollectingFullCoverage()
+        defer { _ = rarityCorpus?.stopCollectingFullCoverage() }
+
         // Determine which (if any) aspects of the program are triggered deterministically.
         // For that, the sample is executed a few more times and the intersection of the interesting aspects of each execution is computed.
         // Once that intersection is stable, the remaining aspects are considered to be triggered deterministically.
@@ -876,6 +882,8 @@ public class Fuzzer {
             aspects = intersection
         } while !didConverge || attempt < minAttempts
 
+        let deterministicCoverage = rarityCorpus?.stopCollectingFullCoverage()
+
         if isTrackingConvergencePatterns {
             currentCorpusImportJob.recordConvergencePattern(pattern)
         }
@@ -886,7 +894,8 @@ public class Fuzzer {
 
         // Determine whether the program needs to be minimized, then, using this helper function, dispatch the appropriate
         // event and insert the sample into the corpus.
-        func finishProcessing(_ program: Program) {
+        // `minimizedCoverage` is the coverage of the minimized program, or nil if minimization did not change it.
+        func finishProcessing(_ program: Program, minimizedCoverage: CoverageBitmap? = nil) {
             if config.enableInspection {
                 if origin == .local {
                     program.comments.add("Program is interesting due to \(aspects)", at: .footer)
@@ -900,7 +909,13 @@ public class Fuzzer {
 
             // If we're running in static corpus mode, we only add programs to our corpus during corpus import.
             if !config.staticCorpus || origin.isFromCorpusImport() {
-                corpus.add(program, aspects)
+                if let rarityCorpus, let deterministicCoverage {
+                    rarityCorpus.add(
+                        program, deterministicCoverage: deterministicCoverage,
+                        minimizedCoverage: minimizedCoverage)
+                } else {
+                    corpus.add(program, aspects)
+                }
             }
         }
 
@@ -911,10 +926,11 @@ public class Fuzzer {
             // will only start once the curent sample has been fully processed and inserted into the corpus.
             fuzzGroup.enter()
             minimizer.withMinimizedCopy(
-                program, withAspects: aspects, parentExecTime: slowestDeterminismRun
-            ) { minimizedProgram in
+                program, withAspects: aspects, parentExecTime: slowestDeterminismRun,
+                collectingCoverageOf: rarityCorpus?.covEvaluator
+            ) { minimizedProgram, minimizedCoverage in
                 self.fuzzGroup.leave()
-                finishProcessing(minimizedProgram)
+                finishProcessing(minimizedProgram, minimizedCoverage: minimizedCoverage)
             }
         }
         return true

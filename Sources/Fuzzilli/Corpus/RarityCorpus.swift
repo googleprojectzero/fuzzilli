@@ -20,7 +20,7 @@ import Foundation
 /// have been seen, decaying with age (mutation rounds and splicing uses) and program size.
 /// Seeds whose energy dropped to 0.0 (all their tracked rare edges saturated) are evicted.
 public class RarityCorpus: ComponentBase, Collection, Corpus {
-    private weak var covEvaluator: ProgramCoverageEvaluator?
+    let covEvaluator: ProgramCoverageEvaluator
 
     private final class Seed: Comparable {
         let program: Program
@@ -85,7 +85,7 @@ public class RarityCorpus: ComponentBase, Collection, Corpus {
         rareEdgeLimit: Int = 8,
         splicingPoolSize: Int = 3,
         splicingAgeIncrement: Double = 0.2,
-        covEvaluator: ProgramCoverageEvaluator? = nil
+        covEvaluator: ProgramCoverageEvaluator
     ) {
         if rareEdgeLimit < 1 || rareEdgeLimit >= Int(UInt8.max) {
             fatalError("rareEdgeLimit must be between 1 and \(UInt8.max - 1)")
@@ -117,15 +117,12 @@ public class RarityCorpus: ComponentBase, Collection, Corpus {
     }
 
     override func initialize() {
-        if covEvaluator == nil {
-            covEvaluator = fuzzer.evaluator as? ProgramCoverageEvaluator
-        }
         // When a program crashes, the few last edges leading to the crash need to be recorded
         // this lowers (we measured it) the amount of duplicates of the same bug in a session
         fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { ev in
-            if ev.behaviour == .deterministic, let evaluator = self.covEvaluator {
+            if ev.behaviour == .deterministic {
                 // TODO(rherouart): b/564888741 - use/extend normal convergence algorithm to only get deterministic edges
-                self.recordCrashEdges(evaluator.getCurrentEdges())
+                self.recordCrashEdges(self.covEvaluator.getAllEdges())
             }
         }
     }
@@ -142,33 +139,38 @@ public class RarityCorpus: ComponentBase, Collection, Corpus {
         return true
     }
 
-    public func add(_ program: Program, _ aspects: ProgramAspects) {
-        addInternal(program, aspects: aspects)
+    public func startCollectingFullCoverage() {
+        covEvaluator.startCollectingDeterministicCoverage()
     }
 
-    public func addInternal(_ program: Program, aspects: ProgramAspects? = nil) {
+    public func stopCollectingFullCoverage() -> CoverageBitmap? {
+        return covEvaluator.stopCollectingDeterministicCoverage()
+    }
+
+    public func add(_ program: Program, _ aspects: ProgramAspects) {
+        logger.fatal(
+            "RarityCorpus requires deterministic coverage; use add(_:deterministicCoverage:minimizedCoverage:)"
+        )
+    }
+
+    public func add(
+        _ program: Program,
+        deterministicCoverage: CoverageBitmap, minimizedCoverage: CoverageBitmap? = nil
+    ) {
+        let allDeterministicEdges = covEvaluator.getAllDeterministicEdges(
+            in: deterministicCoverage, intersectedWith: minimizedCoverage)
+        addInternal(program, allDeterministicEdges: allDeterministicEdges)
+    }
+
+    /// `allDeterministicEdges` are all edges the program hit in every execution of the
+    /// determinism check and in the last minimization run.
+    public func addInternal(
+        _ program: Program,
+        allDeterministicEdges: [UInt32] = []
+    ) {
         guard program.size > 0 else { return }
 
-        // `aspects` only contains the newly discovered virgin edges that caused this program
-        // to be added to the corpus (already verified as deterministic by Fuzzer.processMaybeInteresting).
-        // To also track rare edges shared with earlier seeds, we execute the program twice and
-        // union `newEdges` with the intersection of all edges hit in both runs.
-        let newEdges = Set((aspects as? CovEdgeSet)?.getEdges() ?? [])
-        var deterministicEdges = newEdges
-        if let evaluator = covEvaluator {
-            // TODO(rherouart): b/564888741 - use/extend normal convergence algorithm to only get deterministic edges
-            let exec1 = fuzzer.execute(program, purpose: .other)
-            if exec1.outcome == .succeeded {
-                let edges1 = Set(evaluator.getCurrentEdges())
-                let exec2 = fuzzer.execute(program, purpose: .other)
-                if exec2.outcome == .succeeded {
-                    let edges2 = Set(evaluator.getCurrentEdges())
-                    deterministicEdges.formUnion(edges1.intersection(edges2))
-                }
-            }
-        }
-
-        recordEdgesSeen(deterministicEdges)
+        recordEdgesSeen(allDeterministicEdges)
 
         // Keep only edges that are still considered rare (seen fewer than `rareEdgeLimit` times)
         // so that thousands of common edges (an empty program hits ~25K edges deterministically)
@@ -176,7 +178,7 @@ public class RarityCorpus: ComponentBase, Collection, Corpus {
         // After `recordEdgesSeen`, only the newly discovered edges of this program have
         // `edgeSeenCount == 1` (previously seen edges have count >= 2). Sorting by `edgeSeenCount`
         // ascending therefore automatically prioritizes new edges first when capping at `maxTrackedEdgesPerSeed`.
-        let candidateRareEdges = deterministicEdges.filter {
+        let candidateRareEdges = allDeterministicEdges.filter {
             edgeSeenCount[Int($0)] < rareEdgeLimit
         }
         let trackedEdges = Array(

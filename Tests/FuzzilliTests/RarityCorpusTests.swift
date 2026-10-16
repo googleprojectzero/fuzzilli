@@ -18,21 +18,6 @@ import Testing
 @testable import Fuzzilli
 
 @Suite struct RarityCorpusTests {
-    private func makeCovEdgeSet(_ edges: [UInt32]) -> CovEdgeSet {
-        guard !edges.isEmpty else {
-            return CovEdgeSet(edges: nil, numEdges: 0)
-        }
-        let byteCount = MemoryLayout<UInt32>.stride * edges.count
-        guard let rawPtr = malloc(byteCount) else {
-            fatalError("Failed to allocate memory for CovEdgeSet")
-        }
-        let ptr = rawPtr.bindMemory(to: UInt32.self, capacity: edges.count)
-        for (i, e) in edges.enumerated() {
-            ptr[i] = e
-        }
-        return CovEdgeSet(edges: ptr, numEdges: UInt32(edges.count))
-    }
-
     private func makeProgram(for fuzzer: Fuzzer, intVal: Int64) -> Program {
         let b = fuzzer.makeBuilder()
         b.loadInt(intVal)
@@ -47,15 +32,34 @@ import Testing
         return b.finalize()
     }
 
+    private func makeCorpus(
+        ageExponent: Double = 1.5,
+        sizeExponent: Double = 2.0,
+        rarityExponent: Double = 3.0,
+        rareEdgeLimit: Int = 8,
+        splicingPoolSize: Int = 3,
+        splicingAgeIncrement: Double = 0.2
+    ) -> RarityCorpus {
+        return RarityCorpus(
+            ageExponent: ageExponent,
+            sizeExponent: sizeExponent,
+            rarityExponent: rarityExponent,
+            rareEdgeLimit: rareEdgeLimit,
+            splicingPoolSize: splicingPoolSize,
+            splicingAgeIncrement: splicingAgeIncrement,
+            covEvaluator: ProgramCoverageEvaluator(runner: MockScriptRunner())
+        )
+    }
+
     @Test func testDynamicSharedBitRarityCalculation() {
-        let corpus = RarityCorpus()
+        let corpus = makeCorpus()
         let fuzzer = makeMockFuzzer(corpus: corpus)
 
         fuzzer.sync {
             // Seed A covers edges [10, 20]. Since it's the only seed covering them:
             // Rarity(A) = 1/1 + 1/1 = 2.0
             let progA = makeProgram(for: fuzzer, intVal: 1)
-            fuzzer.corpus.add(progA, makeCovEdgeSet([10, 20]))
+            corpus.addInternal(progA, allDeterministicEdges: [10, 20])
 
             #expect(corpus.size == 1)
             #expect(corpus.seedRarity(at: 0) == 2.0)
@@ -66,7 +70,7 @@ import Testing
             // Rarity(A) drops to 0.125 + 0.125 = 0.25
             // Rarity(B) is 0.125 + 0.125 + 1.0 = 1.25
             let progB = makeProgram(for: fuzzer, intVal: 2)
-            fuzzer.corpus.add(progB, makeCovEdgeSet([10, 20, 30]))
+            corpus.addInternal(progB, allDeterministicEdges: [10, 20, 30])
 
             #expect(corpus.size == 2)
             #expect(corpus.edgeCount(for: 10) == 2)
@@ -79,12 +83,12 @@ import Testing
     }
 
     @Test func testMutationAgeDecay() {
-        let corpus = RarityCorpus(ageExponent: 2.0)
+        let corpus = makeCorpus(ageExponent: 2.0)
         let fuzzer = makeMockFuzzer(corpus: corpus)
 
         fuzzer.sync {
             let prog = makeProgram(for: fuzzer, intVal: 42)
-            fuzzer.corpus.add(prog, makeCovEdgeSet([100, 200]))
+            corpus.addInternal(prog, allDeterministicEdges: [100, 200])
 
             // Initial energy: Rarity 2.0 / (age 0 + 1)^2 = 2.0
             #expect(corpus.seedEnergy(at: 0) == 2.0)
@@ -103,17 +107,17 @@ import Testing
     }
 
     @Test func testProgramSizeLogPenaltyInEnergy() {
-        let corpus = RarityCorpus()
+        let corpus = makeCorpus()
         let fuzzer = makeMockFuzzer(corpus: corpus)
 
         fuzzer.sync {
             // Seed 0: 1 instruction (1 + ln(1)^2 = 1.0), unique edge [10] -> Rarity = 1.0, Energy = 1.0
             let prog1 = makeProgramOfSize(for: fuzzer, count: 1)
-            fuzzer.corpus.add(prog1, makeCovEdgeSet([10]))
+            corpus.addInternal(prog1, allDeterministicEdges: [10])
 
             // Seed 1: 10 instructions (1 + ln(10)^2), unique edge [20] -> Rarity = 1.0
             let prog10 = makeProgramOfSize(for: fuzzer, count: 10)
-            fuzzer.corpus.add(prog10, makeCovEdgeSet([20]))
+            corpus.addInternal(prog10, allDeterministicEdges: [20])
 
             #expect(prog1.size == 1)
             #expect(prog10.size == 10)
@@ -128,14 +132,15 @@ import Testing
     }
 
     @Test func testSaturatedEdgesDropToStrictZeroRarity() {
-        let corpus = RarityCorpus()
+        let corpus = makeCorpus()
         let fuzzer = makeMockFuzzer(corpus: corpus)
 
         fuzzer.sync {
             // Add 8 seeds covering edge [500]. Once 8 seeds have executed edge 500,
             // edgeSeenCount[500] reaches maxRareEdgeCount (8) and its rarity drops to strict 0.0!
             for i in 0..<8 {
-                fuzzer.corpus.add(makeProgram(for: fuzzer, intVal: Int64(i)), makeCovEdgeSet([500]))
+                corpus.addInternal(
+                    makeProgram(for: fuzzer, intVal: Int64(i)), allDeterministicEdges: [500])
                 if i < 7 {
                     #expect(corpus.seedRarity(at: 0) > 0.0)
                 }
@@ -153,7 +158,7 @@ import Testing
 
             // Add a 9th seed with unique edge [501] (rarity = 1.0).
             let rareProg = makeProgram(for: fuzzer, intVal: 999)
-            fuzzer.corpus.add(rareProg, makeCovEdgeSet([501]))
+            corpus.addInternal(rareProg, allDeterministicEdges: [501])
             #expect(corpus.seedRarity(at: 8) == 1.0)
 
             let picked = corpus.randomElementForMutating()
@@ -165,13 +170,13 @@ import Testing
     }
 
     @Test func testCrashEdgesImmediatelyDecreaseParentRarity() {
-        let corpus = RarityCorpus()
+        let corpus = makeCorpus()
         let fuzzer = makeMockFuzzer(corpus: corpus)
 
         fuzzer.sync {
             // Parent seed covers rare setup edge [777].
             let parent = makeProgram(for: fuzzer, intVal: 15)
-            fuzzer.corpus.add(parent, makeCovEdgeSet([777]))
+            corpus.addInternal(parent, allDeterministicEdges: [777])
 
             #expect(corpus.size == 1)
             #expect(corpus.seedRarity(at: 0) == 1.0)
@@ -194,49 +199,23 @@ import Testing
         }
     }
 
-    private final class StubCoverageEvaluator: ProgramCoverageEvaluator {
-        var queuedEdgeRuns: [[UInt32]] = []
-
-        override func initialize() {
-            // Skip cov_finish_initialization for unit testing with MockScriptRunner.
-        }
-
-        override func getCurrentEdges() -> [UInt32] {
-            if !queuedEdgeRuns.isEmpty {
-                return queuedEdgeRuns.removeFirst()
-            }
-            return []
-        }
-    }
-
-    @Test func testCovEvaluatorTwoRunIntersectionAndCapPreservesAspects() {
-        let runner = MockScriptRunner()
-        let covEvaluator = StubCoverageEvaluator(runner: runner)
-        defer { covEvaluator.shutdown() }
-        let corpus = RarityCorpus(covEvaluator: covEvaluator)
-        let fuzzer = makeMockFuzzer(runner: runner, evaluator: covEvaluator, corpus: corpus)
+    @Test func testDeterministicEdgesCapPreservesAspects() {
+        let corpus = makeCorpus()
+        let fuzzer = makeMockFuzzer(corpus: corpus)
 
         fuzzer.sync {
             let deterministicShared = Array(UInt32(1000)..<UInt32(1200))
-            covEvaluator.queuedEdgeRuns = [
-                deterministicShared,
-                deterministicShared,
-                deterministicShared + [99991],
-                deterministicShared + [99992],
-            ]
 
             let prog0 = makeProgram(for: fuzzer, intVal: 1)
-            fuzzer.corpus.add(prog0, makeCovEdgeSet(deterministicShared))
+            corpus.addInternal(prog0, allDeterministicEdges: deterministicShared)
 
             let prog = makeProgram(for: fuzzer, intVal: 7)
-            let aspects = makeCovEdgeSet([1, 2, 3, 4, 5])
-            fuzzer.corpus.add(prog, aspects)
+            let newEdges: [UInt32] = [1, 2, 3, 4, 5]
+            corpus.addInternal(prog, allDeterministicEdges: deterministicShared + newEdges)
 
             #expect(corpus.size == 2)
-            #expect(corpus.edgeCount(for: 99991) == 0)
-            #expect(corpus.edgeCount(for: 99992) == 0)
 
-            for aspectEdge: UInt32 in [1, 2, 3, 4, 5] {
+            for aspectEdge in newEdges {
                 #expect(corpus.edgeCount(for: aspectEdge) == 1)
             }
             // 5 new edges (rarity 1.0 each) + 123 shared edges (count = 2, rarity 0.125 each) = 5.0 + 15.375 = 20.375
@@ -244,13 +223,33 @@ import Testing
         }
     }
 
+    @Test func testProvidedDeterministicEdgesSkipExtraExecutions() {
+        let corpus = makeCorpus()
+        let fuzzer = makeMockFuzzer(corpus: corpus)
+
+        fuzzer.sync {
+            var executions = 0
+            fuzzer.registerEventListener(for: fuzzer.events.PreExecute) { _ in executions += 1 }
+
+            let prog = makeProgram(for: fuzzer, intVal: 7)
+            corpus.addInternal(prog, allDeterministicEdges: [1, 2, 3, 4])
+
+            #expect(corpus.size == 1)
+            #expect(executions == 0)
+            for edge: UInt32 in [1, 2, 3, 4] {
+                #expect(corpus.edgeCount(for: edge) == 1)
+            }
+            #expect(corpus.seedRarity(at: 0) == 4.0)
+        }
+    }
+
     @Test func testSplicingAgesDonorFractionally() {
-        let corpus = RarityCorpus(ageExponent: 2.0, splicingAgeIncrement: 0.2)
+        let corpus = makeCorpus(ageExponent: 2.0, splicingAgeIncrement: 0.2)
         let fuzzer = makeMockFuzzer(corpus: corpus)
 
         fuzzer.sync {
             let prog = makeProgram(for: fuzzer, intVal: 42)
-            fuzzer.corpus.add(prog, makeCovEdgeSet([100, 200]))
+            corpus.addInternal(prog, allDeterministicEdges: [100, 200])
 
             // Each selection as a splicing donor adds 0.2 to the age.
             #expect(corpus.randomElementForSplicing() == prog)
@@ -269,17 +268,17 @@ import Testing
     }
 
     @Test func testFastStateSynchronizationPreservesRarityAndCounts() throws {
-        let parentCorpus = RarityCorpus(splicingAgeIncrement: 0.2)
+        let parentCorpus = makeCorpus(splicingAgeIncrement: 0.2)
         let parentFuzzer = makeMockFuzzer(corpus: parentCorpus)
 
-        let childCorpus = RarityCorpus()
+        let childCorpus = makeCorpus()
         let childFuzzer = makeMockFuzzer(corpus: childCorpus)
 
         try parentFuzzer.sync {
             let progA = makeProgram(for: parentFuzzer, intVal: 1)
             let progB = makeProgram(for: parentFuzzer, intVal: 2)
-            parentFuzzer.corpus.add(progA, makeCovEdgeSet([10, 20]))
-            parentFuzzer.corpus.add(progB, makeCovEdgeSet([20, 30]))
+            parentCorpus.addInternal(progA, allDeterministicEdges: [10, 20])
+            parentCorpus.addInternal(progB, allDeterministicEdges: [20, 30])
             let _ = parentCorpus.randomElementForMutating()
             parentCorpus.recordCrashEdges([30])
             // progA now has the highest energy, so it is the splicing donor and gets a fractional age.
@@ -306,17 +305,17 @@ import Testing
     }
 
     @Test func testHeapEntryTieBreakingByAgeSizeAndIndex() {
-        let corpus = RarityCorpus(ageExponent: 2.0)
+        let corpus = makeCorpus(ageExponent: 2.0)
         let fuzzer = makeMockFuzzer(corpus: corpus)
 
         fuzzer.sync {
             // Seed 0 covers 4 unique edges [10, 11, 12, 13] (size 1, rarity = 4.0, initial energy = 4.0)
             let prog0 = makeProgram(for: fuzzer, intVal: 100)
-            fuzzer.corpus.add(prog0, makeCovEdgeSet([10, 11, 12, 13]))
+            corpus.addInternal(prog0, allDeterministicEdges: [10, 11, 12, 13])
 
             // Seed 1 covers 1 unique edge [20] (size 1, rarity = 1.0, initial energy = 1.0)
             let prog1 = makeProgram(for: fuzzer, intVal: 200)
-            fuzzer.corpus.add(prog1, makeCovEdgeSet([20]))
+            corpus.addInternal(prog1, allDeterministicEdges: [20])
 
             // 1st mutation picks Seed 0 (energy = 4.0), ageing it to age = 1 (new energy = 4.0 / (1 + 1)^2 = 1.0)
             let firstPick = corpus.randomElementForMutating()
@@ -333,13 +332,14 @@ import Testing
     }
 
     @Test func testSplicingSelectsNonZeroEnergySeedsAndFavorsHighEnergy() {
-        let corpus = RarityCorpus(splicingPoolSize: 20)
+        let corpus = makeCorpus(splicingPoolSize: 20)
         let fuzzer = makeMockFuzzer(corpus: corpus)
 
         fuzzer.sync {
             // Saturate edge [0] across 100 seeds (>= rareEdgeLimit = 8) so all 100 have 0.0 energy.
             for i in 0..<100 {
-                fuzzer.corpus.add(makeProgram(for: fuzzer, intVal: Int64(i)), makeCovEdgeSet([0]))
+                corpus.addInternal(
+                    makeProgram(for: fuzzer, intVal: Int64(i)), allDeterministicEdges: [0])
             }
 
             // Add 20 non-zero-energy seeds with energies 1.0, 2.0, ..., 20.0.
@@ -349,7 +349,7 @@ import Testing
                 let edges = Array(nextUniqueEdge..<(nextUniqueEdge + UInt32(k)))
                 nextUniqueEdge += UInt32(k)
                 let prog = makeProgram(for: fuzzer, intVal: Int64(1000 + k))
-                fuzzer.corpus.add(prog, makeCovEdgeSet(edges))
+                corpus.addInternal(prog, allDeterministicEdges: edges)
                 if k == 20 {
                     maxProg = prog
                 }

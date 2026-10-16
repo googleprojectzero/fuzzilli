@@ -246,11 +246,24 @@ int cov_get_edge_counts(struct cov_context* context, struct edge_counts* edges)
 /// Returns 0 on success, or -1 if the context, shared memory, or output pointer is NULL.
 int cov_get_current_edges(struct cov_context* context, struct edge_set* edges)
 {
-    if (!context || !context->shmem || !edges) {
+    if (!context || !context->shmem) {
         return -1;
     }
-    uint64_t* current = (uint64_t*)context->shmem->edges;
-    uint64_t* end = (uint64_t*)(context->shmem->edges + context->bitmap_size);
+    return cov_get_edges_in_bitmap(context, context->shmem->edges, NULL, edges);
+}
+
+/// Extracts the indices of all edges set in `bits` (and also set in `mask`, if `mask` is not NULL).
+/// Both bitmaps must be `context->bitmap_size` bytes long.
+/// The caller is responsible for freeing `edges->edge_indices`.
+/// Returns 0 on success, or -1 on invalid arguments or allocation failure.
+int cov_get_edges_in_bitmap(struct cov_context* context, const uint8_t* bits, const uint8_t* mask, struct edge_set* edges)
+{
+    if (!context || !bits || !edges) {
+        return -1;
+    }
+    const uint64_t* current = (const uint64_t*)bits;
+    const uint64_t* end = (const uint64_t*)(bits + context->bitmap_size);
+    const uint64_t* mask_current = (const uint64_t*)mask;
     edges->count = 0;
     edges->edge_indices = NULL;
 
@@ -258,8 +271,12 @@ int cov_get_current_edges(struct cov_context* context, struct edge_set* edges)
 
     while (current < end) {
         uint64_t val = *current;
+        if (mask_current) {
+            val &= *mask_current;
+            mask_current++;
+        }
         if (val != 0) {
-            uint32_t base_index = (uint32_t)((uintptr_t)current - (uintptr_t)context->shmem->edges) * 8;
+            uint32_t base_index = (uint32_t)((uintptr_t)current - (uintptr_t)bits) * 8;
             while (val != 0) {
                 uint32_t bit = (uint32_t)__builtin_ctzll(val);
                 uint32_t edge_idx = base_index + bit;
@@ -290,6 +307,20 @@ int cov_get_current_edges(struct cov_context* context, struct edge_set* edges)
         current++;
     }
     return 0;
+}
+
+void cov_copy_current_bitmap(struct cov_context* context, uint8_t* dst)
+{
+    memcpy(dst, context->shmem->edges, context->bitmap_size);
+}
+
+void cov_intersect_current_bitmap(struct cov_context* context, uint8_t* dst)
+{
+    const uint64_t* current = (const uint64_t*)context->shmem->edges;
+    uint64_t* out = (uint64_t*)dst;
+    for (uint32_t i = 0; i < context->bitmap_size / 8; i++) {
+        out[i] &= current[i];
+    }
 }
 
 void cov_clear_edge_data(struct cov_context* context, uint32_t index)

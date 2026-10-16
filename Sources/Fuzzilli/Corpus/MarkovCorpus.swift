@@ -70,7 +70,7 @@ public class MarkovCorpus: ComponentBase, Corpus {
         prepareProgramForInclusion(program, index: self.size)
 
         allIncludedPrograms.append(program)
-        for e in origCov.getEdges() {
+        for e in origCov.getNewEdges() {
             edgeMap[e] = program
         }
     }
