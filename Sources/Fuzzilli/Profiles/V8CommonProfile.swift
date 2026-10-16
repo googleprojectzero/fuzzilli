@@ -229,11 +229,6 @@ public let ForceOsrGenerator = CodeGenerator(
         },
     ])
 
-public let TurbofanVerifyTypeGenerator = CodeGenerator("TurbofanVerifyTypeGenerator", inputs: .one)
-{ b, v in
-    b.eval("%VerifyType(%@)", with: [v])
-}
-
 // Marks a function so that V8's optimizing compilers will never optimize it.
 public let NeverOptimizeFunctionGenerator = CodeGenerator(
     "NeverOptimizeFunctionGenerator", inputs: .required(.function())
