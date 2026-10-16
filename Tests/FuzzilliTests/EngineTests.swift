@@ -56,6 +56,49 @@ struct EngineTests {
         }
     }
 
+    @Test
+    func testPostProcessorOnMultiEngine() throws {
+        class MockPostProcessor: FuzzingPostProcessor {
+            var callCount = 0
+            func process(_ program: Program, for fuzzer: Fuzzer) -> Program {
+                callCount += 1
+                return program
+            }
+        }
+        let mockPostProcessor = MockPostProcessor()
+
+        let mutationEngine = MutationEngine(numConsecutiveMutations: 1)
+        let hybridEngine = HybridEngine(numConsecutiveMutations: 1)
+        let engines = WeightedList<FuzzEngine>([
+            (mutationEngine, 1),
+            (hybridEngine, 1),
+        ])
+        let multiEngine = MultiEngine(
+            engines: engines, initialActive: mutationEngine, iterationsPerEngine: 100)
+        multiEngine.registerPostProcessor(mockPostProcessor)
+
+        #expect(multiEngine.postProcessor != nil)
+        #expect(mutationEngine.postProcessor != nil)
+        #expect(hybridEngine.postProcessor != nil)
+
+        let q = DispatchQueue(label: "fuzzerQueue")
+        let fuzzer = makeMockFuzzer(engine: multiEngine, queue: q)
+        fuzzer.sync {
+            #expect(fuzzer.corpusGenerationEngine.postProcessor != nil)
+
+            let b = fuzzer.makeBuilder()
+            b.loadInt(42)
+            fuzzer.corpus.add(b.finalize(), ProgramAspects(outcome: .succeeded))
+
+            #expect(mockPostProcessor.callCount == 0)
+            multiEngine.fuzzOne()
+            #expect(mockPostProcessor.callCount == 1)
+
+            hybridEngine.fuzzOne()
+            #expect(mockPostProcessor.callCount == 3)
+        }
+    }
+
     // Test that certain usages of "arguments" are rejected by the Dumpling
     // post processor.
     @Test

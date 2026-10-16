@@ -46,6 +46,13 @@ public class MultiEngine: FuzzEngine {
         }
     }
 
+    public override func registerPostProcessor(_ postProcessor: FuzzingPostProcessor) {
+        super.registerPostProcessor(postProcessor)
+        for engine in engines {
+            engine.registerPostProcessor(postProcessor)
+        }
+    }
+
     public override func fuzzOne() {
         activeEngine.fuzzOne()
         currentIteration += 1
