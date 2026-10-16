@@ -103,7 +103,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     CodeGenerator(
         "WasmGlobalGenerator",
         inContext: .single(.javascript),
-        produces: [.object(ofGroup: "WasmGlobal")], useInPrefix: true
+        produces: [ObjectGroup.jsWasmGlobal.instanceType], useInPrefix: true
     ) { b in
         b.createWasmGlobal(
             value: b.randomWasmGlobal(forContext: .javascript), isMutable: probability(0.5))
@@ -112,7 +112,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     CodeGenerator(
         "WasmMemoryGenerator",
         inContext: .single(.javascript),
-        produces: [.object(ofGroup: "WasmMemory")], useInPrefix: true
+        produces: [ObjectGroup.jsWasmMemory.instanceType], useInPrefix: true
     ) { b in
         let minPages = Int.random(in: 0..<10)
         let isShared = probability(0.5)
@@ -126,7 +126,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     CodeGenerator(
         "WasmTableGenerator",
         inContext: .single(.javascript),
-        produces: [.object(ofGroup: "WasmTable")], useInPrefix: true
+        produces: [ObjectGroup.wasmTable.instanceType], useInPrefix: true
     ) { b in
         let elementType: ILType = chooseUniform(from: [
             .wasmFuncRef(), .wasmExternRef(), .wasmI31Ref(), .wasmAnyRef(), .wasmEqRef(),

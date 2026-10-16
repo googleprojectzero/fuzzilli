@@ -3148,6 +3148,30 @@ struct ProgramBuilderTests {
         }
     }
 
+    @Test func testFindOrGenerateTypeWasmJsObjects() {
+        let fuzzer = makeMockFuzzer()
+
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            b.loadInt(42)
+
+            #expect(b.randomVariable(ofTypeOrSubtype: ObjectGroup.jsWasmGlobal.instanceType) == nil)
+            let wasmGlobal = b.findOrGenerateType(ObjectGroup.jsWasmGlobal.instanceType)
+            #expect(b.type(of: wasmGlobal).Is(ObjectGroup.jsWasmGlobal.instanceType))
+            #expect(b.type(of: wasmGlobal).isWasmGlobalType)
+
+            #expect(b.randomVariable(ofTypeOrSubtype: ObjectGroup.jsWasmMemory.instanceType) == nil)
+            let wasmMemory = b.findOrGenerateType(ObjectGroup.jsWasmMemory.instanceType)
+            #expect(b.type(of: wasmMemory).Is(ObjectGroup.jsWasmMemory.instanceType))
+            #expect(b.type(of: wasmMemory).isWasmMemoryType)
+
+            #expect(b.randomVariable(ofTypeOrSubtype: ObjectGroup.wasmTable.instanceType) == nil)
+            let wasmTable = b.findOrGenerateType(ObjectGroup.wasmTable.instanceType)
+            #expect(b.type(of: wasmTable).Is(ObjectGroup.wasmTable.instanceType))
+            #expect(b.type(of: wasmTable).isWasmTableType)
+        }
+    }
+
     @Test func testCodeGeneratorWithPreferredInputDependencyResolution() {
         let fuzzer = makeMockFuzzer()
         fuzzer.sync {
