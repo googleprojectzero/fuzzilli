@@ -29,7 +29,7 @@ struct InstructionSimplifier: Reducer {
         for group in helper.code.findAllBlockGroups() {
             guard let begin = helper.code[group.head].op as? BeginAnyFunction else { continue }
             assert(helper.code[group.tail].op is EndAnyFunction)
-            if begin is BeginPlainFunction { continue }
+            if begin is BeginPlainFunction || begin is BeginWorkerFunction { continue }
 
             let functionName = (begin as? BeginAnyNamedFunction)?.functionName ?? nil
             let newBegin = Instruction(

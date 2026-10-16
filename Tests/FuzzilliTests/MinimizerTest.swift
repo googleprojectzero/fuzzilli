@@ -209,18 +209,31 @@ struct MinimizerTests {
             evaluator.keepReturnsInFunctions = true
 
             // Build input program to be minimized.
-            evaluator.nextInstructionIsImportant(in: b)
-            b.buildWorkerFunction(with: .parameters(n: 0)) { args in
+            // Do not mark BeginWorkerFunction itself as important (which would pin its operation
+            // identity in EvaluatorForMinimizationTests); instead keep it alive through a call so
+            // InstructionSimplifier and InliningReducer can attempt to transform or inline it.
+            let f = b.buildWorkerFunction(with: .parameters(n: 0)) { args in
+                b.loadString("unused")
                 evaluator.nextInstructionIsImportant(in: b)
                 let v = b.loadInt(42)
                 b.doReturn(v)
             }
+            evaluator.nextInstructionIsImportant(in: b)
+            b.callFunction(f)
 
             let originalProgram = b.finalize()
 
-            // Perform minimization and check that the two programs are equal.
+            let expectedF = b.buildWorkerFunction(with: .parameters(n: 0)) { args in
+                let v = b.loadInt(42)
+                b.doReturn(v)
+            }
+            b.callFunction(expectedF)
+            let expectedProgram = b.finalize()
+
+            // Perform minimization and check that BeginWorkerFunction is preserved (neither
+            // simplified to BeginPlainFunction nor inlined).
             let actualProgram = minimize(originalProgram, with: fuzzer)
-            #expect(originalProgram == actualProgram)
+            #expect(expectedProgram == actualProgram)
         }
     }
 
@@ -239,6 +252,7 @@ struct MinimizerTests {
             let baz = b.buildAsyncFunction(with: .parameters(n: 0), named: "baz") { args in }
             let bla = b.buildAsyncGeneratorFunction(with: .parameters(n: 0), named: "bla") { args in
             }
+            let qux = b.buildWorkerFunction(with: .parameters(n: 0), named: "qux") { args in }
             evaluator.nextInstructionIsImportant(in: b)
             b.callFunction(foo)
             evaluator.nextInstructionIsImportant(in: b)
@@ -247,19 +261,24 @@ struct MinimizerTests {
             b.callFunction(baz)
             evaluator.nextInstructionIsImportant(in: b)
             b.callFunction(bla)
+            evaluator.nextInstructionIsImportant(in: b)
+            b.callFunction(qux)
 
             let originalProgram = b.finalize()
 
             // Build expected output program.
-            // See test above for why the different function types also become plain functions.
+            // See test above for why the different function types (except worker functions)
+            // also become plain functions.
             let f1 = b.buildPlainFunction(with: .parameters(n: 0)) { args in }
             let f2 = b.buildPlainFunction(with: .parameters(n: 0)) { args in }
             let f3 = b.buildPlainFunction(with: .parameters(n: 0)) { args in }
             let f4 = b.buildPlainFunction(with: .parameters(n: 0)) { args in }
+            let f5 = b.buildWorkerFunction(with: .parameters(n: 0)) { args in }
             b.callFunction(f1)
             b.callFunction(f2)
             b.callFunction(f3)
             b.callFunction(f4)
+            b.callFunction(f5)
 
             let expectedProgram = b.finalize()
 
