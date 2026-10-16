@@ -241,6 +241,13 @@ public let NeverOptimizeFunctionGenerator = CodeGenerator(
     b.eval("%NeverOptimizeFunction(%@)", with: [f])
 }
 
+// Marks a function so that V8's optimizing compilers will not eagerly inline it.
+public let DisableEagerInliningGenerator = CodeGenerator(
+    "DisableEagerInliningGenerator", inputs: .required(.function())
+) { b, f in
+    b.eval("%DisableEagerInlining(%@)", with: [f])
+}
+
 public let WorkerGenerator = CodeGenerator("WorkerGenerator") { b in
     let workerSignature = Signature(withParameterCount: Int.random(in: 0...3))
 
@@ -1263,38 +1270,66 @@ public let ProtoAssignSeqOptFuzzer = ProgramTemplate("ProtoAssignSeqOptFuzzer") 
     b.build(n: 10)
 }
 
-public let TurbofanTierUpNonInlinedCallFuzzer =
-    ProgramTemplate("TurbofanTierUpNonInlinedCallFuzzer") { b in
+private func turbofanTierUpCallFuzzer(
+    _ name: String, prepareCallee: @escaping (ProgramBuilder, Variable) -> Void
+)
+    -> ProgramTemplate
+{
+    return ProgramTemplate(name) { b in
         b.buildPrefix()
         b.build(n: 50)
-        // Find a function (or generate a new one) to be marked as "never optimize".
-        let unoptimizedFunction =
+        // Find a function (or generate a new one) to be called from the optimized function.
+        let callee =
             b.randomVariable(ofType: .function())
             ?? b.buildPlainFunction(with: .parameters(n: 2)) { _ in
                 b.build(n: 20)
                 b.doReturn(b.randomJsVariable())
             }
-        b.eval("%NeverOptimizeFunction(%@)", with: [unoptimizedFunction])
-        // Create another function that calls the unoptimized function. This will always create a real
-        // call instead of inlining it.
-        let optimizedFunction = b.buildPlainFunction(with: .parameters(n: 0)) { _ in
-            // This should be able to generate interesting things including calls to the unoptimized
+        prepareCallee(b, callee)
+        // Create another function that calls the target function.
+        let optimizedFunction = b.buildPlainFunction(with: .parameters(n: 2)) { _ in
+            // This should be able to generate interesting things including calls to the target
             // function in all kinds of control flow.
             b.build(n: 30)
-            // Also explicitly emit a call to the unoptimized function.
+            // Also explicitly emit a call to the target function.
             b.callFunction(
-                unoptimizedFunction, withArgs: b.randomArguments(forCalling: unoptimizedFunction))
+                callee, withArgs: b.randomArguments(forCalling: callee))
             b.build(n: 10)
         }
         // Collect feedback and optimize the function.
         // Guard all calls. The path where they throw is still interesting as there are
         // optimizations that affect the unwinding logic which we'd like to get coverage for as well.
         b.eval("%PrepareFunctionForOptimization(%@)", with: [optimizedFunction])
-        b.callFunction(optimizedFunction, guard: true)
-        b.callFunction(optimizedFunction, guard: true)
+        b.callFunction(
+            optimizedFunction, withArgs: b.randomArguments(forCalling: optimizedFunction),
+            guard: true)
+        b.callFunction(
+            optimizedFunction, withArgs: b.randomArguments(forCalling: optimizedFunction),
+            guard: true)
         b.eval("%OptimizeFunctionOnNextCall(%@)", with: [optimizedFunction])
-        b.callFunction(optimizedFunction, guard: true)
+        b.callFunction(
+            optimizedFunction, withArgs: b.randomArguments(forCalling: optimizedFunction),
+            guard: true)
     }
+
+}
+
+// Mark the callee as "never optimize" so that calling it from the optimized function always
+// creates a real call instead of inlining it.
+public let TurbofanTierUpNonInlinedCallFuzzer = turbofanTierUpCallFuzzer(
+    "TurbofanTierUpNonInlinedCallFuzzer"
+) { b, unoptimizedFunction in
+    b.eval("%NeverOptimizeFunction(%@)", with: [unoptimizedFunction])
+}
+
+// Mark the callee as "don't eager inline" and gather feedback on it so that calling it from the
+// optimized function either creates a non-inlined call or a non-eagerly inlined call.
+public let TurbofanTierUpNotEagerInlinedCallFuzzer = turbofanTierUpCallFuzzer(
+    "TurbofanTierUpNotEagerInlinedCallFuzzer"
+) { b, notEagerlyInlinedFunction in
+    b.eval("%PrepareFunctionForOptimization(%@)", with: [notEagerlyInlinedFunction])
+    b.eval("%DisableEagerInlining(%@)", with: [notEagerlyInlinedFunction])
+}
 
 // Configure V8 invocation arguments. `forSandbox` is used by the V8SandboxProfile. As the sandbox
 // fuzzer does not crash on regular assertions, most validation flags do not make sense in that

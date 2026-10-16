@@ -128,6 +128,7 @@ let v8DumplingProfile = Profile(
         (ForceOsrGenerator, 5),
         (TurbofanVerifyTypeGenerator, 10),
         (NeverOptimizeFunctionGenerator, 5),
+        (DisableEagerInliningGenerator, 5),
 
         (V8GcGenerator, 10),
         (V8DispatchTableGCIntervalGenerator, 5),

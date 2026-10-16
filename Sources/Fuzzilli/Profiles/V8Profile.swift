@@ -62,6 +62,7 @@ public let v8Profile = Profile(
         (ForceOsrGenerator, 5),
         (TurbofanVerifyTypeGenerator, 10),
         (NeverOptimizeFunctionGenerator, 5),
+        (DisableEagerInliningGenerator, 5),
 
         (WorkerGenerator, 10),
         (V8GcGenerator, 5),
@@ -97,6 +98,7 @@ public let v8Profile = Profile(
         (WasmTurbofanFuzzer, 1),
         (ProtoAssignSeqOptFuzzer, 1),
         (TurbofanTierUpNonInlinedCallFuzzer, 1),
+        (TurbofanTierUpNotEagerInlinedCallFuzzer, 1),
     ]),
 
     disabledCodeGenerators: [],
