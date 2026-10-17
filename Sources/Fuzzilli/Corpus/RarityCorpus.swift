@@ -148,9 +148,7 @@ public class RarityCorpus: ComponentBase, Collection, Corpus {
     }
 
     public func add(_ program: Program, _ aspects: ProgramAspects) {
-        logger.fatal(
-            "RarityCorpus requires deterministic coverage; use add(_:deterministicCoverage:minimizedCoverage:)"
-        )
+        addInternal(program, allDeterministicEdges: covEvaluator.getAllEdges())
     }
 
     public func add(

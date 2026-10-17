@@ -403,11 +403,9 @@ guard let corpusImportMode = corpusImportModeByName[corpusImportModeName] else {
     configError("Invalid corpus import mode \(corpusImportModeName)")
 }
 
-if corpusImportPath != nil && corpusImportMode == .full
-    && (corpusName == "markov" || corpusName == "rarity")
-{
-    // The markov and rarity corpora won't have edges associated with some samples, which will then never be mutated.
-    configError("\(corpusName) corpus is not compatible with the .full corpus import mode")
+if corpusImportPath != nil && corpusImportMode == .full && corpusName == "markov" {
+    // The markov corpus probably won't have edges associated with some samples, which will then never be mutated.
+    configError("Markov corpus is not compatible with the .full corpus import mode")
 }
 
 guard !resume || corpusImportPath == nil else {
