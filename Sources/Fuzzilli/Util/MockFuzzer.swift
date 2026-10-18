@@ -105,7 +105,8 @@ public func makeMockFuzzer(
     environment maybeEnvironment: JavaScriptEnvironment? = nil,
     evaluator maybeEvaluator: ProgramEvaluator? = nil, corpus maybeCorpus: Corpus? = nil,
     codeGenerators additionalCodeGenerators: [(CodeGenerator, Int)] = [],
-    queue: DispatchQueue? = nil, overwriteGenerators: WeightedList<CodeGenerator>? = nil
+    queue: DispatchQueue? = nil, overwriteGenerators: WeightedList<CodeGenerator>? = nil,
+    initialize: Bool = true
 ) -> Fuzzer {
     // The configuration of this fuzzer.
     let configuration =
@@ -193,7 +194,9 @@ public func makeMockFuzzer(
             print("[\(ev.label)] \(ev.message)")
         }
 
-        fuzzer.initialize()
+        if initialize {
+            fuzzer.initialize()
+        }
     }
 
     return fuzzer

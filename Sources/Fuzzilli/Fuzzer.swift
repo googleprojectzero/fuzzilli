@@ -765,6 +765,19 @@ public class Fuzzer {
     public func scheduleCorpusImport(
         _ corpus: [Program], importMode: CorpusImportMode
     ) {
+        // In the default corpus import mode (where we only keep interesting samples), the order
+        // of imported programs matters as earlier samples may cause later samples to not be
+        // added to the corpus (because they no longer add any new coverage). To not create an
+        // artifical bias due to the order/filenames, we shuffle the corpus here.
+        let shuffledCorpus = corpus.shuffled()
+        let importQueue = ThreadSafeImportQueue(shuffledCorpus)
+        scheduleCorpusImport(importQueue, importMode: importMode)
+    }
+
+    /// Schedules an existing import queue of programs to be imported into this fuzzer.
+    public func scheduleCorpusImport(
+        _ importQueue: ThreadSafeImportQueue, importMode: CorpusImportMode
+    ) {
         dispatchPrecondition(condition: .onQueue(queue))
         // Currently we only allow corpus import when the fuzzer is still uninitialized.
         // If necessary, this can be changed, but we'd need to be able to correctly handle the .waiting -> .corpusImport state transition.
@@ -775,19 +788,19 @@ public class Fuzzer {
             return logger.error("Cannot currently schedule multiple corpus imports")
         }
 
-        guard !corpus.isEmpty else {
+        guard !importQueue.isEmpty else {
             // Nothing to do.
             return
         }
 
-        // In the default corpus import mode (where we only keep interesting samples), the order
-        // of imported programs matters as earlier samples may cause later samples to not be
-        // added to the corpus (because they no longer add any new coverage). To not create an
-        // artifical bias due to the order/filenames, we shuffle the corpus here.
-        let shuffledCorpus = corpus.shuffled()
-
-        currentCorpusImportJob = CorpusImportJob(corpus: shuffledCorpus, mode: importMode)
+        currentCorpusImportJob = CorpusImportJob(queue: importQueue, mode: importMode)
         changeState(to: .corpusImport)
+    }
+
+    /// Returns the currently active import queue if a corpus import is in progress.
+    public var currentImportQueue: ThreadSafeImportQueue? {
+        guard state == .corpusImport else { return nil }
+        return currentCorpusImportJob.queue
     }
 
     /// Computes and returns the corpus import progress as percentage.
@@ -1089,8 +1102,12 @@ public class Fuzzer {
             }
 
         case .corpusImport:
-            assert(!currentCorpusImportJob.isFinished)
-            let program = currentCorpusImportJob.nextProgram()
+            guard let program = currentCorpusImportJob.nextProgram() else {
+                printFinalCorpusImportStats()
+                dispatchEvent(events.CorpusImportComplete)
+                changeState(to: .fuzzing)
+                break
+            }
 
             if currentCorpusImportJob.numberOfProgramsProcessedSoFar % 500 == 0 {
                 logger.info(
@@ -1101,82 +1118,6 @@ public class Fuzzer {
             let (result, fixupAttempts) = importProgramWithFixup(
                 program, origin: .corpusImport(mode: currentCorpusImportJob.importMode))
             currentCorpusImportJob.notifyImportOutcome(result, fixupAttempts: fixupAttempts)
-
-            if currentCorpusImportJob.isFinished {
-                logger.info("Corpus import finished:")
-                logger.info(
-                    "\(currentCorpusImportJob.numberOfProgramsThatExecutedSuccessfullyDuringImport)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs executed successfully"
-                )
-                logger.info(
-                    "    Of which \(currentCorpusImportJob.numberOfProgramsThatWereImport) programs were added to the corpus"
-                )
-                logger.info(
-                    "    Of which \(currentCorpusImportJob.numberOfProgramsNotImportedBecauseUninteresting) programs were not interesting (e.g. lack of coverage)"
-                )
-                logger.info(
-                    "\(currentCorpusImportJob.numberOfProgramsThatNeededFixup)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs needed fixup during import"
-                )
-                logger.info(
-                    "    \(currentCorpusImportJob.numberOfProgramsThatNeededOneFixupAttempt) succeeded after attempt 1"
-                )
-                logger.info(
-                    "    \(currentCorpusImportJob.numberOfProgramsThatNeededTwoFixupAttempts) succeeded after attempt 2"
-                )
-                logger.info(
-                    "    \(currentCorpusImportJob.numberOfProgramsThatNeededThreeFixupAttempts) succeeded after attempt 3"
-                )
-                logger.info(
-                    "\(currentCorpusImportJob.numberOfProgramsThatFailedDuringImport)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs failed to execute (even after fixup) and weren't imported"
-                )
-                logger.info(
-                    "\(currentCorpusImportJob.numberOfProgramsThatTimedOutDuringImport)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs timed out and weren't imported"
-                )
-                if !config.isWasmEnabled {
-                    logger.info(
-                        "\(currentCorpusImportJob.numberOfProgramsRequiringWasmButDisabled)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs require Wasm which is disabled"
-                    )
-                    if currentCorpusImportJob.numberOfProgramsRequiringWasmButDisabled > 0
-                        && config.storagePath != nil
-                    {
-                        logger.info(
-                            "  These programs have been stored at \(config.storagePath!)/\(Configuration.excludedWasmDirectory)/"
-                        )
-                    }
-                }
-                if !config.generateBundle {
-                    logger.info(
-                        "\(currentCorpusImportJob.numberOfProgramsRequiringBundlesButDisabled)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs require bundles which are disabled"
-                    )
-                }
-
-                let successRatio =
-                    Double(
-                        currentCorpusImportJob.numberOfProgramsThatExecutedSuccessfullyDuringImport)
-                    / Double(currentCorpusImportJob.totalNumberOfProgramsToImport)
-                let failureRatio = 1.0 - successRatio
-                if failureRatio >= 0.25 {
-                    let reason =
-                        config.isWasmEnabled
-                        ? "execute successfully"
-                        : "execute successfully or require currently disabled wasm or bundles"
-                    logger.warning(
-                        "\(String(format: "%.2f", failureRatio * 100))% of imported programs failed to \(reason) and therefore couldn't be imported."
-                    )
-                }
-
-                if config.trackConvergencePatterns {
-                    logger.info("Convergence patterns report:")
-                    let sortedPatterns = currentCorpusImportJob.convergencePatterns.sorted {
-                        $0.value > $1.value
-                    }
-                    for (pattern, count) in sortedPatterns {
-                        logger.info("    \(pattern): \(count)")
-                    }
-                }
-
-                dispatchEvent(events.CorpusImportComplete)
-                changeState(to: .fuzzing)
-            }
 
         case .corpusGeneration:
             // We should never perform corpus generation if we're using a static corpus.
@@ -1209,6 +1150,79 @@ public class Fuzzer {
         // Perform the next iteration as soon as all tasks related to the current iteration are finished.
         fuzzGroup.notify(queue: queue) {
             self.fuzzOne()
+        }
+    }
+
+    private func printFinalCorpusImportStats() {
+        logger.info("Corpus import finished:")
+        logger.info(
+            "\(currentCorpusImportJob.numberOfProgramsThatExecutedSuccessfullyDuringImport)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs executed successfully"
+        )
+        logger.info(
+            "    Of which \(currentCorpusImportJob.numberOfProgramsThatWereImport) programs were added to the corpus"
+        )
+        logger.info(
+            "    Of which \(currentCorpusImportJob.numberOfProgramsNotImportedBecauseUninteresting) programs were not interesting (e.g. lack of coverage)"
+        )
+        logger.info(
+            "\(currentCorpusImportJob.numberOfProgramsThatNeededFixup)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs needed fixup during import"
+        )
+        logger.info(
+            "    \(currentCorpusImportJob.numberOfProgramsThatNeededOneFixupAttempt) succeeded after attempt 1"
+        )
+        logger.info(
+            "    \(currentCorpusImportJob.numberOfProgramsThatNeededTwoFixupAttempts) succeeded after attempt 2"
+        )
+        logger.info(
+            "    \(currentCorpusImportJob.numberOfProgramsThatNeededThreeFixupAttempts) succeeded after attempt 3"
+        )
+        logger.info(
+            "\(currentCorpusImportJob.numberOfProgramsThatFailedDuringImport)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs failed to execute (even after fixup) and weren't imported"
+        )
+        logger.info(
+            "\(currentCorpusImportJob.numberOfProgramsThatTimedOutDuringImport)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs timed out and weren't imported"
+        )
+        if !config.isWasmEnabled {
+            logger.info(
+                "\(currentCorpusImportJob.numberOfProgramsRequiringWasmButDisabled)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs require Wasm which is disabled"
+            )
+            if currentCorpusImportJob.numberOfProgramsRequiringWasmButDisabled > 0
+                && config.storagePath != nil
+            {
+                logger.info(
+                    "  These programs have been stored at \(config.storagePath!)/\(Configuration.excludedWasmDirectory)/"
+                )
+            }
+        }
+        if !config.generateBundle {
+            logger.info(
+                "\(currentCorpusImportJob.numberOfProgramsRequiringBundlesButDisabled)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs require bundles which are disabled"
+            )
+        }
+
+        let successRatio =
+            Double(
+                currentCorpusImportJob.numberOfProgramsThatExecutedSuccessfullyDuringImport)
+            / Double(currentCorpusImportJob.totalNumberOfProgramsToImport)
+        let failureRatio = 1.0 - successRatio
+        if failureRatio >= 0.25 {
+            let reason =
+                config.isWasmEnabled
+                ? "execute successfully"
+                : "execute successfully or require currently disabled wasm or bundles"
+            logger.warning(
+                "\(String(format: "%.2f", failureRatio * 100))% of imported programs failed to \(reason) and therefore couldn't be imported."
+            )
+        }
+
+        if config.trackConvergencePatterns {
+            logger.info("Convergence patterns report:")
+            let sortedPatterns = currentCorpusImportJob.convergencePatterns.sorted {
+                $0.value > $1.value
+            }
+            for (pattern, count) in sortedPatterns {
+                logger.info("    \(pattern): \(count)")
+            }
         }
     }
 
@@ -1444,7 +1458,7 @@ public class Fuzzer {
 
     /// A pending corpus import job together with some statistics.
     struct CorpusImportJob {
-        private var corpusToImport: [Program]
+        private let importQueue: ThreadSafeImportQueue
 
         let importMode: CorpusImportMode
         let totalNumberOfProgramsToImport: Int
@@ -1473,19 +1487,29 @@ public class Fuzzer {
         }
 
         init(corpus: [Program], mode: CorpusImportMode) {
-            self.corpusToImport = corpus.reversed()  // Programs are taken from the end.
+            self.init(queue: ThreadSafeImportQueue(corpus), mode: mode)
+        }
+
+        init(queue: ThreadSafeImportQueue, mode: CorpusImportMode) {
+            self.importQueue = queue
             self.importMode = mode
-            self.totalNumberOfProgramsToImport = corpus.count
+            self.totalNumberOfProgramsToImport = queue.initialCount
         }
 
         var isFinished: Bool {
-            return corpusToImport.isEmpty
+            return importQueue.isEmpty
         }
 
-        mutating func nextProgram() -> Program {
-            assert(!isFinished)
+        var queue: ThreadSafeImportQueue {
+            return importQueue
+        }
+
+        mutating func nextProgram() -> Program? {
+            guard let program = importQueue.next() else {
+                return nil
+            }
             numberOfProgramsProcessedSoFar += 1
-            return corpusToImport.removeLast()
+            return program
         }
 
         mutating func recordConvergencePattern(_ pattern: String) {
@@ -1530,9 +1554,7 @@ public class Fuzzer {
         }
 
         func progress() -> Double {
-            let numberOfProgramsToImport = Double(totalNumberOfProgramsToImport)
-            let numberOfProgramsAlreadyProcessed = Double(numberOfProgramsProcessedSoFar)
-            return numberOfProgramsAlreadyProcessed / numberOfProgramsToImport
+            return importQueue.progress
         }
     }
 }

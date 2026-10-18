@@ -102,11 +102,11 @@ Since Fuzzilli uses GCD and sequential `DispatchQueue`s per fuzzer instance, we 
 public class ThreadSafeImportQueue {
     private let queue = DispatchQueue(label: "fuzzilli.import-queue")
     private var programs: [Program]
+    public let initialCount: Int
 
     public init(_ programs: [Program]) {
-        // Reverse array on initialization so we can pop from the end in O(1) time,
-        // mirroring Fuzzilli's CorpusImportJob implementation.
-        self.programs = programs.reversed()
+        self.programs = programs
+        self.initialCount = programs.count
     }
 
     public func next() -> Program? {
@@ -333,7 +333,7 @@ The feature is split into 6 incremental, easy-to-review Changelists (CLs):
   - Implement the thread-safe `ThreadSafeImportQueue` class.
   - **Production Safety (Refactoring Only):** Integrate the queue into `Fuzzer.swift` and `CorpusImportJob`.
   - **Flag Protection:** Ensure that if parallel import is disabled (default), the sequential import behaves exactly as it did before. The queue can either be bypassed completely or act as a single-threaded queue with identical sequencing and zero performance overhead.
-  - **Side-by-Side Testing:** Add comprehensive unit tests in `ThreadSafeImportQueueTests.swift` to verify concurrent dequeueing safety, progress reporting correctness, depletion events, and sequential fallback behaviors.
+  - **Side-by-Side Testing:** Add comprehensive unit tests in `ThreadSafeImportQueueTests.swift` to verify concurrent dequeueing safety, FIFO ordering, progress reporting correctness, empty queue handling, and integration with `CorpusImportJob` and `Fuzzer`.
 
 ### CL 2: Coordinated Parallel Import Flow & State Transitions
 - **Files:** `Sources/Fuzzilli/Fuzzer.swift`, `Sources/Fuzzilli/Modules/Sync.swift`, `Sources/Fuzzilli/Modules/ThreadSync.swift`, `Sources/FuzzilliCli/main.swift`, `Sources/FuzzilliCli/TerminalUI.swift`, `Sources/Fuzzilli/Protobuf/fuzzilli.proto`, `Tests/FuzzilliTests/ParallelImportStateTests.swift` (New file)
@@ -379,4 +379,5 @@ The feature is split into 6 incremental, easy-to-review Changelists (CLs):
   - Expose CLI arguments (e.g., `--parallelImport`, `--randomEdgeReset`).
   - **Flag Protection:** Keep all flags **off by default** so standard production runs remain 100% unaffected.
   - **Side-by-Side Testing:** Write extensive end-to-end integration tests spawning actual worker threads and performing the complete parallel import and merging flow on realistic program sets. Confirm that the default mode functions exactly as before with delayed workers.
+  - **Optional Depletion Tracking Tests:** Optionally test explicit queue depletion hooks/callbacks or coordinator tracking if required beyond the standard `nil` dequeue termination check.
   - Perform verification runs on separate, isolated machines to check performance without impacting the live production environment.
