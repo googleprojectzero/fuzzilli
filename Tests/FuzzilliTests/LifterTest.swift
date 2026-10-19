@@ -6271,4 +6271,40 @@ struct LifterTests {
             #expect(actual == expected)
         }
     }
+
+    @Test func testCreateWasmGlobalFloatSpecialValuesLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            b.createWasmGlobal(value: .wasmf32(.nan), isMutable: true)
+            b.createWasmGlobal(value: .wasmf32(-.nan), isMutable: false)
+            b.createWasmGlobal(value: .wasmf32(.infinity), isMutable: true)
+            b.createWasmGlobal(value: .wasmf32(-.infinity), isMutable: false)
+            b.createWasmGlobal(value: .wasmf32(-0.0), isMutable: true)
+            b.createWasmGlobal(value: .wasmf64(.nan), isMutable: false)
+            b.createWasmGlobal(value: .wasmf64(-.nan), isMutable: true)
+            b.createWasmGlobal(value: .wasmf64(.infinity), isMutable: false)
+            b.createWasmGlobal(value: .wasmf64(-.infinity), isMutable: true)
+            b.createWasmGlobal(value: .wasmf64(-0.0), isMutable: false)
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                let v0 = new WebAssembly.Global({ value: "f32", mutable: true }, NaN);
+                let v1 = new WebAssembly.Global({ value: "f32", mutable: false }, NaN);
+                let v2 = new WebAssembly.Global({ value: "f32", mutable: true }, Infinity);
+                let v3 = new WebAssembly.Global({ value: "f32", mutable: false }, -Infinity);
+                let v4 = new WebAssembly.Global({ value: "f32", mutable: true }, -0.0);
+                let v5 = new WebAssembly.Global({ value: "f64", mutable: false }, NaN);
+                let v6 = new WebAssembly.Global({ value: "f64", mutable: true }, NaN);
+                let v7 = new WebAssembly.Global({ value: "f64", mutable: false }, Infinity);
+                let v8 = new WebAssembly.Global({ value: "f64", mutable: true }, -Infinity);
+                let v9 = new WebAssembly.Global({ value: "f64", mutable: false }, -0.0);
+
+                """
+            #expect(actual == expected)
+        }
+    }
 }

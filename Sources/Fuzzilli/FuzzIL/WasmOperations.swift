@@ -935,15 +935,27 @@ public enum WasmGlobal {
 
     // Returns a JS string representing the initial value.
     func valueToString() -> String {
+        func floatToString<T: BinaryFloatingPoint & LosslessStringConvertible>(_ val: T) -> String {
+            if val.isNaN {
+                return "NaN"
+            } else if val.isEqual(to: -T.infinity) {
+                return "-Infinity"
+            } else if val.isEqual(to: T.infinity) {
+                return "Infinity"
+            } else {
+                return String(val)
+            }
+        }
+
         switch self {
         case .wasmi64(let val):
             return "\(val)n"
         case .wasmi32(let val):
             return "\(val)"
         case .wasmf32(let val):
-            return "\(val)"
+            return floatToString(val)
         case .wasmf64(let val):
-            return "\(val)"
+            return floatToString(val)
         case .externref:
             return ""
         case .exnref,
