@@ -116,11 +116,14 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     ) { b in
         let minPages = Int.random(in: 0..<10)
         let isShared = probability(0.5)
+        let isMemory64 = probability(0.5)
         var maxPages: Int? = nil
         if isShared || probability(0.5) {
-            maxPages = Int.random(in: minPages...WasmConstants.specMaxWasmMem32Pages)
+            maxPages = Int.random(
+                in: minPages...WasmConstants.specMaxWasmMemPages(isMemory64: isMemory64))
         }
-        b.createWasmMemory(minPages: minPages, maxPages: maxPages, isShared: isShared)
+        b.createWasmMemory(
+            minPages: minPages, maxPages: maxPages, isShared: isShared, isMemory64: isMemory64)
     },
 
     CodeGenerator(
@@ -736,10 +739,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             maxPages = nil
         } else {
             maxPages = Int.random(
-                in:
-                    minPages...(isMemory64
-                    ? WasmConstants.specMaxWasmMem64Pages
-                    : WasmConstants.specMaxWasmMem32Pages))
+                in: minPages...WasmConstants.specMaxWasmMemPages(isMemory64: isMemory64))
         }
         module.addMemory(
             minPages: minPages, maxPages: maxPages, isShared: isShared, isMemory64: isMemory64)

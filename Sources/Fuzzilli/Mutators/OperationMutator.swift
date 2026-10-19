@@ -374,10 +374,7 @@ public class OperationMutator: BaseInstructionMutator {
             let isShared = op.memType.isShared
             let isMemory64 = op.memType.isMemory64
             let newMinPages = Int.random(in: 0..<10)
-            let maxPagesLimit =
-                isMemory64
-                ? WasmConstants.specMaxWasmMem64Pages
-                : WasmConstants.specMaxWasmMem32Pages
+            let maxPagesLimit = WasmConstants.specMaxWasmMemPages(isMemory64: isMemory64)
             let newMaxPages =
                 !isShared && probability(0.5)
                 ? nil : Int.random(in: newMinPages...maxPagesLimit)
@@ -513,10 +510,7 @@ public class OperationMutator: BaseInstructionMutator {
             let isShared = memType.isShared
             let isMemory64 = memType.isMemory64
             let newMinPages = Int.random(in: 0..<10)
-            let maxPagesLimit =
-                isMemory64
-                ? WasmConstants.specMaxWasmMem64Pages
-                : WasmConstants.specMaxWasmMem32Pages
+            let maxPagesLimit = WasmConstants.specMaxWasmMemPages(isMemory64: isMemory64)
             let newMaxPages =
                 !isShared && probability(0.5)
                 ? nil : Int.random(in: newMinPages...maxPagesLimit)

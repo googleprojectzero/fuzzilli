@@ -21,6 +21,10 @@ struct WasmConstants {
     // This constant limits the amount of *declared* memory. At runtime, memory can grow up to only a limit based on the architecture type.
     static let specMaxWasmMem32Pages: Int = 65536  // 4GB
     static let specMaxWasmMem64Pages: Int = 262144  // 16GB
+
+    static func specMaxWasmMemPages(isMemory64: Bool) -> Int {
+        return isMemory64 ? specMaxWasmMem64Pages : specMaxWasmMem32Pages
+    }
 }
 
 // Base class for all wasm operations.
