@@ -2245,23 +2245,7 @@ public class WasmLifter {
                 case .i64x2: 0xBC
                 default: fatalError("Shape \(op.shape) not supported for WasmSimd128IntegerUnOp")
                 }
-            var encoding =
-                Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(base + op.unOpKind.rawValue)
-            // For most of the instructions we have to add another 0x01 byte add the end of the encoding.
-            switch op.shape {
-            case .i8x16:
-                break
-            case .i16x8, .i32x4, .i64x2:
-                switch op.unOpKind {
-                case .extadd_pairwise_i8x16_s,
-                    .extadd_pairwise_i8x16_u:
-                    break
-                default:
-                    encoding += Leb128.unsignedEncode(0x01)
-                }
-            default: fatalError("Shape \(op.shape) not supported for WasmSimd128IntegerUnOp")
-            }
-            return encoding
+            return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(base + op.unOpKind.rawValue)
         case .wasmSimd128IntegerBinOp(let op):
             assert(
                 WasmSimd128IntegerBinOpKind.allCases.count == 26,
@@ -2274,13 +2258,8 @@ public class WasmLifter {
                 case .i64x2: 0xBC
                 default: fatalError("Shape \(op.shape) not supported for WasmSimd128IntegerBinOp")
                 }
-            var encoding =
-                Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(base + op.binOpKind.rawValue)
-            // Apart from .i8x16 shape, the encoding has another 0x01 byte at the end of the encoding.
-            if op.shape != .i8x16 {
-                encoding += Leb128.unsignedEncode(0x01)
-            }
-            return encoding
+            return Data([Prefix.Simd.rawValue])
+                + Leb128.unsignedEncode(base + op.binOpKind.rawValue)
         case .wasmSimd128IntegerTernaryOp(let op):
             assert(
                 WasmSimd128IntegerTernaryOpKind.allCases.count == 2,
@@ -2297,7 +2276,6 @@ public class WasmLifter {
                 }
             return Data([Prefix.Simd.rawValue])
                 + Leb128.unsignedEncode(base + op.ternaryOpKind.rawValue)
-                + Leb128.unsignedEncode(0x01)
         case .wasmSimd128FloatUnOp(let op):
             assert(
                 WasmSimd128FloatUnOpKind.allCases.count == 7,
@@ -2310,19 +2288,19 @@ public class WasmLifter {
                     case .floor: Leb128.unsignedEncode(0x68)
                     case .trunc: Leb128.unsignedEncode(0x69)
                     case .nearest: Leb128.unsignedEncode(0x6A)
-                    case .abs: Leb128.unsignedEncode(0xE0) + Leb128.unsignedEncode(0x01)
-                    case .neg: Leb128.unsignedEncode(0xE1) + Leb128.unsignedEncode(0x01)
-                    case .sqrt: Leb128.unsignedEncode(0xE3) + Leb128.unsignedEncode(0x01)
+                    case .abs: Leb128.unsignedEncode(0xE0)
+                    case .neg: Leb128.unsignedEncode(0xE1)
+                    case .sqrt: Leb128.unsignedEncode(0xE3)
                     }
                 case .f64x2:
                     switch op.unOpKind {
                     case .ceil: Leb128.unsignedEncode(0x74)
                     case .floor: Leb128.unsignedEncode(0x75)
                     case .trunc: Leb128.unsignedEncode(0x7A)
-                    case .nearest: Leb128.unsignedEncode(0x94) + Leb128.unsignedEncode(0x01)
-                    case .abs: Leb128.unsignedEncode(0xEC) + Leb128.unsignedEncode(0x01)
-                    case .neg: Leb128.unsignedEncode(0xED) + Leb128.unsignedEncode(0x01)
-                    case .sqrt: Leb128.unsignedEncode(0xEF) + Leb128.unsignedEncode(0x01)
+                    case .nearest: Leb128.unsignedEncode(0x94)
+                    case .abs: Leb128.unsignedEncode(0xEC)
+                    case .neg: Leb128.unsignedEncode(0xED)
+                    case .sqrt: Leb128.unsignedEncode(0xEF)
                     }
                 default: fatalError("Shape \(op.shape) not supported for WasmSimd128FloatUnOp")
                 }
@@ -2332,7 +2310,6 @@ public class WasmLifter {
                 WasmSimd128FloatBinOpKind.allCases.count == 10,
                 "New WasmSimd128FloatBinOpKind added: check if the encoding is still correct!")
             return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(op.getOpcode())
-                + Leb128.unsignedEncode(0x01)
         case .wasmSimd128FloatTernaryOp(let op):
             assert(
                 WasmSimd128FloatTernaryOpKind.allCases.count == 2,
@@ -2345,7 +2322,6 @@ public class WasmLifter {
                 }
             return Data([Prefix.Simd.rawValue])
                 + Leb128.unsignedEncode(base + op.ternaryOpKind.rawValue)
-                + Leb128.unsignedEncode(0x01)
         case .wasmSimd128Compare(let op):
             assert(
                 WasmIntegerCompareOpKind.allCases.count == 10,
@@ -2378,7 +2354,6 @@ public class WasmLifter {
                                 "Shape \(op.shape) does not have \(op.compareOpKind) instruction")
                         }
                     return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(0xD6 + temp)
-                        + Leb128.unsignedEncode(0x01)
                 }
                 fatalError("unreachable")
             case .f32x4:
