@@ -90,8 +90,6 @@ struct BlockReducer: Reducer {
             case .beginBlockStatement,
                 .beginWasmFunction,
                 .beginWasmModule,
-                .wasmBeginTryDelegate,
-                .wasmBeginTryTable,
                 .beginBundleScript,
                 .beginBundleModule,
                 .beginPendingBundleModule,
@@ -99,7 +97,9 @@ struct BlockReducer: Reducer {
                 reduceGenericBlockGroup(group, with: helper)
 
             case .wasmBeginBlock,
-                .wasmBeginLoop:
+                .wasmBeginLoop,
+                .wasmBeginTryTable,
+                .wasmBeginTryDelegate:
                 let rewroteProgram = reduceGenericWasmBlockGroup(group, with: helper)
                 if rewroteProgram {
                     return
@@ -345,7 +345,7 @@ struct BlockReducer: Reducer {
         let endInstr = helper.code[group.tail]
         // Drop the signature from the inputs before remapping.
         let blockInputs = beginInstr.inputs.dropFirst()
-        let endInstrInputs = endInstr.inputs.dropFirst()
+        let endInstrInputs = endInstr.inputs.suffix(endInstr.numOutputs)
         var varReplacements = Dictionary(
             uniqueKeysWithValues: zip(beginInstr.innerOutputs.dropFirst(), blockInputs))
         varReplacements.merge(
