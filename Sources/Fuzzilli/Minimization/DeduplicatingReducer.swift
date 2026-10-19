@@ -31,6 +31,9 @@ struct DeduplicatingReducer: Reducer {
         var deduplicatedVariables = VariableMap<Variable>()
         var visibleBuiltins = Stack<[String]>([[]])
         var variableForName = [String: Variable]()
+        var outerScopes = Stack<
+            (visibleBuiltins: Stack<[String]>, variableForName: [String: Variable])
+        >()
         for instr in helper.code {
             // Instruction replacement.
             let oldInouts = Array(instr.inouts)
@@ -45,8 +48,19 @@ struct DeduplicatingReducer: Reducer {
                 for builtin in visibleBuiltins.pop() {
                     variableForName.removeValue(forKey: builtin)
                 }
+                if instr.op is EndWorkerFunction {
+                    assert(visibleBuiltins.isEmpty && variableForName.isEmpty)
+                    (visibleBuiltins, variableForName) = outerScopes.pop()
+                }
             }
             if instr.isBlockStart {
+                // Worker functions are serialized as source strings and executed in an isolated
+                // Worker thread, so they do not share lexical scope with the enclosing script.
+                if instr.op is BeginWorkerFunction {
+                    outerScopes.push((visibleBuiltins, variableForName))
+                    visibleBuiltins = Stack()
+                    variableForName = [:]
+                }
                 visibleBuiltins.push([])
             }
 

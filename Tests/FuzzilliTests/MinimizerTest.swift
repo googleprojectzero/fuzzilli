@@ -2013,6 +2013,62 @@ struct MinimizerTests {
         }
     }
 
+    @Test func testWorkerVariableDeduplication() {
+        let evaluator = EvaluatorForMinimizationTests()
+        let fuzzer = makeMockFuzzer(evaluator: evaluator)
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            // Build input program to be minimized.
+            var foo = b.createNamedVariable(forBuiltin: "foo")
+            evaluator.nextInstructionIsImportant(in: b)
+            b.callFunction(foo)
+
+            evaluator.nextInstructionIsImportant(in: b)
+            b.buildWorkerFunction(with: .parameters(n: 0)) { _ in
+                let workerFoo1 = b.createNamedVariable(forBuiltin: "foo")
+                evaluator.nextInstructionIsImportant(in: b)
+                let cond = b.callFunction(workerFoo1)
+                let workerFoo2 = b.createNamedVariable(forBuiltin: "foo")
+                evaluator.nextInstructionIsImportant(in: b)
+                b.callFunction(workerFoo2)
+                evaluator.nextInstructionIsImportant(in: b)
+                b.buildIf(cond) {
+                    let workerFoo3 = b.createNamedVariable(forBuiltin: "foo")
+                    evaluator.nextInstructionIsImportant(in: b)
+                    b.callFunction(workerFoo3)
+                }
+            }
+
+            let outerFoo2 = b.createNamedVariable(forBuiltin: "foo")
+            evaluator.nextInstructionIsImportant(in: b)
+            b.callFunction(outerFoo2)
+
+            let originalProgram = b.finalize()
+
+            // Build expected output program.
+            foo = b.createNamedVariable(forBuiltin: "foo")
+            b.callFunction(foo)
+
+            b.buildWorkerFunction(with: .parameters(n: 0)) { _ in
+                let workerFoo = b.createNamedVariable(forBuiltin: "foo")
+                let cond = b.callFunction(workerFoo)
+                b.callFunction(workerFoo)
+                b.buildIf(cond) {
+                    b.callFunction(workerFoo)
+                }
+            }
+
+            b.callFunction(foo)
+
+            let expectedProgram = b.finalize()
+
+            let actualProgram = minimize(
+                originalProgram, with: fuzzer, performPostprocessing: false)
+            #expect(expectedProgram == actualProgram)
+        }
+    }
+
     @Test func testBundleMinimizing() {
         let config = Configuration(logLevel: .error, generateBundle: true)
         let evaluator = EvaluatorForMinimizationTests()
