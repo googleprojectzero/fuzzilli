@@ -2566,7 +2566,7 @@ public class JavaScriptLifter: Lifter {
             return UnaryExpression.new("-Infinity")
         } else if value.isEqual(to: Double.infinity) {
             return Identifier.new("Infinity")
-        } else if value < 0.0 {
+        } else if value.sign == .minus {
             return NegativeNumberLiteral.new(String(value))
         } else {
             return NumberLiteral.new(String(value))

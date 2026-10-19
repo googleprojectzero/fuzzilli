@@ -502,6 +502,40 @@ struct LifterTests {
         }
     }
 
+    @Test func testNegativeZeroParenthesization() throws {
+        let fuzzer = makeMockFuzzer()
+        let actual = fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            let negZero = b.loadFloat(-0.0)
+            let expRhs = b.loadFloat(4.3)
+            let _ = b.unary(.Minus, negZero)
+            let _ = b.binary(negZero, expRhs, with: .Exp)
+
+            let negNan = b.loadFloat(-Double.nan)
+            let _ = b.unary(.Minus, negNan)
+            let _ = b.binary(negNan, expRhs, with: .Exp)
+
+            let program = b.finalize()
+            return fuzzer.lifter.lift(program)
+        }
+
+        let expected = """
+            -(-0.0);
+            (-0.0) ** 4.3;
+            -NaN;
+            NaN ** 4.3;
+
+            """
+
+        #expect(actual == expected)
+
+        if let runner = JavaScriptExecutor() {
+            let result = try runner.executeScript(actual)
+            #expect(result.isSuccess)
+        }
+    }
+
     @Test func testExpressionUninlining() {
         let fuzzer = makeMockFuzzer()
         fuzzer.sync {
