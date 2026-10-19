@@ -1707,18 +1707,12 @@ public let CodeGenerators: [CodeGenerator] = [
             { b in
                 // We could consider having a standalone DirectiveGenerator, but probably most of the time it won't do anything meaningful.
                 // We could also consider keeping a list of known directives in the JavaScriptEnvironment, but currently we only use 'use strict'.
-                let (randomParameters, defaultValues) = b.randomParameters()
-                    .withRandomDefaultParameters(
-                        probability: 0.1,
-                        randomVariable: { b.randomJsVariable() })
+                // Functions with a 'use strict' directive must have a simple parameter list (no rest, default, or destructuring parameters).
+                let randomParameters = b.randomParameters(withRestParameterProbability: 0)
                 b.setParameterTypesForNextSubroutine(
                     randomParameters.parameterTypes)
                 let instr = b.emit(
-                    BeginPlainFunction(parameters: randomParameters.parameters, functionName: nil),
-                    withInputs: defaultValues)
-                if randomParameters.parameters.hasRestParameter && probability(0.2) {
-                    b.getProperty("length", of: instr.innerOutputs.last!)
-                }
+                    BeginPlainFunction(parameters: randomParameters.parameters, functionName: nil))
                 b.runtimeData.push("strictFunction", instr.output)
                 b.directive("use strict")
             },
