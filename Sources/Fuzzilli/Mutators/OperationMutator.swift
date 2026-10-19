@@ -525,21 +525,21 @@ public class OperationMutator: BaseInstructionMutator {
                 from: WasmMemoryLoadType.allCases.filter({
                     $0.numberType() == op.loadType.numberType()
                 }))
-            let newStaticOffset = b.randomInt()
+            let newStaticOffset = randomWasmMemoryOffset(for: instr, b)
             newOp = WasmMemoryLoad(loadType: newLoadType, staticOffset: newStaticOffset)
         case .wasmMemoryStore(let op):
             let newStoreType = chooseUniform(
                 from: WasmMemoryStoreType.allCases.filter({
                     $0.numberType() == op.storeType.numberType()
                 }))
-            let newStaticOffset = b.randomInt()
+            let newStaticOffset = randomWasmMemoryOffset(for: instr, b)
             newOp = WasmMemoryStore(storeType: newStoreType, staticOffset: newStaticOffset)
         case .wasmAtomicLoad(let op):
             let newLoadType = chooseUniform(
                 from: WasmAtomicLoadType.allCases.filter({
                     $0.numberType() == op.loadType.numberType()
                 }))
-            let newStaticOffset = b.randomInt()
+            let newStaticOffset = randomWasmMemoryOffset(for: instr, b)
             let newOrdering = chooseUniform(from: WasmMemoryOrdering.allCases)
             newOp = WasmAtomicLoad(
                 loadType: newLoadType,
@@ -551,7 +551,7 @@ public class OperationMutator: BaseInstructionMutator {
                 from: WasmAtomicStoreType.allCases.filter({
                     $0.numberType() == op.storeType.numberType()
                 }))
-            let newStaticOffset = b.randomInt()
+            let newStaticOffset = randomWasmMemoryOffset(for: instr, b)
             let newOrdering = chooseUniform(from: WasmMemoryOrdering.allCases)
             newOp = WasmAtomicStore(
                 storeType: newStoreType,
@@ -561,13 +561,13 @@ public class OperationMutator: BaseInstructionMutator {
         case .wasmAtomicRMW(let op):
             let newOpType = chooseUniform(
                 from: WasmAtomicRMWType.allCases.filter({ $0.type() == op.op.type() }))
-            let newOffset = b.randomInt()
+            let newOffset = randomWasmMemoryOffset(for: instr, b)
             let newOrdering = chooseUniform(from: WasmMemoryOrdering.allCases)
             newOp = WasmAtomicRMW(op: newOpType, offset: newOffset, ordering: newOrdering)
         case .wasmAtomicCmpxchg(let op):
             let newOpType = chooseUniform(
                 from: WasmAtomicCmpxchgType.allCases.filter({ $0.type() == op.op.type() }))
-            let newOffset = b.randomInt()
+            let newOffset = randomWasmMemoryOffset(for: instr, b)
             let newOrdering = chooseUniform(from: WasmMemoryOrdering.allCases)
             newOp = WasmAtomicCmpxchg(op: newOpType, offset: newOffset, ordering: newOrdering)
         case .constSimd128(_):
@@ -632,28 +632,19 @@ public class OperationMutator: BaseInstructionMutator {
                 kind: op.kind, lane: Int.random(in: 0..<op.kind.laneCount()))
         case .wasmSimdStoreLane(_):
             let kind = chooseUniform(from: WasmSimdStoreLane.Kind.allCases)
-            let staticOffset =
-                probability(0.8)
-                ? Int64.random(in: -256...256)
-                : Int64.random(in: Int64.min...Int64.max)  // most likely out of bounds
+            let staticOffset = randomWasmMemoryOffset(for: instr, b)
             newOp = WasmSimdStoreLane(
                 kind: kind, staticOffset: staticOffset,
                 lane: Int.random(in: 0..<kind.laneCount()))
         case .wasmSimdLoadLane(_):
             let kind = chooseUniform(from: WasmSimdLoadLane.Kind.allCases)
-            let staticOffset =
-                probability(0.8)
-                ? Int64.random(in: -256...256)
-                : Int64.random(in: Int64.min...Int64.max)  // most likely out of bounds
+            let staticOffset = randomWasmMemoryOffset(for: instr, b)
             newOp = WasmSimdLoadLane(
                 kind: kind, staticOffset: staticOffset,
                 lane: Int.random(in: 0..<kind.laneCount()))
         case .wasmSimdLoad(_):
             let kind = chooseUniform(from: WasmSimdLoad.Kind.allCases)
-            let staticOffset =
-                probability(0.8)
-                ? Int64.random(in: -256...256)
-                : Int64.random(in: Int64.min...Int64.max)  // most likely out of bounds
+            let staticOffset = randomWasmMemoryOffset(for: instr, b)
             newOp = WasmSimdLoad(kind: kind, staticOffset: staticOffset)
         case .wasmBranchIf(let op):
             newOp = WasmBranchIf(
@@ -1383,5 +1374,16 @@ extension OperationMutator {
     ) -> String {
         guard b.hasVisibleClassDefinition else { return fallback }
         return b.currentClassDefinition.privateMethods.randomElement() ?? fallback
+    }
+
+    private func randomWasmMemoryOffset(for instr: Instruction, _ b: ProgramBuilder) -> UInt64 {
+        let memType = b.type(of: instr.input(0)).wasmMemoryType
+        let maxPages = memType.map { $0.limits.max ?? $0.limits.min } ?? 0
+        let maxMemSize = Int64(maxPages) * Int64(WasmConstants.specWasmMemPageSize)
+        if maxMemSize > 0 && probability(0.9) {
+            return UInt64(b.randomNonNegativeIndex(upTo: maxMemSize - 1))
+        }
+        let maxOffset = (memType?.isMemory64 ?? false) ? Int64.max : Int64(UInt32.max)
+        return UInt64(b.randomNonNegativeIndex(upTo: maxOffset))
     }
 }

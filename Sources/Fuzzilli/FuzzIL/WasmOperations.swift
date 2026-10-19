@@ -1285,9 +1285,9 @@ final class WasmMemoryLoad: WasmOperation {
     override var opcode: Opcode { .wasmMemoryLoad(self) }
 
     let loadType: WasmMemoryLoadType
-    let staticOffset: Int64
+    let staticOffset: UInt64
 
-    init(loadType: WasmMemoryLoadType, staticOffset: Int64) {
+    init(loadType: WasmMemoryLoadType, staticOffset: UInt64) {
         self.loadType = loadType
         self.staticOffset = staticOffset
         super.init(
@@ -1333,9 +1333,9 @@ final class WasmMemoryStore: WasmOperation {
     override var opcode: Opcode { .wasmMemoryStore(self) }
 
     let storeType: WasmMemoryStoreType
-    let staticOffset: Int64
+    let staticOffset: UInt64
 
-    init(storeType: WasmMemoryStoreType, staticOffset: Int64) {
+    init(storeType: WasmMemoryStoreType, staticOffset: UInt64) {
         self.storeType = storeType
         self.staticOffset = staticOffset
         super.init(numInputs: 3, attributes: [.isMutable], requiredContext: [.wasmFunction])
@@ -2495,10 +2495,10 @@ final class WasmSimdStoreLane: WasmOperation {
 
     override var opcode: Opcode { .wasmSimdStoreLane(self) }
     let kind: Kind
-    let staticOffset: Int64
+    let staticOffset: UInt64
     let lane: Int
 
-    init(kind: Kind, staticOffset: Int64, lane: Int) {
+    init(kind: Kind, staticOffset: UInt64, lane: Int) {
         self.kind = kind
         self.staticOffset = staticOffset
         self.lane = lane
@@ -2529,10 +2529,10 @@ final class WasmSimdLoadLane: WasmOperation {
 
     override var opcode: Opcode { .wasmSimdLoadLane(self) }
     let kind: Kind
-    let staticOffset: Int64
+    let staticOffset: UInt64
     let lane: Int
 
-    init(kind: Kind, staticOffset: Int64, lane: Int) {
+    init(kind: Kind, staticOffset: UInt64, lane: Int) {
         self.kind = kind
         self.staticOffset = staticOffset
         self.lane = lane
@@ -2561,9 +2561,9 @@ final class WasmSimdLoad: WasmOperation {
     override var opcode: Opcode { .wasmSimdLoad(self) }
 
     let kind: Kind
-    let staticOffset: Int64
+    let staticOffset: UInt64
 
-    init(kind: Kind, staticOffset: Int64) {
+    init(kind: Kind, staticOffset: UInt64) {
         self.kind = kind
         self.staticOffset = staticOffset
         super.init(
@@ -2850,12 +2850,12 @@ final class WasmAtomicLoad: WasmOperation {
     /// The type of the loaded value.
     let loadType: WasmAtomicLoadType
     /// The static offset from the base address.
-    let offset: Int64
+    let offset: UInt64
     /// The memory ordering of the load.
     let ordering: WasmMemoryOrdering
 
     init(
-        loadType: WasmAtomicLoadType, offset: Int64,
+        loadType: WasmAtomicLoadType, offset: UInt64,
         ordering: WasmMemoryOrdering = .sequentiallyConsistent
     ) {
         self.loadType = loadType
@@ -2874,12 +2874,12 @@ final class WasmAtomicStore: WasmOperation {
     /// The type of the stored value.
     let storeType: WasmAtomicStoreType
     /// The static offset from the base address.
-    let offset: Int64
+    let offset: UInt64
     /// The memory ordering of the store.
     let ordering: WasmMemoryOrdering
 
     init(
-        storeType: WasmAtomicStoreType, offset: Int64,
+        storeType: WasmAtomicStoreType, offset: UInt64,
         ordering: WasmMemoryOrdering = .sequentiallyConsistent
     ) {
         self.storeType = storeType
@@ -2894,11 +2894,12 @@ final class WasmAtomicRMW: WasmOperation {
     override var opcode: Opcode { .wasmAtomicRMW(self) }
 
     let op: WasmAtomicRMWType
-    let offset: Int64
+    let offset: UInt64
     let ordering: WasmMemoryOrdering
 
     init(
-        op: WasmAtomicRMWType, offset: Int64, ordering: WasmMemoryOrdering = .sequentiallyConsistent
+        op: WasmAtomicRMWType, offset: UInt64,
+        ordering: WasmMemoryOrdering = .sequentiallyConsistent
     ) {
         self.op = op
         self.offset = offset
@@ -2944,11 +2945,11 @@ final class WasmAtomicCmpxchg: WasmOperation {
     override var opcode: Opcode { .wasmAtomicCmpxchg(self) }
 
     let op: WasmAtomicCmpxchgType
-    let offset: Int64
+    let offset: UInt64
     let ordering: WasmMemoryOrdering
 
     init(
-        op: WasmAtomicCmpxchgType, offset: Int64,
+        op: WasmAtomicCmpxchgType, offset: UInt64,
         ordering: WasmMemoryOrdering = .sequentiallyConsistent
     ) {
         self.op = op

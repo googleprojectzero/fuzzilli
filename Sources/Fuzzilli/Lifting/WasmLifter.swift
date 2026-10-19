@@ -2001,39 +2001,39 @@ public class WasmLifter {
         case .wasmMemoryLoad(let op):
             let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0))
             return Data([op.loadType.rawValue]) + alignAndMemory
-                + Leb128.signedEncode(Int(op.staticOffset))
+                + Leb128.unsignedEncode(op.staticOffset)
         case .wasmMemoryStore(let op):
             let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0))
             let opCode = Data(
                 op.storeType != .S128StoreMem
                     ? [op.storeType.rawValue]
                     : [Prefix.Simd.rawValue, op.storeType.rawValue])
-            return opCode + alignAndMemory + Leb128.signedEncode(Int(op.staticOffset))
+            return opCode + alignAndMemory + Leb128.unsignedEncode(op.staticOffset)
         case .wasmAtomicLoad(let op):
             let opcode = [Prefix.Atomic.rawValue, op.loadType.rawValue]
             let alignAndMemory = try alignmentAndMemoryBytes(
                 wasmInstruction.input(0), alignment: op.loadType.naturalAlignment(),
                 ordering: op.ordering)
-            return Data(opcode) + alignAndMemory + Leb128.signedEncode(Int(op.offset))
+            return Data(opcode) + alignAndMemory + Leb128.unsignedEncode(op.offset)
 
         case .wasmAtomicStore(let op):
             let opcode = [Prefix.Atomic.rawValue, op.storeType.rawValue]
             let alignAndMemory = try alignmentAndMemoryBytes(
                 wasmInstruction.input(0), alignment: op.storeType.naturalAlignment(),
                 ordering: op.ordering)
-            return Data(opcode) + alignAndMemory + Leb128.signedEncode(Int(op.offset))
+            return Data(opcode) + alignAndMemory + Leb128.unsignedEncode(op.offset)
         case .wasmAtomicRMW(let op):
             let opcode = [Prefix.Atomic.rawValue, op.op.rawValue]
             let alignAndMemory = try alignmentAndMemoryBytes(
                 wasmInstruction.input(0), alignment: op.op.naturalAlignment(),
                 ordering: op.ordering, isRMW: true)
-            return Data(opcode) + alignAndMemory + Leb128.signedEncode(Int(op.offset))
+            return Data(opcode) + alignAndMemory + Leb128.unsignedEncode(op.offset)
         case .wasmAtomicCmpxchg(let op):
             let opcode = [Prefix.Atomic.rawValue, op.op.rawValue]
             let alignAndMemory = try alignmentAndMemoryBytes(
                 wasmInstruction.input(0), alignment: op.op.naturalAlignment(),
                 ordering: op.ordering, isRMW: true)
-            return Data(opcode) + alignAndMemory + Leb128.signedEncode(Int(op.offset))
+            return Data(opcode) + alignAndMemory + Leb128.unsignedEncode(op.offset)
         case .wasmMemorySize(_):
             let memoryIdx = try resolveIdx(ofType: .memory, for: wasmInstruction.input(0))
             return Data([0x3F]) + Leb128.unsignedEncode(memoryIdx)
@@ -2372,16 +2372,15 @@ public class WasmLifter {
         case .wasmSimdStoreLane(let op):
             let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0))
             return Data([Prefix.Simd.rawValue, op.kind.rawValue]) + alignAndMemory
-                + Leb128.signedEncode(Int(op.staticOffset)) + Leb128.unsignedEncode(op.lane)
+                + Leb128.unsignedEncode(op.staticOffset) + Leb128.unsignedEncode(op.lane)
         case .wasmSimdLoadLane(let op):
             let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0))
             return Data([Prefix.Simd.rawValue, op.kind.rawValue]) + alignAndMemory
-                + Leb128.signedEncode(Int(op.staticOffset)) + Leb128.unsignedEncode(op.lane)
+                + Leb128.unsignedEncode(op.staticOffset) + Leb128.unsignedEncode(op.lane)
         case .wasmSimdLoad(let op):
-            // The memory immediate is {staticOffset, align} where align is 0 by default. Use signed encoding for potential bad (i.e. negative) offsets.
             let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0))
             return Data([Prefix.Simd.rawValue, op.kind.rawValue]) + alignAndMemory
-                + Leb128.signedEncode(Int(op.staticOffset))
+                + Leb128.unsignedEncode(op.staticOffset)
         case .wasmArrayNewFixed(let op):
             let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
             let arrayIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)

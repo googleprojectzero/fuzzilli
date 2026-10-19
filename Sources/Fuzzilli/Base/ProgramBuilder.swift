@@ -5484,7 +5484,7 @@ public class ProgramBuilder {
         @discardableResult
         public func wasmMemoryLoad(
             memory: Variable, dynamicOffset: Variable, loadType: WasmMemoryLoadType,
-            staticOffset: Int64
+            staticOffset: UInt64
         ) -> Variable {
             let addrType = b.type(of: memory).wasmMemoryType!.addrType
             return b.emit(
@@ -5496,7 +5496,7 @@ public class ProgramBuilder {
 
         public func wasmMemoryStore(
             memory: Variable, dynamicOffset: Variable, value: Variable,
-            storeType: WasmMemoryStoreType, staticOffset: Int64
+            storeType: WasmMemoryStoreType, staticOffset: UInt64
         ) {
             assert(b.type(of: value) == storeType.numberType())
             let addrType = b.type(of: memory).wasmMemoryType!.addrType
@@ -5510,7 +5510,7 @@ public class ProgramBuilder {
 
         @discardableResult
         func wasmAtomicLoad(
-            memory: Variable, address: Variable, loadType: WasmAtomicLoadType, offset: Int64,
+            memory: Variable, address: Variable, loadType: WasmAtomicLoadType, offset: UInt64,
             ordering: WasmMemoryOrdering = .sequentiallyConsistent
         ) -> Variable {
             let op = WasmAtomicLoad(loadType: loadType, offset: offset, ordering: ordering)
@@ -5519,7 +5519,7 @@ public class ProgramBuilder {
 
         func wasmAtomicStore(
             memory: Variable, address: Variable, value: Variable, storeType: WasmAtomicStoreType,
-            offset: Int64, ordering: WasmMemoryOrdering = .sequentiallyConsistent
+            offset: UInt64, ordering: WasmMemoryOrdering = .sequentiallyConsistent
         ) {
             let op = WasmAtomicStore(storeType: storeType, offset: offset, ordering: ordering)
             b.emit(op, withInputs: [memory, address, value])
@@ -5527,7 +5527,7 @@ public class ProgramBuilder {
 
         @discardableResult
         func wasmAtomicRMW(
-            memory: Variable, lhs: Variable, rhs: Variable, op: WasmAtomicRMWType, offset: Int64,
+            memory: Variable, lhs: Variable, rhs: Variable, op: WasmAtomicRMWType, offset: UInt64,
             ordering: WasmMemoryOrdering = .sequentiallyConsistent
         ) -> Variable {
             let op = WasmAtomicRMW(op: op, offset: offset, ordering: ordering)
@@ -5542,7 +5542,7 @@ public class ProgramBuilder {
         @discardableResult
         func wasmAtomicCmpxchg(
             memory: Variable, address: Variable, expected: Variable, replacement: Variable,
-            op: WasmAtomicCmpxchgType, offset: Int64,
+            op: WasmAtomicCmpxchgType, offset: UInt64,
             ordering: WasmMemoryOrdering = .sequentiallyConsistent
         ) -> Variable {
             let op = WasmAtomicCmpxchg(op: op, offset: offset, ordering: ordering)
@@ -6492,7 +6492,7 @@ public class ProgramBuilder {
 
         func wasmSimdStoreLane(
             kind: WasmSimdStoreLane.Kind, memory: Variable, dynamicOffset: Variable,
-            staticOffset: Int64, from: Variable, lane: Int
+            staticOffset: UInt64, from: Variable, lane: Int
         ) {
             let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
             let dynamicOffsetType = isMemory64 ? ILType.wasmi64 : ILType.wasmi32
@@ -6505,7 +6505,7 @@ public class ProgramBuilder {
         @discardableResult
         func wasmSimdLoadLane(
             kind: WasmSimdLoadLane.Kind, memory: Variable, dynamicOffset: Variable,
-            staticOffset: Int64, into: Variable, lane: Int
+            staticOffset: UInt64, into: Variable, lane: Int
         ) -> Variable {
             let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
             let dynamicOffsetType = isMemory64 ? ILType.wasmi64 : ILType.wasmi32
@@ -6518,7 +6518,7 @@ public class ProgramBuilder {
 
         @discardableResult
         func wasmSimdLoad(
-            kind: WasmSimdLoad.Kind, memory: Variable, dynamicOffset: Variable, staticOffset: Int64
+            kind: WasmSimdLoad.Kind, memory: Variable, dynamicOffset: Variable, staticOffset: UInt64
         ) -> Variable {
             let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
             let dynamicOffsetType = isMemory64 ? ILType.wasmi64 : ILType.wasmi32
@@ -6953,7 +6953,7 @@ public class ProgramBuilder {
     // 0 <= dynamicOffset + staticOffset <= memSize
     //
     // Note: In rare cases, the returned values may lead to an out-of-bounds memory access.
-    func generateMemoryIndexes(forMemory memory: Variable) -> (Variable, Int64) {
+    func generateMemoryIndexes(forMemory memory: Variable) -> (Variable, UInt64) {
         return generateAlignedMemoryIndexes(forMemory: memory, alignment: 1)
     }
 
@@ -6963,7 +6963,7 @@ public class ProgramBuilder {
     //
     // Note: In rare cases, the returned values may lead to an out-of-bounds memory access.
     func generateAlignedMemoryIndexes(forMemory memory: Variable, alignment: Int64) -> (
-        address: Variable, offset: Int64
+        address: Variable, offset: UInt64
     ) {
         assert(alignment > 0, "Alignment must be positive")
         let memoryTypeInfo = self.type(of: memory).wasmMemoryType!
@@ -6984,7 +6984,7 @@ public class ProgramBuilder {
         let currentAddress = dynamicOffsetValue + staticOffset
         // Calculate the minimal value needed to make the total address aligned.
         let adjustment = (alignment - (currentAddress % alignment)) % alignment
-        let alignedStaticOffset = staticOffset + adjustment
+        let alignedStaticOffset = UInt64(staticOffset + adjustment)
         return (dynamicOffset, alignedStaticOffset)
     }
 

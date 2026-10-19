@@ -5323,7 +5323,7 @@ public struct Fuzzilli_Protobuf_WasmMemoryLoad: Sendable {
 
   public var loadType: Fuzzilli_Protobuf_WasmMemoryLoadType = .i32Loadmem
 
-  public var staticOffset: Int64 = 0
+  public var staticOffset: UInt64 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -5337,7 +5337,7 @@ public struct Fuzzilli_Protobuf_WasmMemoryStore: Sendable {
 
   public var storeType: Fuzzilli_Protobuf_WasmMemoryStoreType = .i32Storemem
 
-  public var staticOffset: Int64 = 0
+  public var staticOffset: UInt64 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -5859,7 +5859,7 @@ public struct Fuzzilli_Protobuf_WasmSimdStoreLane: Sendable {
 
   public var kind: Fuzzilli_Protobuf_WasmSimdStoreLaneKind = .store8
 
-  public var staticOffset: Int64 = 0
+  public var staticOffset: UInt64 = 0
 
   public var lane: UInt32 = 0
 
@@ -5875,7 +5875,7 @@ public struct Fuzzilli_Protobuf_WasmSimdLoadLane: Sendable {
 
   public var kind: Fuzzilli_Protobuf_WasmSimdLoadLaneKind = .load8
 
-  public var staticOffset: Int64 = 0
+  public var staticOffset: UInt64 = 0
 
   public var lane: UInt32 = 0
 
@@ -5891,7 +5891,7 @@ public struct Fuzzilli_Protobuf_WasmSimdLoad: Sendable {
 
   public var kind: Fuzzilli_Protobuf_WasmSimdLoadKind = .loads128
 
-  public var staticOffset: Int64 = 0
+  public var staticOffset: UInt64 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -6429,7 +6429,7 @@ public struct Fuzzilli_Protobuf_WasmAtomicLoad: Sendable {
 
   public var loadType: Fuzzilli_Protobuf_WasmAtomicLoadType = .i32Load
 
-  public var offset: Int64 = 0
+  public var offset: UInt64 = 0
 
   public var ordering: Fuzzilli_Protobuf_WasmMemoryOrdering = .sequentiallyConsistent
 
@@ -6445,7 +6445,7 @@ public struct Fuzzilli_Protobuf_WasmAtomicStore: Sendable {
 
   public var storeType: Fuzzilli_Protobuf_WasmAtomicStoreType = .i32Store
 
-  public var offset: Int64 = 0
+  public var offset: UInt64 = 0
 
   public var ordering: Fuzzilli_Protobuf_WasmMemoryOrdering = .sequentiallyConsistent
 
@@ -6461,7 +6461,7 @@ public struct Fuzzilli_Protobuf_WasmAtomicRMW: Sendable {
 
   public var op: Fuzzilli_Protobuf_WasmAtomicRMWType = .i32Add
 
-  public var offset: Int64 = 0
+  public var offset: UInt64 = 0
 
   public var ordering: Fuzzilli_Protobuf_WasmMemoryOrdering = .sequentiallyConsistent
 
@@ -6477,7 +6477,7 @@ public struct Fuzzilli_Protobuf_WasmAtomicCmpxchg: Sendable {
 
   public var op: Fuzzilli_Protobuf_WasmAtomicCmpxchgType = .i32Cmpxchg
 
-  public var offset: Int64 = 0
+  public var offset: UInt64 = 0
 
   public var ordering: Fuzzilli_Protobuf_WasmMemoryOrdering = .sequentiallyConsistent
 
@@ -14799,7 +14799,7 @@ extension Fuzzilli_Protobuf_WasmMemoryLoad: SwiftProtobuf.Message, SwiftProtobuf
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.loadType) }()
-      case 2: try { try decoder.decodeSingularInt64Field(value: &self.staticOffset) }()
+      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.staticOffset) }()
       default: break
       }
     }
@@ -14810,7 +14810,7 @@ extension Fuzzilli_Protobuf_WasmMemoryLoad: SwiftProtobuf.Message, SwiftProtobuf
       try visitor.visitSingularEnumField(value: self.loadType, fieldNumber: 1)
     }
     if self.staticOffset != 0 {
-      try visitor.visitSingularInt64Field(value: self.staticOffset, fieldNumber: 2)
+      try visitor.visitSingularUInt64Field(value: self.staticOffset, fieldNumber: 2)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -14834,7 +14834,7 @@ extension Fuzzilli_Protobuf_WasmMemoryStore: SwiftProtobuf.Message, SwiftProtobu
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.storeType) }()
-      case 2: try { try decoder.decodeSingularInt64Field(value: &self.staticOffset) }()
+      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.staticOffset) }()
       default: break
       }
     }
@@ -14845,7 +14845,7 @@ extension Fuzzilli_Protobuf_WasmMemoryStore: SwiftProtobuf.Message, SwiftProtobu
       try visitor.visitSingularEnumField(value: self.storeType, fieldNumber: 1)
     }
     if self.staticOffset != 0 {
-      try visitor.visitSingularInt64Field(value: self.staticOffset, fieldNumber: 2)
+      try visitor.visitSingularUInt64Field(value: self.staticOffset, fieldNumber: 2)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -16067,7 +16067,7 @@ extension Fuzzilli_Protobuf_WasmSimdStoreLane: SwiftProtobuf.Message, SwiftProto
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.kind) }()
-      case 2: try { try decoder.decodeSingularInt64Field(value: &self.staticOffset) }()
+      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.staticOffset) }()
       case 3: try { try decoder.decodeSingularUInt32Field(value: &self.lane) }()
       default: break
       }
@@ -16079,7 +16079,7 @@ extension Fuzzilli_Protobuf_WasmSimdStoreLane: SwiftProtobuf.Message, SwiftProto
       try visitor.visitSingularEnumField(value: self.kind, fieldNumber: 1)
     }
     if self.staticOffset != 0 {
-      try visitor.visitSingularInt64Field(value: self.staticOffset, fieldNumber: 2)
+      try visitor.visitSingularUInt64Field(value: self.staticOffset, fieldNumber: 2)
     }
     if self.lane != 0 {
       try visitor.visitSingularUInt32Field(value: self.lane, fieldNumber: 3)
@@ -16107,7 +16107,7 @@ extension Fuzzilli_Protobuf_WasmSimdLoadLane: SwiftProtobuf.Message, SwiftProtob
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.kind) }()
-      case 2: try { try decoder.decodeSingularInt64Field(value: &self.staticOffset) }()
+      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.staticOffset) }()
       case 3: try { try decoder.decodeSingularUInt32Field(value: &self.lane) }()
       default: break
       }
@@ -16119,7 +16119,7 @@ extension Fuzzilli_Protobuf_WasmSimdLoadLane: SwiftProtobuf.Message, SwiftProtob
       try visitor.visitSingularEnumField(value: self.kind, fieldNumber: 1)
     }
     if self.staticOffset != 0 {
-      try visitor.visitSingularInt64Field(value: self.staticOffset, fieldNumber: 2)
+      try visitor.visitSingularUInt64Field(value: self.staticOffset, fieldNumber: 2)
     }
     if self.lane != 0 {
       try visitor.visitSingularUInt32Field(value: self.lane, fieldNumber: 3)
@@ -16147,7 +16147,7 @@ extension Fuzzilli_Protobuf_WasmSimdLoad: SwiftProtobuf.Message, SwiftProtobuf._
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.kind) }()
-      case 2: try { try decoder.decodeSingularInt64Field(value: &self.staticOffset) }()
+      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.staticOffset) }()
       default: break
       }
     }
@@ -16158,7 +16158,7 @@ extension Fuzzilli_Protobuf_WasmSimdLoad: SwiftProtobuf.Message, SwiftProtobuf._
       try visitor.visitSingularEnumField(value: self.kind, fieldNumber: 1)
     }
     if self.staticOffset != 0 {
-      try visitor.visitSingularInt64Field(value: self.staticOffset, fieldNumber: 2)
+      try visitor.visitSingularUInt64Field(value: self.staticOffset, fieldNumber: 2)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -17199,7 +17199,7 @@ extension Fuzzilli_Protobuf_WasmAtomicLoad: SwiftProtobuf.Message, SwiftProtobuf
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.loadType) }()
-      case 2: try { try decoder.decodeSingularInt64Field(value: &self.offset) }()
+      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.offset) }()
       case 3: try { try decoder.decodeSingularEnumField(value: &self.ordering) }()
       default: break
       }
@@ -17211,7 +17211,7 @@ extension Fuzzilli_Protobuf_WasmAtomicLoad: SwiftProtobuf.Message, SwiftProtobuf
       try visitor.visitSingularEnumField(value: self.loadType, fieldNumber: 1)
     }
     if self.offset != 0 {
-      try visitor.visitSingularInt64Field(value: self.offset, fieldNumber: 2)
+      try visitor.visitSingularUInt64Field(value: self.offset, fieldNumber: 2)
     }
     if self.ordering != .sequentiallyConsistent {
       try visitor.visitSingularEnumField(value: self.ordering, fieldNumber: 3)
@@ -17239,7 +17239,7 @@ extension Fuzzilli_Protobuf_WasmAtomicStore: SwiftProtobuf.Message, SwiftProtobu
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.storeType) }()
-      case 2: try { try decoder.decodeSingularInt64Field(value: &self.offset) }()
+      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.offset) }()
       case 3: try { try decoder.decodeSingularEnumField(value: &self.ordering) }()
       default: break
       }
@@ -17251,7 +17251,7 @@ extension Fuzzilli_Protobuf_WasmAtomicStore: SwiftProtobuf.Message, SwiftProtobu
       try visitor.visitSingularEnumField(value: self.storeType, fieldNumber: 1)
     }
     if self.offset != 0 {
-      try visitor.visitSingularInt64Field(value: self.offset, fieldNumber: 2)
+      try visitor.visitSingularUInt64Field(value: self.offset, fieldNumber: 2)
     }
     if self.ordering != .sequentiallyConsistent {
       try visitor.visitSingularEnumField(value: self.ordering, fieldNumber: 3)
@@ -17279,7 +17279,7 @@ extension Fuzzilli_Protobuf_WasmAtomicRMW: SwiftProtobuf.Message, SwiftProtobuf.
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.op) }()
-      case 2: try { try decoder.decodeSingularInt64Field(value: &self.offset) }()
+      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.offset) }()
       case 3: try { try decoder.decodeSingularEnumField(value: &self.ordering) }()
       default: break
       }
@@ -17291,7 +17291,7 @@ extension Fuzzilli_Protobuf_WasmAtomicRMW: SwiftProtobuf.Message, SwiftProtobuf.
       try visitor.visitSingularEnumField(value: self.op, fieldNumber: 1)
     }
     if self.offset != 0 {
-      try visitor.visitSingularInt64Field(value: self.offset, fieldNumber: 2)
+      try visitor.visitSingularUInt64Field(value: self.offset, fieldNumber: 2)
     }
     if self.ordering != .sequentiallyConsistent {
       try visitor.visitSingularEnumField(value: self.ordering, fieldNumber: 3)
@@ -17319,7 +17319,7 @@ extension Fuzzilli_Protobuf_WasmAtomicCmpxchg: SwiftProtobuf.Message, SwiftProto
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.op) }()
-      case 2: try { try decoder.decodeSingularInt64Field(value: &self.offset) }()
+      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.offset) }()
       case 3: try { try decoder.decodeSingularEnumField(value: &self.ordering) }()
       default: break
       }
@@ -17331,7 +17331,7 @@ extension Fuzzilli_Protobuf_WasmAtomicCmpxchg: SwiftProtobuf.Message, SwiftProto
       try visitor.visitSingularEnumField(value: self.op, fieldNumber: 1)
     }
     if self.offset != 0 {
-      try visitor.visitSingularInt64Field(value: self.offset, fieldNumber: 2)
+      try visitor.visitSingularUInt64Field(value: self.offset, fieldNumber: 2)
     }
     if self.ordering != .sequentiallyConsistent {
       try visitor.visitSingularEnumField(value: self.ordering, fieldNumber: 3)

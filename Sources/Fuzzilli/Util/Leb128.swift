@@ -17,6 +17,10 @@ import Foundation
 public struct Leb128 {
     public static func unsignedEncode(_ value: Int) -> Data {
         assert(value >= 0)
+        return unsignedEncode(UInt64(value))
+    }
+
+    public static func unsignedEncode(_ value: UInt64) -> Data {
         var value = value
 
         var data = Data()
