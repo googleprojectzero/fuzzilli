@@ -1695,6 +1695,9 @@ public class ProgramBuilder {
 
     /// Adopts an instruction from the program that is currently configured for adoption into the program being constructed.
     public func adopt(_ instr: Instruction) {
+        if instr.op is EndClassDefinition && hasVisibleClassDefinition {
+            currentClassDefinition.emitPendingPrivateMembers()
+        }
         internalAppend(Instruction(instr.op, inouts: adopt(instr.inouts)))
     }
 

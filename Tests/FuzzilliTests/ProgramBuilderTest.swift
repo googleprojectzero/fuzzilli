@@ -922,6 +922,49 @@ struct ProgramBuilderTests {
         }
     }
 
+    @Test func testPendingPrivateMembersFlushedOnAdopt() throws {
+        let fuzzer = makeMockFuzzer()
+        try fuzzer.sync {
+            let b1 = fuzzer.makeBuilder()
+            b1.buildClassDefinition { cls in
+                cls.addInstanceMethod("m", with: .parameters(n: 0)) { _ in }
+            }
+            let original = b1.finalize()
+
+            let propGenerator = fuzzer.codeGenerators.first {
+                $0.name == "PrivatePropertyRetrievalGenerator"
+            }!
+            let methodGenerator = fuzzer.codeGenerators.first {
+                $0.name == "PrivateMethodCallGenerator"
+            }!
+
+            let b2 = fuzzer.makeBuilder()
+            b2.adopting {
+                for instr in original.code {
+                    b2.adopt(instr)
+                    if instr.op is BeginClassMethod {
+                        let thisVar = b2.currentClassDefinition.currentThisVariable!
+                        _ = propGenerator.parts[0].run(in: b2, with: [thisVar])
+                        _ = methodGenerator.parts[0].run(in: b2, with: [thisVar])
+                        #expect(b2.currentClassDefinition.pendingPrivateProperties.count == 1)
+                        #expect(b2.currentClassDefinition.pendingPrivateMethods.count == 1)
+                    }
+                }
+            }
+            let adopted = b2.finalize()
+
+            #expect(adopted.code.contains(where: { $0.op is ClassAddPrivateProperty }))
+            #expect(adopted.code.contains(where: { $0.op is BeginClassPrivateMethod }))
+            #expect(adopted.code.contains(where: { $0.op is EndClassPrivateMethod }))
+
+            if let runner = JavaScriptExecutor() {
+                let js = fuzzer.lifter.lift(adopted)
+                let result = try runner.executeScript(js)
+                #expect(result.isSuccess, "\(result.output)\n\(result.error)\nScript:\n\(js)")
+            }
+        }
+    }
+
     @Test func testSwitchBlockBuilding() {
         let fuzzer = makeMockFuzzer()
         fuzzer.sync {
