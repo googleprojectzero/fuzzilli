@@ -2827,7 +2827,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         inContext: .single(.javascript),
         inputs: .required(.object(ofGroup: "WasmMemory"))
     ) { b, memory in
-        b.callMethod("grow", on: memory, withArgs: [b.loadInt(Int64.random(in: 0...10))])
+        b.jsGrowWasmMemory(memory)
     },
 
     CodeGenerator(

@@ -4820,6 +4820,15 @@ public class ProgramBuilder {
     }
 
     @discardableResult
+    public func jsGrowWasmMemory(
+        _ memory: Variable, by pages: Int64 = Int64.random(in: 0...9), guard isGuarded: Bool = false
+    ) -> Variable {
+        let isMemory64 = type(of: memory).wasmMemoryType?.isMemory64 ?? false
+        let numPages = isMemory64 ? loadBigInt(pages) : loadInt(pages)
+        return callMethod("grow", on: memory, withArgs: [numPages], guard: isGuarded)
+    }
+
+    @discardableResult
     public func createWasmTable(elementType: ILType, limits: Limits, isTable64: Bool) -> Variable {
         return emit(CreateWasmTable(elementType: elementType, limits: limits, isTable64: isTable64))
             .output

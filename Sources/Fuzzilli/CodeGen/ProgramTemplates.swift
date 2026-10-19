@@ -623,8 +623,7 @@ public let ProgramTemplates = [
             if probability(0.5),
                 let memory = b.randomVariable(ofType: .object(ofGroup: "WasmMemory"))
             {
-                b.callMethod(
-                    "grow", on: memory, withArgs: [b.loadInt(Int64.random(in: 0...5))], guard: true)
+                b.jsGrowWasmMemory(memory, guard: true)
                 b.build(n: 5)
             }
         }
@@ -686,9 +685,7 @@ public let ProgramTemplates = [
                 // C. Growth/Resize Event (Mix of JS, Wasm, and RAB APIs)
                 withEqualProbability(
                     {
-                        _ = b.callMethod(
-                            "grow", on: memory, withArgs: [b.loadInt(Int64.random(in: 0...4))],
-                            guard: true)
+                        b.jsGrowWasmMemory(memory, guard: true)
                     },
                     {
                         _ = b.callFunction(wasmGrow, withArgs: [b.loadInt(Int64.random(in: 0...4))])

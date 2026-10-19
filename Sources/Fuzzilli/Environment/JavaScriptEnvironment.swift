@@ -3557,7 +3557,7 @@ extension ObjectGroup {
             "buffer": .jsArrayBuffer | .jsSharedArrayBuffer
         ],
         methods: [
-            "grow": [.number] => .number,
+            "grow": [.plain(.number | .bigint)] => (.number | .bigint),
             "toResizableBuffer": [] => (.jsArrayBuffer | .jsSharedArrayBuffer),
             "toFixedLengthBuffer": [] => (.jsArrayBuffer | .jsSharedArrayBuffer),
         ]

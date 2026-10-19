@@ -2735,7 +2735,8 @@ struct JSTyperTests {
             #expect(
                 b.type(of: grow)
                     == .unboundFunction(
-                        [.number] => .number, receiver: ObjectGroup.jsWasmMemory.instanceType))
+                        [.plain(.number | .bigint)] => (.number | .bigint),
+                        receiver: ObjectGroup.jsWasmMemory.instanceType))
 
             let wasmTableConstructor = b.getProperty("Table", of: wasm)
             let wasmTable = b.construct(wasmTableConstructor)  // In theory this needs arguments.
