@@ -1872,6 +1872,8 @@ extension Instruction: ProtobufConvertible {
                 }
             case .wasmArraySet(_):
                 $0.wasmArraySet = Fuzzilli_Protobuf_WasmArraySet()
+            case .wasmArrayInitData(_):
+                $0.wasmArrayInitData = Fuzzilli_Protobuf_WasmArrayInitData()
             case .wasmStructNewDefault(_):
                 $0.wasmStructNewDefault = Fuzzilli_Protobuf_WasmStructNewDefault()
             case .wasmStructNew(_):
@@ -3160,6 +3162,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmArrayGet(isSigned: p.isSigned)
         case .wasmArraySet(_):
             op = WasmArraySet()
+        case .wasmArrayInitData(_):
+            op = WasmArrayInitData()
         case .wasmStructNew(_):
             op = WasmStructNew(fieldCount: inouts.count - 2)
         case .wasmStructNewDefault(_):

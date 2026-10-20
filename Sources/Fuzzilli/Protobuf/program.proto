@@ -409,6 +409,7 @@ message Instruction {
         WasmTableFill wasmTableFill = 383;
         WasmArrayNewData wasmArrayNewData = 384;
         WasmArrayNewElem wasmArrayNewElem = 385;
+        WasmArrayInitData wasmArrayInitData = 386;
     }
 }
 

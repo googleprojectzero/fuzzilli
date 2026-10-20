@@ -372,6 +372,61 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator(
+        "WasmArrayInitDataGenerator", inContext: .single(.wasmFunction),
+        inputs: .requiredComplex(
+            .init(.anyNonNullableIndexRef, .IsWasmArray), .init(.wasmDataSegment()))
+    ) { b, _, dataSegment in
+        let dataSegmentTypeInfo = b.type(of: dataSegment).wasmDataSegmentType!
+        if dataSegmentTypeInfo.isDropped {
+            return
+        }
+
+        // array.init_data requires a mutable array with non-reference elements.
+        let maybeArray = b.findVariable { v in
+            guard
+                let refType = b.type(of: v).wasmReferenceType,
+                !refType.nullability,
+                case .Index(let desc, _) = refType.kind,
+                let arrayType = desc.get() as? WasmArrayTypeDescription
+            else {
+                return false
+            }
+            return arrayType.mutability && !arrayType.elementType.isWasmReferenceType
+        }
+        guard let array = maybeArray else { return }
+
+        guard case .Index(let desc, _) = b.type(of: array).wasmReferenceType!.kind,
+            let arrayType = desc.get() as? WasmArrayTypeDescription
+        else {
+            fatalError("unreachable: array.init_data input not an array")
+        }
+
+        let elementByteSize = arrayType.elementType.wasmByteSize!
+        let function = b.currentWasmModule.currentWasmFunction
+
+        // TODO(mliedtke): Track array length and use other indices as well.
+        let arrayIndex = function.consti32(0)
+
+        let segmentLength = Int64(dataSegmentTypeInfo.segmentLength)
+        let dataOffsetValue = b.randomNonNegativeIndex(upTo: segmentLength)
+        let dataOffset = function.consti32(Int32(dataOffsetValue))
+
+        let maxElements = max(0, (segmentLength - dataOffsetValue) / Int64(elementByteSize))
+        var size = function.consti32(Int32(b.randomSize(upTo: min(maxElements, 0x1000))))
+        // The array length is not tracked statically, so in most cases clamp the size to the
+        // array length at runtime to avoid traps.
+        if probability(0.9) {
+            let arrayLength = function.wasmArrayLen(array)
+            let fits = function.wasmi32CompareOp(size, arrayLength, using: .Le_u)
+            size = function.wasmSelect(on: fits, trueValue: size, falseValue: arrayLength)
+        }
+
+        function.wasmArrayInitData(
+            array: array, arrayIndex: arrayIndex, dataSegment: dataSegment,
+            dataOffset: dataOffset, size: size)
+    },
+
+    CodeGenerator(
         "WasmStructNewGenerator", inContext: .single(.wasmFunction),
         inputs: .requiredComplex(.init(.wasmTypeDef(), .IsWasmStruct)),
         producesComplex: [.init(.anyNonNullableIndexRef, .IsWasmStruct)]

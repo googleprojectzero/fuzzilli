@@ -1136,8 +1136,11 @@ public struct JSTyper: Analyzer {
                 break
             }
             setType(of: instr.output, to: typeDesc.elementType.unpacked())
-        case .wasmArraySet(_):
-            break
+        case .wasmArraySet(_),
+            .wasmArrayInitData(_):
+            if !(tryGetTypeDescription(of: instr.input(0)) is WasmArrayTypeDescription) {
+                setType(of: instr.input(0), to: .error)
+            }
         case .wasmStructNew(_),
             .wasmStructNewDefault(_),
             .wasmStructNewDesc(_),
@@ -1169,7 +1172,9 @@ public struct JSTyper: Analyzer {
             }
             setType(of: instr.output, to: typeDesc.fields[op.fieldIndex].type.unpacked())
         case .wasmStructSet(_):
-            break
+            if !(tryGetTypeDescription(of: instr.input(0)) is WasmStructTypeDescription) {
+                setType(of: instr.input(0), to: .error)
+            }
         case .wasmRefNull(let op):
             if instr.hasInputs {
                 setReferenceType(

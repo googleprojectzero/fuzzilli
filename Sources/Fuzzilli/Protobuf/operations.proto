@@ -1823,6 +1823,9 @@ message WasmArrayNewData {
 message WasmArrayNewElem {
 }
 
+message WasmArrayInitData {
+}
+
 message BeginBundleScript {
 }
 

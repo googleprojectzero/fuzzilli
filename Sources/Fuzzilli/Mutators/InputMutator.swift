@@ -135,7 +135,8 @@ public class InputMutator: BaseInstructionMutator {
             .wasmStructGet,
             .wasmStructSet,
             .wasmArrayGet,
-            .wasmArraySet:
+            .wasmArraySet,
+            .wasmArrayInitData:
             // Input 0 is always the target struct or array reference.
             guard selectedInput == 0 else { return nil }
             return findNullableRefVariant(of: inouts[selectedInput], b)

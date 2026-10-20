@@ -249,6 +249,44 @@ struct WasmGCTests {
         testForOutput(program: jsProg, runner: runner, outputString: "20\n")
     }
 
+    @Test func testArrayInitData() throws {
+        let runner = JavaScriptExecutor()!
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let jsProg = fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            let arrayType = b.wasmDefineTypeGroup {
+                return [b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)]
+            }[0]
+
+            let module = b.buildWasmModule { wasmModule in
+                let dataSegment = wasmModule.addDataSegment(
+                    segment: [10, 0, 0, 0, 20, 0, 0, 0, 30, 0, 0, 0])
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, _, _ in
+                    let array = function.wasmArrayNewDefault(
+                        arrayType: arrayType, size: function.consti32(4))
+                    function.wasmArrayInitData(
+                        array: array, arrayIndex: function.consti32(1),
+                        dataSegment: dataSegment, dataOffset: function.consti32(4),
+                        size: function.consti32(2))
+                    let elem1 = function.wasmArrayGet(array: array, index: function.consti32(1))
+                    let elem2 = function.wasmArrayGet(array: array, index: function.consti32(2))
+                    return [function.wasmi32BinOp(elem1, elem2, binOpKind: .Add)]
+                }
+            }
+
+            let exports = module.loadExports()
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+            let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [])
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+            let prog = b.finalize()
+            return fuzzer.lifter.lift(prog)
+        }
+        testForOutput(program: jsProg, runner: runner, outputString: "50\n")
+    }
+
     @Test func testArrayLen() throws {
         let runner = JavaScriptExecutor()!
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)

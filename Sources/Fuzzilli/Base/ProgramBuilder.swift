@@ -6588,6 +6588,19 @@ public class ProgramBuilder {
                 types: [.wasmGenericRef, .wasmi32, arrayDesc.elementType.unpacked()])
         }
 
+        public func wasmArrayInitData(
+            array: Variable, arrayIndex: Variable, dataSegment: Variable, dataOffset: Variable,
+            size: Variable
+        ) {
+            let arrayDesc = b.jsTyper.getTypeDescription(of: array) as! WasmArrayTypeDescription
+            assert(arrayDesc.mutability)
+            assert(!arrayDesc.elementType.isWasmReferenceType)
+            b.emit(
+                WasmArrayInitData(),
+                withInputs: [array, arrayIndex, dataSegment, dataOffset, size],
+                types: [.wasmArrayRef(), .wasmi32, .wasmDataSegment(), .wasmi32, .wasmi32])
+        }
+
         @discardableResult
         public func wasmStructNew(structType: Variable, fields: [Variable]) -> Variable {
             return b.emit(
