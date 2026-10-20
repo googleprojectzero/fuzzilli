@@ -536,6 +536,44 @@ struct LifterTests {
         }
     }
 
+    @Test func testPostfixAndPrefixUnaryOperationPrecedenceLifting() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+
+            let b = fuzzer.makeBuilder()
+
+            let v0 = b.loadInt(3)
+            let v1 = b.loadInt(2)
+            let output = b.createNamedVariable(forBuiltin: "output")
+
+            b.callFunction(output, withArgs: [b.unary(.Minus, b.unary(.PostInc, v0))])
+            b.callFunction(output, withArgs: [b.unary(.Minus, b.unary(.PostDec, v0))])
+            b.callFunction(output, withArgs: [b.binary(b.unary(.PostInc, v0), v1, with: .Exp)])
+            b.callFunction(output, withArgs: [b.binary(b.unary(.PostDec, v1), v0, with: .Exp)])
+            b.callFunction(output, withArgs: [b.unary(.Minus, b.unary(.PreInc, v0))])
+            b.callFunction(output, withArgs: [b.unary(.Minus, b.unary(.PreDec, v0))])
+            b.callFunction(output, withArgs: [b.binary(b.unary(.PreInc, v1), v0, with: .Exp)])
+
+            let program = b.finalize()
+            let actual = fuzzer.lifter.lift(program)
+
+            let expected = """
+                let v0 = 3;
+                let v1 = 2;
+                output(-v0++);
+                output(-v0--);
+                output(v0++ ** v1);
+                output(v1-- ** v0);
+                output(-(++v0));
+                output(-(--v0));
+                output((++v1) ** v0);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
     @Test func testExpressionUninlining() {
         let fuzzer = makeMockFuzzer()
         fuzzer.sync {

@@ -1155,7 +1155,7 @@ public class JavaScriptLifter: Lifter {
                     input = NumberLiteral.new("(\(input.text))")
                 }
                 if op.op.isPostfix {
-                    expr = UnaryExpression.new() + input + op.op.token
+                    expr = PostfixExpression.new() + input + op.op.token
                 } else {
                     expr = UnaryExpression.new() + op.op.token + input
                 }
