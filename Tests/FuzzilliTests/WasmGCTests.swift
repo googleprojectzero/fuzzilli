@@ -287,6 +287,63 @@ struct WasmGCTests {
         testForOutput(program: jsProg, runner: runner, outputString: "50\n")
     }
 
+    @Test func testArrayInitElem() throws {
+        let runner = JavaScriptExecutor()!
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let jsProg = fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            let typeGroup = b.wasmDefineTypeGroup {
+                let sigType = b.wasmDefineSignatureType(
+                    signature: [] => [.wasmi32], indexTypes: [])
+                let arrayFuncRef = b.wasmDefineArrayType(
+                    elementType: .wasmFuncRef(), mutability: true)
+                return [sigType, arrayFuncRef]
+            }
+            let sigType = typeGroup[0]
+            let arrayType = typeGroup[1]
+
+            let module = b.buildWasmModule { wasmModule in
+                let f0 = wasmModule.addWasmFunction(signature: sigType) { function, _, _ in
+                    return [function.consti32(10)]
+                }
+                let f1 = wasmModule.addWasmFunction(signature: sigType) { function, _, _ in
+                    return [function.consti32(20)]
+                }
+                let f2 = wasmModule.addWasmFunction(signature: sigType) { function, _, _ in
+                    return [function.consti32(30)]
+                }
+                let elementSegment = wasmModule.addElementSegment(elements: [f0, f1, f2])
+                wasmModule.addWasmFunction(signature: sigType) { function, _, _ in
+                    let array = function.wasmArrayNewDefault(
+                        arrayType: arrayType, size: function.consti32(4))
+                    function.wasmArrayInitElem(
+                        array: array, arrayIndex: function.consti32(2),
+                        elementSegment: elementSegment, elementOffset: function.consti32(1),
+                        size: function.consti32(2))
+                    let callElement = { (index: Int32) -> Variable in
+                        let elem = function.wasmArrayGet(
+                            array: array, index: function.consti32(index))
+                        let funcRef = function.wasmRefCast(
+                            elem, refType: .wasmRef(.Index(), nullability: false), typeDef: sigType)
+                        return function.wasmCallRef(functionRef: funcRef, functionArgs: [])[0]
+                    }
+                    return [function.wasmi32BinOp(callElement(2), callElement(3), binOpKind: .Add)]
+                }
+            }
+
+            let exports = module.loadExports()
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+            let wasmOut = b.callMethod(module.getExportedMethod(at: 3), on: exports, withArgs: [])
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+            let prog = b.finalize()
+            return fuzzer.lifter.lift(prog)
+        }
+        testForOutput(program: jsProg, runner: runner, outputString: "50\n")
+    }
+
     @Test func testArrayLen() throws {
         let runner = JavaScriptExecutor()!
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)

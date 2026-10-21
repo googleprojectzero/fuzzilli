@@ -6601,6 +6601,20 @@ public class ProgramBuilder {
                 types: [.wasmArrayRef(), .wasmi32, .wasmDataSegment(), .wasmi32, .wasmi32])
         }
 
+        public func wasmArrayInitElem(
+            array: Variable, arrayIndex: Variable, elementSegment: Variable,
+            elementOffset: Variable, size: Variable
+        ) {
+            let arrayDesc = b.jsTyper.getTypeDescription(of: array) as! WasmArrayTypeDescription
+            assert(arrayDesc.mutability)
+            // TODO(bettscheider): Support more types than funcrefs.
+            assert(arrayDesc.elementType == .wasmFuncRef())
+            b.emit(
+                WasmArrayInitElem(),
+                withInputs: [array, arrayIndex, elementSegment, elementOffset, size],
+                types: [.wasmArrayRef(), .wasmi32, .wasmElementSegment(), .wasmi32, .wasmi32])
+        }
+
         @discardableResult
         public func wasmStructNew(structType: Variable, fields: [Variable]) -> Variable {
             return b.emit(

@@ -427,6 +427,56 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator(
+        "WasmArrayInitElemGenerator", inContext: .single(.wasmFunction),
+        inputs: .requiredComplex(
+            .init(.anyNonNullableIndexRef, .IsWasmArray), .init(.wasmElementSegment()))
+    ) { b, _, elementSegment in
+        let elementSegmentTypeInfo = b.type(of: elementSegment).wasmElementSegmentType!
+        if elementSegmentTypeInfo.isDropped {
+            return
+        }
+
+        // array.init_elem requires a mutable array. Element segments currently only hold funcrefs,
+        // so the array's element type must also be funcref.
+        // TODO(bettscheider): Support non-funcref element segments and arrays in array.init_elem.
+        let maybeArray = b.findVariable { v in
+            guard
+                let refType = b.type(of: v).wasmReferenceType,
+                !refType.nullability,
+                case .Index(let desc, _) = refType.kind,
+                let arrayType = desc.get() as? WasmArrayTypeDescription
+            else {
+                return false
+            }
+            return arrayType.mutability && arrayType.elementType == .wasmFuncRef()
+        }
+        guard let array = maybeArray else { return }
+
+        let function = b.currentWasmModule.currentWasmFunction
+
+        // TODO(mliedtke): Track array length and use other indices as well.
+        let arrayIndex = function.consti32(0)
+
+        let segmentLength = Int64(elementSegmentTypeInfo.segmentLength)
+        let elementOffsetValue = b.randomNonNegativeIndex(upTo: segmentLength)
+        let elementOffset = function.consti32(Int32(elementOffsetValue))
+
+        let maxElements = segmentLength - elementOffsetValue
+        var size = function.consti32(Int32(b.randomSize(upTo: min(maxElements, 0x1000))))
+        // The array length is not tracked statically, so in most cases clamp the size to the
+        // array length at runtime to avoid traps.
+        if probability(0.9) {
+            let arrayLength = function.wasmArrayLen(array)
+            let fits = function.wasmi32CompareOp(size, arrayLength, using: .Le_u)
+            size = function.wasmSelect(on: fits, trueValue: size, falseValue: arrayLength)
+        }
+
+        function.wasmArrayInitElem(
+            array: array, arrayIndex: arrayIndex, elementSegment: elementSegment,
+            elementOffset: elementOffset, size: size)
+    },
+
+    CodeGenerator(
         "WasmStructNewGenerator", inContext: .single(.wasmFunction),
         inputs: .requiredComplex(.init(.wasmTypeDef(), .IsWasmStruct)),
         producesComplex: [.init(.anyNonNullableIndexRef, .IsWasmStruct)]

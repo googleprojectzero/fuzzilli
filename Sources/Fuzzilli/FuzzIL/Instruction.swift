@@ -1874,6 +1874,8 @@ extension Instruction: ProtobufConvertible {
                 $0.wasmArraySet = Fuzzilli_Protobuf_WasmArraySet()
             case .wasmArrayInitData(_):
                 $0.wasmArrayInitData = Fuzzilli_Protobuf_WasmArrayInitData()
+            case .wasmArrayInitElem(_):
+                $0.wasmArrayInitElem = Fuzzilli_Protobuf_WasmArrayInitElem()
             case .wasmStructNewDefault(_):
                 $0.wasmStructNewDefault = Fuzzilli_Protobuf_WasmStructNewDefault()
             case .wasmStructNew(_):
@@ -3164,6 +3166,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmArraySet()
         case .wasmArrayInitData(_):
             op = WasmArrayInitData()
+        case .wasmArrayInitElem(_):
+            op = WasmArrayInitElem()
         case .wasmStructNew(_):
             op = WasmStructNew(fieldCount: inouts.count - 2)
         case .wasmStructNewDefault(_):

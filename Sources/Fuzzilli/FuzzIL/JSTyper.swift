@@ -1137,7 +1137,8 @@ public struct JSTyper: Analyzer {
             }
             setType(of: instr.output, to: typeDesc.elementType.unpacked())
         case .wasmArraySet(_),
-            .wasmArrayInitData(_):
+            .wasmArrayInitData(_),
+            .wasmArrayInitElem(_):
             if !(tryGetTypeDescription(of: instr.input(0)) is WasmArrayTypeDescription) {
                 setType(of: instr.input(0), to: .error)
             }

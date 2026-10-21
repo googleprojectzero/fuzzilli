@@ -410,6 +410,7 @@ message Instruction {
         WasmArrayNewData wasmArrayNewData = 384;
         WasmArrayNewElem wasmArrayNewElem = 385;
         WasmArrayInitData wasmArrayInitData = 386;
+        WasmArrayInitElem wasmArrayInitElem = 387;
     }
 }
 
