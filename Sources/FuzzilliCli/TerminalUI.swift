@@ -67,7 +67,12 @@ class TerminalUI {
 
         fuzzer.registerEventListener(for: fuzzer.events.CrashFound) { crash in
             if crash.isUnique {
+                let timeSinceLastInterestingProgram = -self.lastInterestingProgramFound
+                    .timeIntervalSinceNow
                 print("########## Unique Crash Found ##########")
+                print(
+                    "Crash Stats: corpus: \(fuzzer.corpus.name), uptime: \(Int(fuzzer.uptime()))s, timeSinceLastInterestingSample: \(Int(timeSinceLastInterestingProgram))s, corpusSize: \(fuzzer.corpus.size), coverage: \(String(format: "%.2f%%", fuzzer.evaluator.currentScore * 100)), behaviour: \(crash.behaviour.rawValue)"
+                )
                 print(fuzzer.lifter.lift(crash.program, withOptions: .includeComments))
             }
         }

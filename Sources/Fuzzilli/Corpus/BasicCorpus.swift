@@ -53,7 +53,7 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
         self.programs = RingBuffer(maxSize: maxSize)
         self.ages = RingBuffer(maxSize: maxSize)
 
-        super.init(name: "Corpus")
+        super.init(name: "BasicCorpus")
     }
 
     override func initialize() {
