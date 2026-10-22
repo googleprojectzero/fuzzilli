@@ -137,28 +137,38 @@ import Testing
         let p1 = makeTestProgram(intVal: 20)
         let queue = ThreadSafeImportQueue([p0, p1])
 
-        var job = Fuzzer.CorpusImportJob(queue: queue, mode: .full)
-        #expect(job.totalNumberOfProgramsToImport == 2)
-        #expect(job.isFinished == false)
-        #expect(job.progress() == 0.0)
+        var job1 = Fuzzer.CorpusImportJob(queue: queue, mode: .full)
+        var job2 = Fuzzer.CorpusImportJob(queue: queue, mode: .full)
+        #expect(job1.totalNumberOfProgramsToImport == 2)
+        #expect(job1.totalNumberOfProgramsProcessedSoFar == 0)
+        #expect(job1.isFinished == false)
+        #expect(job1.progress() == 0.0)
 
-        let first = job.nextProgram()
+        let first = job1.nextProgram()
         #expect(first == p1)
-        #expect(job.numberOfProgramsProcessedSoFar == 1)
-        #expect(job.progress() == 0.5)
-        #expect(job.isFinished == false)
+        #expect(job1.numberOfProgramsProcessedSoFar == 1)
+        #expect(job2.numberOfProgramsProcessedSoFar == 0)
+        #expect(job1.totalNumberOfProgramsProcessedSoFar == 1)
+        #expect(job2.totalNumberOfProgramsProcessedSoFar == 1)
+        #expect(job1.progress() == 0.5)
+        #expect(job1.isFinished == false)
 
-        let second = job.nextProgram()
+        let second = job2.nextProgram()
         #expect(second == p0)
-        #expect(job.numberOfProgramsProcessedSoFar == 2)
-        #expect(job.progress() == 1.0)
-        #expect(job.isFinished == true)
+        #expect(job1.numberOfProgramsProcessedSoFar == 1)
+        #expect(job2.numberOfProgramsProcessedSoFar == 1)
+        #expect(job1.totalNumberOfProgramsProcessedSoFar == 2)
+        #expect(job2.totalNumberOfProgramsProcessedSoFar == 2)
+        #expect(job1.progress() == 1.0)
+        #expect(job1.isFinished == true)
+        #expect(job2.isFinished == true)
 
         // Dequeueing on a depleted job must safely return nil without incrementing counter
-        let third = job.nextProgram()
+        let third = job1.nextProgram()
         #expect(third == nil)
-        #expect(job.numberOfProgramsProcessedSoFar == 2)
-        #expect(job.isFinished == true)
+        #expect(job1.numberOfProgramsProcessedSoFar == 1)
+        #expect(job1.totalNumberOfProgramsProcessedSoFar == 2)
+        #expect(job1.isFinished == true)
     }
 
     @Test func testFuzzerScheduleCorpusImportWithQueue() {
@@ -172,6 +182,99 @@ import Testing
             #expect(fuzzer.state == .corpusImport)
             #expect(fuzzer.corpusImportProgress() == 0.0)
             #expect(fuzzer.currentImportQueue === queue)
+        }
+    }
+
+    @Test func testSharedQueueFinalImportStats() {
+        let config = Configuration(logLevel: .info)
+        let fuzzer = makeMockFuzzer(
+            config: config, queue: DispatchQueue(label: "test.fuzzer.stats"), initialize: false)
+        let programs = makeTestPrograms(count: 4)
+        let queue = ThreadSafeImportQueue(programs)
+        let done = DispatchSemaphore(value: 0)
+
+        var infoMessages = [String]()
+        var warningMessages = [String]()
+
+        fuzzer.sync {
+            fuzzer.registerEventListener(for: fuzzer.events.Log) { ev in
+                if ev.level == .info {
+                    infoMessages.append(ev.message)
+                } else if ev.level == .warning {
+                    warningMessages.append(ev.message)
+                }
+            }
+            fuzzer.registerEventListener(for: fuzzer.events.CorpusImportComplete) {
+                fuzzer.shutdown(reason: .finished)
+                done.signal()
+            }
+
+            fuzzer.scheduleCorpusImport(queue, importMode: .full)
+            fuzzer.initialize()
+
+            // Simulate other workers consuming 3 of the 4 programs from the shared queue.
+            _ = queue.next()
+            _ = queue.next()
+            _ = queue.next()
+            #expect(queue.count == 1)
+
+            fuzzer.start()
+        }
+
+        done.wait()
+
+        fuzzer.sync {
+            #expect(infoMessages.contains("1/1 programs executed successfully"))
+            #expect(
+                !warningMessages.contains(where: {
+                    $0.contains("of imported programs failed to")
+                }))
+        }
+    }
+
+    @Test func testSharedQueueDepletedBeforeWorkerStarts() {
+        let config = Configuration(logLevel: .info)
+        let fuzzer = makeMockFuzzer(
+            config: config, queue: DispatchQueue(label: "test.fuzzer.depleted"), initialize: false)
+        let programs = makeTestPrograms(count: 2)
+        let queue = ThreadSafeImportQueue(programs)
+        let done = DispatchSemaphore(value: 0)
+
+        var infoMessages = [String]()
+        var warningMessages = [String]()
+
+        fuzzer.sync {
+            fuzzer.registerEventListener(for: fuzzer.events.Log) { ev in
+                if ev.level == .info {
+                    infoMessages.append(ev.message)
+                } else if ev.level == .warning {
+                    warningMessages.append(ev.message)
+                }
+            }
+            fuzzer.registerEventListener(for: fuzzer.events.CorpusImportComplete) {
+                fuzzer.shutdown(reason: .finished)
+                done.signal()
+            }
+
+            fuzzer.scheduleCorpusImport(queue, importMode: .full)
+            fuzzer.initialize()
+
+            // Simulate other workers draining the entire queue before this worker processes any program.
+            _ = queue.next()
+            _ = queue.next()
+            #expect(queue.isEmpty)
+
+            fuzzer.start()
+        }
+
+        done.wait()
+
+        fuzzer.sync {
+            #expect(!infoMessages.contains("Corpus import finished:"))
+            #expect(
+                !warningMessages.contains(where: {
+                    $0.contains("of imported programs failed to")
+                }))
         }
     }
 }

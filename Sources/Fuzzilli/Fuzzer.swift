@@ -1111,7 +1111,7 @@ public class Fuzzer {
 
             if currentCorpusImportJob.numberOfProgramsProcessedSoFar % 500 == 0 {
                 logger.info(
-                    "Corpus import progress: processed \(currentCorpusImportJob.numberOfProgramsProcessedSoFar) of \(currentCorpusImportJob.totalNumberOfProgramsToImport) programs"
+                    "Corpus import progress: processed \(currentCorpusImportJob.totalNumberOfProgramsProcessedSoFar) of \(currentCorpusImportJob.totalNumberOfProgramsToImport) programs"
                 )
             }
 
@@ -1154,9 +1154,12 @@ public class Fuzzer {
     }
 
     private func printFinalCorpusImportStats() {
+        let processed = currentCorpusImportJob.numberOfProgramsProcessedSoFar
+        guard processed > 0 else { return }
+
         logger.info("Corpus import finished:")
         logger.info(
-            "\(currentCorpusImportJob.numberOfProgramsThatExecutedSuccessfullyDuringImport)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs executed successfully"
+            "\(currentCorpusImportJob.numberOfProgramsThatExecutedSuccessfullyDuringImport)/\(processed) programs executed successfully"
         )
         logger.info(
             "    Of which \(currentCorpusImportJob.numberOfProgramsThatWereImport) programs were added to the corpus"
@@ -1165,7 +1168,7 @@ public class Fuzzer {
             "    Of which \(currentCorpusImportJob.numberOfProgramsNotImportedBecauseUninteresting) programs were not interesting (e.g. lack of coverage)"
         )
         logger.info(
-            "\(currentCorpusImportJob.numberOfProgramsThatNeededFixup)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs needed fixup during import"
+            "\(currentCorpusImportJob.numberOfProgramsThatNeededFixup)/\(processed) programs needed fixup during import"
         )
         logger.info(
             "    \(currentCorpusImportJob.numberOfProgramsThatNeededOneFixupAttempt) succeeded after attempt 1"
@@ -1177,14 +1180,14 @@ public class Fuzzer {
             "    \(currentCorpusImportJob.numberOfProgramsThatNeededThreeFixupAttempts) succeeded after attempt 3"
         )
         logger.info(
-            "\(currentCorpusImportJob.numberOfProgramsThatFailedDuringImport)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs failed to execute (even after fixup) and weren't imported"
+            "\(currentCorpusImportJob.numberOfProgramsThatFailedDuringImport)/\(processed) programs failed to execute (even after fixup) and weren't imported"
         )
         logger.info(
-            "\(currentCorpusImportJob.numberOfProgramsThatTimedOutDuringImport)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs timed out and weren't imported"
+            "\(currentCorpusImportJob.numberOfProgramsThatTimedOutDuringImport)/\(processed) programs timed out and weren't imported"
         )
         if !config.isWasmEnabled {
             logger.info(
-                "\(currentCorpusImportJob.numberOfProgramsRequiringWasmButDisabled)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs require Wasm which is disabled"
+                "\(currentCorpusImportJob.numberOfProgramsRequiringWasmButDisabled)/\(processed) programs require Wasm which is disabled"
             )
             if currentCorpusImportJob.numberOfProgramsRequiringWasmButDisabled > 0
                 && config.storagePath != nil
@@ -1196,14 +1199,14 @@ public class Fuzzer {
         }
         if !config.generateBundle {
             logger.info(
-                "\(currentCorpusImportJob.numberOfProgramsRequiringBundlesButDisabled)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs require bundles which are disabled"
+                "\(currentCorpusImportJob.numberOfProgramsRequiringBundlesButDisabled)/\(processed) programs require bundles which are disabled"
             )
         }
 
         let successRatio =
             Double(
                 currentCorpusImportJob.numberOfProgramsThatExecutedSuccessfullyDuringImport)
-            / Double(currentCorpusImportJob.totalNumberOfProgramsToImport)
+            / Double(processed)
         let failureRatio = 1.0 - successRatio
         if failureRatio >= 0.25 {
             let reason =
@@ -1498,6 +1501,10 @@ public class Fuzzer {
 
         var isFinished: Bool {
             return importQueue.isEmpty
+        }
+
+        var totalNumberOfProgramsProcessedSoFar: Int {
+            return totalNumberOfProgramsToImport - importQueue.count
         }
 
         var queue: ThreadSafeImportQueue {
