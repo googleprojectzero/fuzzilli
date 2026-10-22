@@ -57,12 +57,16 @@ public let v8Profile = Profile(
 
     additionalCodeGenerators: [
         (ForceJITCompilationThroughLoopGenerator, 5),
-        (ForceTurboFanCompilationGenerator, 5),
-        (ForceMaglevCompilationGenerator, 5),
+        (ForceTurboFanCompilationGenerator, 15),
+        (ForceMaglevCompilationGenerator, 15),
         (ForceWasmTurboFanCompilationGenerator, 5),
-        (ForceOsrGenerator, 5),
+        (CompileBaselineGenerator, 10),
+        (ForceOsrGenerator, 10),
         (NeverOptimizeFunctionGenerator, 5),
         (DisableEagerInliningGenerator, 5),
+        (DeoptimizeFunctionGenerator, 5),
+        (DeoptimizeNowGenerator, 5),
+        (SetForceSlowPathGenerator, 5),
 
         (WorkerGenerator, 10),
         (V8GcGenerator, 5),
@@ -79,6 +83,7 @@ public let v8Profile = Profile(
         (UndefinedNanGenerator, 5),
         (StringShapeGenerator, 5),
         (HeapNumberGenerator, 5),
+        (ArrayBufferDetachGenerator, 5),
         (V8InterceptorObjectGenerator, 5),
         (V8AccessCheckedObjectGenerator, 5),
         (V8SetAccessPolicyGenerator, 5),

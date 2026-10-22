@@ -143,10 +143,10 @@ public let ForceJITCompilationThroughLoopGenerator = CodeGenerator(
     "ForceJITCompilationThroughLoopGenerator", inputs: .required(.function())
 ) { b, f in
     assert(b.type(of: f).Is(.function()))
-    let arguments = b.randomArguments(forCalling: f)
+    let (arguments, matches) = b.randomArguments(forCallingGuardableFunction: f)
 
     b.buildRepeatLoop(n: 100) { _ in
-        b.callFunction(f, withArgs: arguments)
+        b.callFunction(f, withArgs: arguments, guard: !matches)
     }
 }
 
@@ -229,7 +229,9 @@ public let ForceOsrGenerator = CodeGenerator(
                 loopVar, with: b.loadInt(Int64.random(in: 0..<Int64(numIterations))),
                 using: .equal)
             b.buildIf(condition) {
-                if probability(0.8) {
+                if probability(0.2) {
+                    b.eval("%BaselineOsr()")
+                } else if probability(0.8) {
                     b.eval("%OptimizeOsr()")
                 } else {
                     b.eval("%OptimizeOsr(%@)", with: [b.loadInt(1)])
@@ -256,6 +258,36 @@ public let DisableEagerInliningGenerator = CodeGenerator(
     "DisableEagerInliningGenerator", inputs: .required(.function())
 ) { b, f in
     b.eval("%DisableEagerInlining(%@)", with: [f])
+}
+
+// Compiles the given function to Sparkplug baseline code.
+public let CompileBaselineGenerator = CodeGenerator(
+    "CompileBaselineGenerator", inputs: .required(.function())
+) { b, f in
+    b.eval("%CompileBaseline(%@)", with: [f])
+    let (arguments, matches) = b.randomArguments(forCallingGuardableFunction: f)
+    b.callFunction(f, withArgs: arguments, guard: !matches)
+}
+
+// Deoptimizes the given function if it is currently optimized, or aborts its optimization.
+public let DeoptimizeFunctionGenerator = CodeGenerator(
+    "DeoptimizeFunctionGenerator", inputs: .required(.function())
+) { b, f in
+    b.eval("%DeoptimizeFunction(%@)", with: [f])
+    if probability(0.5) {
+        let (arguments, matches) = b.randomArguments(forCallingGuardableFunction: f)
+        b.callFunction(f, withArgs: arguments, guard: !matches)
+    }
+}
+
+// Deoptimizes the currently executing function if it is optimized.
+public let DeoptimizeNowGenerator = CodeGenerator("DeoptimizeNowGenerator") { b in
+    b.eval(probability(0.5) ? "%DeoptimizeNow()" : "%_DeoptimizeNow()")
+}
+
+// Toggles forcing slow paths in builtins and runtime functions.
+public let SetForceSlowPathGenerator = CodeGenerator("SetForceSlowPathGenerator") { b in
+    b.eval(probability(0.5) ? "%SetForceSlowPath(true)" : "%SetForceSlowPath(false)")
 }
 
 public let WorkerGenerator = CodeGenerator("WorkerGenerator") { b in
@@ -318,6 +350,33 @@ public let PretenureAllocationSiteGenerator = CodeGenerator(
     "PretenureAllocationSiteGenerator", inputs: .required(.object())
 ) { b, obj in
     b.eval("%PretenureAllocationSite(%@)", with: [obj])
+    // %PretenureAllocationSite only queues the allocation site for pretenuring;
+    // the actual pretenuring transition happens when feedback is processed
+    // during a minor GC.
+    if probability(0.8) {
+        let gc = b.createNamedVariable(forBuiltin: "gc")
+        let type = b.loadString("minor")
+        let options = b.createObject(with: ["type": type])
+        b.callFunction(gc, withArgs: [options])
+    }
+}
+
+public let ArrayBufferDetachGenerator = CodeGenerator(
+    "ArrayBufferDetachGenerator", inputs: .required(.jsArrayBuffer)
+) { b, buffer in
+    if probability(0.8) {
+        b.eval("%ArrayBufferDetach(%@)", with: [buffer])
+    } else {
+        // Setting a detach key overwrites JSArrayBuffer::views_or_detach_key_
+        // with a Cell, which disables single-view tracking in AttachView and
+        // TryDetachViews. Sometimes leave the buffer attached so subsequent
+        // view creations or transfers observe has_detach_key().
+        let key = b.randomJsVariable()
+        b.eval("%ArrayBufferSetDetachKey(%@, %@)", with: [buffer, key])
+        if probability(0.8) {
+            b.eval("%ArrayBufferDetach(%@, %@)", with: [buffer, key])
+        }
+    }
 }
 
 public let HoleNanGenerator = CodeGenerator("HoleNanGenerator") { b in

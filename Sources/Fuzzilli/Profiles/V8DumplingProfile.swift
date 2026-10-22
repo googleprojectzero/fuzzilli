@@ -123,15 +123,20 @@ let v8DumplingProfile = Profile(
 
     additionalCodeGenerators: [
         (ForceJITCompilationThroughLoopGenerator, 5),
-        (ForceTurboFanCompilationGenerator, 5),
-        (ForceMaglevCompilationGenerator, 5),
-        (ForceOsrGenerator, 5),
+        (ForceTurboFanCompilationGenerator, 15),
+        (ForceMaglevCompilationGenerator, 15),
+        (CompileBaselineGenerator, 10),
+        (ForceOsrGenerator, 10),
         (NeverOptimizeFunctionGenerator, 5),
         (DisableEagerInliningGenerator, 5),
+        (DeoptimizeFunctionGenerator, 5),
+        (DeoptimizeNowGenerator, 5),
+        (SetForceSlowPathGenerator, 5),
 
         (V8GcGenerator, 10),
         (V8DispatchTableGCIntervalGenerator, 5),
         (V8SimulateNewspaceFullGenerator, 5),
+        (ArrayBufferDetachGenerator, 5),
         (V8InterceptorObjectGenerator, 5),
         (V8AccessCheckedObjectGenerator, 5),
         (V8SetAccessPolicyGenerator, 5),
