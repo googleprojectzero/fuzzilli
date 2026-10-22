@@ -2083,10 +2083,10 @@ public class WasmLifter {
             // A Block can "produce" (push) an item on the value stack, just like a function. Similarly, a block can also have parameters.
             // Ref: https://webassembly.github.io/spec/core/binary/instructions.html#binary-blocktype
             let signatureDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
-            return Data([0x02] + Leb128.unsignedEncode(typeDescToIndex[signatureDesc]!))
+            return Data([0x02] + Leb128.signedEncode(typeDescToIndex[signatureDesc]!))
         case .wasmBeginLoop(_):
             let signatureDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
-            return Data([0x03] + Leb128.unsignedEncode(typeDescToIndex[signatureDesc]!))
+            return Data([0x03] + Leb128.signedEncode(typeDescToIndex[signatureDesc]!))
         case .wasmBeginTryTable(let op):
             let signatureDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
             var inputIndex = 1 + op.parameterCount
@@ -2107,15 +2107,15 @@ public class WasmLifter {
                 }
             }.reduce(Data(), +)
             return [0x1F]
-                + Leb128.unsignedEncode(typeDescToIndex[signatureDesc]!)
+                + Leb128.signedEncode(typeDescToIndex[signatureDesc]!)
                 + Leb128.unsignedEncode(op.catches.count)
                 + catchTable
         case .wasmBeginTry(_):
             let signatureDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
-            return Data([0x06] + Leb128.unsignedEncode(typeDescToIndex[signatureDesc]!))
+            return Data([0x06] + Leb128.signedEncode(typeDescToIndex[signatureDesc]!))
         case .wasmBeginTryDelegate(_):
             let signatureDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
-            return Data([0x06] + Leb128.unsignedEncode(typeDescToIndex[signatureDesc]!))
+            return Data([0x06] + Leb128.signedEncode(typeDescToIndex[signatureDesc]!))
         case .wasmBeginCatchAll(_):
             return Data([0x19])
         case .wasmBeginCatch(_):
@@ -2185,7 +2185,7 @@ public class WasmLifter {
         case .wasmBeginIf(let op):
             currentFunction!.addBranchHint(op.hint)
             let signatureDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
-            let beginIf = Data([0x04] + Leb128.unsignedEncode(typeDescToIndex[signatureDesc]!))
+            let beginIf = Data([0x04] + Leb128.signedEncode(typeDescToIndex[signatureDesc]!))
             // Invert the condition with an `i32.eqz` (resulting in 0 becoming 1 and everything else becoming 0).
             return op.inverted ? Data([0x45]) + beginIf : beginIf
         case .wasmBeginElse(_):
