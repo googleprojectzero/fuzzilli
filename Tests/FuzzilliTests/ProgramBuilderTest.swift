@@ -3869,7 +3869,7 @@ struct ProgramBuilderTests {
             for _ in 0..<numPrograms {
                 fuzzer.sync {
                     let b = fuzzer.makeBuilder()
-                    b.buildPrefix()
+                    b.loadInt(123)
 
                     // TODO(mliedtke): The mechanism needs to learn how to resolve nested input +
                     // context dependencies.

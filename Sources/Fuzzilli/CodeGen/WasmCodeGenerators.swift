@@ -78,6 +78,7 @@ private func wasmTypeGroupWithAllTypesGenerator(withCustomDescriptors: Bool) -> 
 
     return CodeGenerator(
         "WasmTypeGroupWithAllTypesGenerator",
+        useInPrefix: true,
         [
             GeneratorStub(
                 "WasmTypeGroupBeginGenerator",
