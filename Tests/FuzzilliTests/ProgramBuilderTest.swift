@@ -1032,6 +1032,47 @@ struct ProgramBuilderTests {
         }
     }
 
+    @Test func testDuplicatePrivateMembersRenamedOnAdopt() throws {
+        let fuzzer = makeMockFuzzer()
+        try fuzzer.sync {
+            let b1 = fuzzer.makeBuilder()
+            b1.buildClassDefinition { cls in
+                cls.addPrivateInstanceProperty("a")
+                cls.addPrivateInstanceMethod("m", with: .parameters(n: 0)) { _ in }
+            }
+            let original = b1.finalize()
+
+            let b2 = fuzzer.makeBuilder()
+            b2.adopting {
+                for instr in original.code {
+                    b2.adopt(instr)
+                    if instr.op is BeginClassDefinition {
+                        b2.currentClassDefinition.addPrivateInstanceProperty("a")
+                        b2.currentClassDefinition.addPrivateInstanceMethod(
+                            "m", with: .parameters(n: 0)
+                        ) { _ in }
+                    }
+                }
+            }
+            let adopted = b2.finalize()
+
+            let propNames = adopted.code.compactMap {
+                ($0.op as? ClassAddPrivateProperty)?.propertyName
+            }
+            let methodNames = adopted.code.compactMap {
+                ($0.op as? BeginClassPrivateMethod)?.methodName
+            }
+            #expect(propNames.count == 2 && Set(propNames).count == 2)
+            #expect(methodNames.count == 2 && Set(methodNames).count == 2)
+
+            if let runner = JavaScriptExecutor() {
+                let js = fuzzer.lifter.lift(adopted)
+                let result = try runner.executeScript(js)
+                #expect(result.isSuccess, "\(result.output)\n\(result.error)\nScript:\n\(js)")
+            }
+        }
+    }
+
     @Test func testSwitchBlockBuilding() {
         let fuzzer = makeMockFuzzer()
         fuzzer.sync {

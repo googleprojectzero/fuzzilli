@@ -1701,10 +1701,37 @@ public class ProgramBuilder {
 
     /// Adopts an instruction from the program that is currently configured for adoption into the program being constructed.
     public func adopt(_ instr: Instruction) {
-        if instr.op is EndClassDefinition && hasVisibleClassDefinition {
-            currentClassDefinition.emitPendingPrivateMembers()
+        var op = instr.op
+        if hasVisibleClassDefinition {
+            op = handleClassInstructionAdoption(op)
         }
-        internalAppend(Instruction(instr.op, inouts: adopt(instr.inouts)))
+        internalAppend(Instruction(op, inouts: adopt(instr.inouts)))
+    }
+
+    // Flushes pending private members on EndClassDefinition and renames colliding private member
+    // declarations to prevent duplicate definitions, which cause early SyntaxErrors in JavaScript.
+    private func handleClassInstructionAdoption(_ op: Operation) -> Operation {
+        switch op.opcode {
+        case .classAddPrivateProperty(let propOp)
+        where currentClassDefinition.privateFields.contains(propOp.propertyName):
+            let newName = generateString(
+                randomCustomIdentifierName, notIn: currentClassDefinition.allPrivateFields)
+            return ClassAddPrivateProperty(
+                propertyName: newName, hasValue: propOp.hasValue, isStatic: propOp.isStatic)
+        case .beginClassPrivateMethod(let methodOp)
+        where currentClassDefinition.privateFields.contains(methodOp.methodName):
+            let newName = generateString(
+                randomCustomPrivateMethodName, notIn: currentClassDefinition.allPrivateFields)
+            return BeginClassPrivateMethod(
+                methodName: newName, parameters: methodOp.parameters,
+                isStatic: methodOp.isStatic, isGenerator: methodOp.isGenerator,
+                isAsync: methodOp.isAsync)
+        case .endClassDefinition:
+            currentClassDefinition.emitPendingPrivateMembers()
+            return op
+        default:
+            return op
+        }
     }
 
     /// Append an instruction at the current position.
@@ -2049,11 +2076,15 @@ public class ProgramBuilder {
         //
         var variableMap = remappedVariables
         for instr in program.code where slice.contains(instr.index) {
+            var op = instr.op
+            if hasVisibleClassDefinition {
+                op = handleClassInstructionAdoption(op)
+            }
             for output in instr.allOutputs {
                 variableMap[output] = nextVariable()
             }
             let inouts = instr.inouts.map({ variableMap[$0]! })
-            append(Instruction(instr.op, inouts: inouts))
+            append(Instruction(op, inouts: inouts))
         }
 
         trace("Splicing done")
