@@ -1006,6 +1006,32 @@ struct ProgramBuilderTests {
         }
     }
 
+    @Test func testPendingPrivateMemberReuse() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            b.buildClassDefinition { cls in
+                cls.addInstanceMethod("f", with: .parameters(n: 0)) { _ in
+                    let thisVar = cls.currentThisVariable!
+                    let (_, prop1) = cls.selectOrRegisterPendingPrivateProperty(
+                        forReceiver: thisVar, in: b)
+                    let (_, prop2) = cls.selectOrRegisterPendingPrivateProperty(
+                        forReceiver: thisVar, in: b)
+                    #expect(prop1 == prop2)
+                    #expect(cls.pendingPrivateProperties == [prop1])
+
+                    let (_, method1) = cls.selectOrRegisterPendingPrivateMethod(
+                        forReceiver: thisVar, in: b)
+                    let (_, method2) = cls.selectOrRegisterPendingPrivateMethod(
+                        forReceiver: thisVar, in: b)
+                    #expect(method1 == method2)
+                    #expect(cls.pendingPrivateMethods == [method1])
+                }
+            }
+            _ = b.finalize()
+        }
+    }
+
     @Test func testSwitchBlockBuilding() {
         let fuzzer = makeMockFuzzer()
         fuzzer.sync {

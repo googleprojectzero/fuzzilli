@@ -1366,14 +1366,16 @@ extension OperationMutator {
         in b: ProgramBuilder, fallback: String
     ) -> String {
         guard b.hasVisibleClassDefinition else { return fallback }
-        return b.currentClassDefinition.privateProperties.randomElement() ?? fallback
+        let cls = b.currentClassDefinition
+        return (cls.privateProperties + cls.pendingPrivateProperties).randomElement() ?? fallback
     }
 
     private func selectAvailablePrivateMethod(
         in b: ProgramBuilder, fallback: String
     ) -> String {
         guard b.hasVisibleClassDefinition else { return fallback }
-        return b.currentClassDefinition.privateMethods.randomElement() ?? fallback
+        let cls = b.currentClassDefinition
+        return (cls.privateMethods + cls.pendingPrivateMethods).randomElement() ?? fallback
     }
 
     private func randomWasmMemoryOffset(for instr: Instruction, _ b: ProgramBuilder) -> UInt64 {

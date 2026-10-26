@@ -600,11 +600,17 @@ public class ProgramBuilder {
     }
 
     // Generate a string not already contained in `notIn` using the provided `generator`. If it fails
-    // repeatedly, return a random string instead.
+    // repeatedly, return a random identifier string instead.
     public func generateString(_ generator: () -> String, notIn: any Collection<String>) -> String {
         Self.generateConstrained(
             generator, notIn: notIn,
-            fallback: { String.random(ofLength: Int.random(in: 1...5)) })
+            fallback: {
+                var result: String
+                repeat {
+                    result = "p" + String.random(ofLength: Int.random(in: 1...4))
+                } while notIn.contains(result)
+                return result
+            })
     }
 
     // Find a random variable to use as a string that isn't contained in `notIn`. If it fails
@@ -3210,7 +3216,7 @@ public class ProgramBuilder {
                 receiver = obj
             }
             let propertyName: String
-            if let prop = privateProperties.randomElement() {
+            if let prop = (privateProperties + pendingPrivateProperties).randomElement() {
                 propertyName = prop
             } else {
                 propertyName = b.generateString(
@@ -3231,7 +3237,7 @@ public class ProgramBuilder {
                 receiver = obj
             }
             let methodName: String
-            if let method = privateMethods.randomElement() {
+            if let method = (privateMethods + pendingPrivateMethods).randomElement() {
                 methodName = method
             } else {
                 methodName = b.generateString(

@@ -1511,7 +1511,7 @@ public let CodeGenerators: [CodeGenerator] = [
         // Try to find a private field that hasn't already been added to this literal.
         let propertyName = b.generateString(
             b.randomCustomIdentifierName,
-            notIn: b.currentClassDefinition.privateFields)
+            notIn: b.currentClassDefinition.allPrivateFields)
 
         var value = probability(0.5) ? b.randomJsVariable() : nil
         b.currentClassDefinition.addPrivateInstanceProperty(
@@ -1529,7 +1529,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 // Try to find a private method that hasn't already been added to this class.
                 let methodName = b.generateString(
                     b.randomCustomPrivateMethodName,
-                    notIn: b.currentClassDefinition.privateFields)
+                    notIn: b.currentClassDefinition.allPrivateFields)
                 let parameters = b.randomParameters()
                 let (isAsync, isGenerator) = randomAsyncAndGeneratorFlags()
                 b.emit(
@@ -1555,7 +1555,7 @@ public let CodeGenerators: [CodeGenerator] = [
         // Try to find a private field that hasn't already been added to this literal.
         let propertyName = b.generateString(
             b.randomCustomIdentifierName,
-            notIn: b.currentClassDefinition.privateFields)
+            notIn: b.currentClassDefinition.allPrivateFields)
         var value = probability(0.5) ? b.randomJsVariable() : nil
         b.currentClassDefinition.addPrivateStaticProperty(
             propertyName, value: value)
@@ -1572,7 +1572,7 @@ public let CodeGenerators: [CodeGenerator] = [
                 // Try to find a private method that hasn't already been added to this class.
                 let methodName = b.generateString(
                     b.randomCustomPrivateMethodName,
-                    notIn: b.currentClassDefinition.privateFields)
+                    notIn: b.currentClassDefinition.allPrivateFields)
                 let parameters = b.randomParameters()
                 let (isAsync, isGenerator) = randomAsyncAndGeneratorFlags()
                 b.emit(
