@@ -3707,6 +3707,7 @@ struct MinimizerTests {
             let b = fuzzer.makeBuilder()
 
             let cls = b.buildClassDefinition { cls in
+                cls.addPrivateInstanceMethod("foo", with: .parameters(n: 0)) { _ in }
                 cls.addInstanceMethod("m", with: .parameters(n: 0)) { args in
                     let this = args[0]
                     let v = b.loadInt(42)
@@ -3737,6 +3738,7 @@ struct MinimizerTests {
 
             let b2 = fuzzer.makeBuilder()
             let expectedCls = b2.buildClassDefinition { cls in
+                cls.addPrivateInstanceMethod("foo", with: .parameters(n: 0)) { _ in }
                 cls.addInstanceMethod("m", with: .parameters(n: 0)) { args in
                     let this = args[0]
                     let v = b2.loadInt(42)

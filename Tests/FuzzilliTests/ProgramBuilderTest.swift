@@ -965,6 +965,47 @@ struct ProgramBuilderTests {
         }
     }
 
+    @Test func testSplicingPrivateMemberAccessIntoClass() throws {
+        var getPropIndex = -1
+        var callMethodIndex = -1
+        let fuzzer = makeMockFuzzer()
+        try fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            b.buildClassDefinition { cls in
+                cls.addPrivateInstanceProperty("a")
+                cls.addPrivateInstanceMethod("m", with: .parameters(n: 0)) { _ in }
+                cls.addInstanceMethod("f", with: .parameters(n: 0)) { _ in
+                    let obj = b.createObject(with: [:])
+                    getPropIndex = b.indexOfNextInstruction()
+                    b.getPrivateProperty("a", of: obj, guard: true)
+                    callMethodIndex = b.indexOfNextInstruction()
+                    b.callPrivateMethod("m", on: obj, guard: true)
+                }
+            }
+            let donor = b.finalize()
+
+            b.buildClassDefinition { cls in
+                cls.addInstanceMethod("g", with: .parameters(n: 0)) { _ in
+                    #expect(b.splice(from: donor, at: getPropIndex, mergeDataFlow: false))
+                    #expect(b.splice(from: donor, at: callMethodIndex, mergeDataFlow: false))
+                    #expect(b.currentClassDefinition.pendingPrivateProperties == ["a"])
+                    #expect(b.currentClassDefinition.pendingPrivateMethods == ["m"])
+                }
+            }
+            let spliced = b.finalize()
+
+            #expect(spliced.code.contains(where: { $0.op is ClassAddPrivateProperty }))
+            #expect(spliced.code.contains(where: { $0.op is BeginClassPrivateMethod }))
+            #expect(spliced.code.contains(where: { $0.op is EndClassPrivateMethod }))
+
+            if let runner = JavaScriptExecutor() {
+                let js = fuzzer.lifter.lift(spliced)
+                let result = try runner.executeScript(js)
+                #expect(result.isSuccess, "\(result.output)\n\(result.error)\nScript:\n\(js)")
+            }
+        }
+    }
+
     @Test func testSwitchBlockBuilding() {
         let fuzzer = makeMockFuzzer()
         fuzzer.sync {

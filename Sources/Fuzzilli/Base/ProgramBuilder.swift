@@ -8147,6 +8147,16 @@ public class ProgramBuilder {
             activeClassDefinitions.top.currentThisVariable = nil
         case .endClassDefinition:
             activeClassDefinitions.pop()
+        case .getPrivateProperty(let op):
+            recordPendingPrivatePropertyIfNeeded(op.propertyName)
+        case .setPrivateProperty(let op):
+            recordPendingPrivatePropertyIfNeeded(op.propertyName)
+        case .updatePrivateProperty(let op):
+            recordPendingPrivatePropertyIfNeeded(op.propertyName)
+        case .callPrivateMethod(let op):
+            recordPendingPrivateMethodIfNeeded(op.methodName)
+        case .callPrivateMethodWithSpread(let op):
+            recordPendingPrivateMethodIfNeeded(op.methodName)
 
         case .beginSwitch:
             activeSwitchBlocks.push(SwitchBlock(in: self))
@@ -8195,6 +8205,24 @@ public class ProgramBuilder {
             assert(!instr.op.requiredContext.contains(.switchBlock))
             assert(!instr.op.requiredContext.contains(.wasm))
             break
+        }
+    }
+
+    private func recordPendingPrivatePropertyIfNeeded(_ name: String) {
+        guard hasVisibleClassDefinition else { return }
+        if !activeClassDefinitions.elementsStartingAtTop().contains(where: {
+            $0.allPrivateFields.contains(name)
+        }) {
+            currentClassDefinition.recordPendingPrivateProperty(name)
+        }
+    }
+
+    private func recordPendingPrivateMethodIfNeeded(_ name: String) {
+        guard hasVisibleClassDefinition else { return }
+        if !activeClassDefinitions.elementsStartingAtTop().contains(where: {
+            $0.allPrivateFields.contains(name)
+        }) {
+            currentClassDefinition.recordPendingPrivateMethod(name)
         }
     }
 
