@@ -4091,6 +4091,27 @@ struct ProgramBuilderTests {
         }
     }
 
+    @Test func testCodeGeneratorWeights() {
+        let allGenerators =
+            CodeGenerators
+            + wasmCodeGenerators(enableCustomDescriptors: true)
+            + [BinaryenWasmGenerator]
+        let generatorNames = Set(allGenerators.map { $0.name })
+        #expect(generatorNames.count == allGenerators.count)
+
+        for generatorName in generatorNames {
+            #expect(
+                codeGeneratorWeights[generatorName] != nil,
+                "Missing weight for CodeGenerator \(generatorName) in CodeGeneratorWeights.swift")
+        }
+        for weightKey in codeGeneratorWeights.keys {
+            #expect(
+                generatorNames.contains(weightKey),
+                "Orphaned weight for non-existent CodeGenerator \(weightKey) in CodeGeneratorWeights.swift"
+            )
+        }
+    }
+
     @Test func testUnboundFunctionWithImpossibleReceiver() {
         let fuzzer = makeMockFuzzer()
         fuzzer.sync {

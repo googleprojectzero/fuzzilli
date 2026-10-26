@@ -98,7 +98,6 @@ public let codeGeneratorWeights = [
     "ClassComputedSetterGenerator":             3,
 
 
-    "ObjectWithSpreadGenerator":                2,
     "ArrayWithSpreadGenerator":                 2,
     "TemplateStringGenerator":                  1,
     "ConcatenatedStringGenerator":              2,
@@ -110,7 +109,6 @@ public let codeGeneratorWeights = [
     "AsyncFunctionGenerator":                   3,
     "AsyncArrowFunctionGenerator":              1,
     "AsyncGeneratorFunctionGenerator":          1,
-    "ConstructorGenerator":                     5,
     "SubroutineReturnGenerator":                3,
     "YieldGenerator":                           5,
     "YieldEachGenerator":                       5,
@@ -253,7 +251,6 @@ public let codeGeneratorWeights = [
     "WasmMemoryToFixedLengthBufferGenerator":   5,
     "WasmMemoryJSGrowGenerator":                5,
     "WasmTagGenerator":                         4,
-    "WasmLegacyTryCatchComplexGenerator":       5,
 
     // For generating bundles
     "BundleScriptGenerator":                    1,
