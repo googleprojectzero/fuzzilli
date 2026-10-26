@@ -1102,16 +1102,16 @@ public class Fuzzer {
             }
 
         case .corpusImport:
-            guard let program = currentCorpusImportJob.nextProgram() else {
+            guard let (program, totalProcessed) = currentCorpusImportJob.nextProgram() else {
                 printFinalCorpusImportStats()
                 dispatchEvent(events.CorpusImportComplete)
                 changeState(to: .fuzzing)
                 break
             }
 
-            if currentCorpusImportJob.numberOfProgramsProcessedSoFar % 500 == 0 {
+            if totalProcessed % 500 == 0 {
                 logger.info(
-                    "Corpus import progress: processed \(currentCorpusImportJob.totalNumberOfProgramsProcessedSoFar) of \(currentCorpusImportJob.totalNumberOfProgramsToImport) programs"
+                    "Corpus import progress: processed \(totalProcessed) of \(currentCorpusImportJob.totalNumberOfProgramsToImport) programs"
                 )
             }
 
@@ -1503,20 +1503,16 @@ public class Fuzzer {
             return importQueue.isEmpty
         }
 
-        var totalNumberOfProgramsProcessedSoFar: Int {
-            return totalNumberOfProgramsToImport - importQueue.count
-        }
-
         var queue: ThreadSafeImportQueue {
             return importQueue
         }
 
-        mutating func nextProgram() -> Program? {
-            guard let program = importQueue.next() else {
+        mutating func nextProgram() -> (program: Program, totalProcessed: Int)? {
+            guard let result = importQueue.nextWithProcessedCount() else {
                 return nil
             }
             numberOfProgramsProcessedSoFar += 1
-            return program
+            return result
         }
 
         mutating func recordConvergencePattern(_ pattern: String) {

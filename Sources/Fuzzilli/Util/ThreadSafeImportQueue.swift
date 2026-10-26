@@ -32,9 +32,16 @@ public class ThreadSafeImportQueue {
 
     /// Dequeues and returns the next program in O(1) time, or nil if the queue is depleted.
     public func next() -> Program? {
+        return nextWithProcessedCount()?.program
+    }
+
+    /// Dequeues and returns the next program together with the total number of
+    /// programs dequeued so far in O(1) time, or nil if the queue is depleted.
+    public func nextWithProcessedCount() -> (program: Program, totalProcessed: Int)? {
         return queue.sync {
             guard !programs.isEmpty else { return nil }
-            return programs.removeLast()
+            let program = programs.removeLast()
+            return (program, initialCount - programs.count)
         }
     }
 
