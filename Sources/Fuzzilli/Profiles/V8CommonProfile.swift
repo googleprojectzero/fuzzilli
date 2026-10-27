@@ -199,6 +199,21 @@ public let ForceTurboFanCompilationGenerator = forceCompilationGenerator(
 public let ForceMaglevCompilationGenerator = forceCompilationGenerator(
     "ForceMaglevCompilationGenerator", optimizeName: "OptimizeMaglevOnNextCall")
 
+public let ForceWasmTurboFanCompilationGenerator = CodeGenerator(
+    "ForceWasmTurboFanCompilationGenerator",
+    inputs: .required(.object(ofGroup: "_fuzz_WasmExports0"))
+) { b, exports in
+    guard let methodName = b.type(of: exports).randomMethod() else { return }
+    let f = b.getProperty(methodName, of: exports)
+    let signature = b.type(of: f).signature ?? Signature.forUnknownFunction
+    let guardCalls = probability(0.5)
+    let args1 = b.findOrGenerateArguments(forSignature: signature)
+    b.callFunction(f, withArgs: args1, guard: guardCalls)
+    b.eval("%WasmTierUpFunction(%@)", with: [f])
+    let args2 = probability(0.5) ? args1 : b.findOrGenerateArguments(forSignature: signature)
+    b.callFunction(f, withArgs: args2, guard: guardCalls)
+}
+
 // Create a loop and force OSR in one of the iterations.
 public let ForceOsrGenerator = CodeGenerator(
     "ForceOsrGenerator",

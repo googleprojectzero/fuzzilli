@@ -197,7 +197,8 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             },
             GeneratorStub(
                 "WasmModuleEndGenerator",
-                inContext: .single(.wasm)
+                inContext: .single(.wasm),
+                produces: [.object(ofGroup: "_fuzz_WasmExports0")]
             ) { b in
                 let module = b.currentWasmModule
                 let shouldCallExports = probability(0.5)
