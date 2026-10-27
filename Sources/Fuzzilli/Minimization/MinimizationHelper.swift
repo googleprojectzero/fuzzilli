@@ -119,7 +119,10 @@ class MinimizationHelper {
         var timeoutMs = fuzzer.config.timeout * 2
         // Cut candidates that run over twice as long as their parent, plus 50 ms for noise.
         // Not when fuzzing differentially, since the reference engine's run time isn't known.
-        if aspects.outcome == .succeeded, !fuzzer.isDifferentialFuzzing, let parentExecTime {
+        // Not with --fixedMinimizationTimeout, for targets whose run times vary too much for this.
+        if aspects.outcome == .succeeded, !fuzzer.isDifferentialFuzzing,
+            !fuzzer.config.fixedMinimizationTimeout, let parentExecTime
+        {
             timeoutMs = min(timeoutMs, UInt32(2 * parentExecTime * 1000) + 50)
         }
 

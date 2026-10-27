@@ -43,6 +43,8 @@ if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 
             --timeout=n                  : Timeout in ms after which to interrupt execution of programs (default depends
                                            on the profile). Or provide an interval like --timeout=200,400. The actual
                                            timeout in this interval will be determined by the start-up tests.
+            --fixedMinimizationTimeout   : Give minimization candidates a fixed timeout (twice the timeout above) instead
+                                           of one derived from the parent's execution time.
             --minMutationsPerSample=n    : Discard samples from the corpus only after they have been mutated at least this many times (default: 25).
             --minCorpusSize=n            : Keep at least this many samples in the corpus regardless of the number of times
                                            they have been mutated (default: 1000).
@@ -193,6 +195,7 @@ var resume = args.has("--resume")
 let overwrite = args.has("--overwrite")
 let staticCorpus = args.has("--staticCorpus")
 let trackConvergencePatterns = args.has("--trackConvergencePatterns")
+let fixedMinimizationTimeout = args.has("--fixedMinimizationTimeout")
 let exportStatistics = args.has("--exportStatistics")
 let statisticsExportInterval = args.uint(for: "--statisticsExportInterval") ?? 10
 let execPurposeStatistics = args.has("--execPurposeStats") ? ExecutionPurposeStatistics() : nil
@@ -758,6 +761,7 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
 let mainConfig = Configuration(
     arguments: CommandLine.arguments,
     timeout: timeout.maxTimeout(),
+    fixedMinimizationTimeout: fixedMinimizationTimeout,
     logLevel: logLevel,
     startupTests: profile.startupTests,
     enableDiagnostics: diagnostics,
@@ -990,6 +994,7 @@ for i in 1..<numJobs {
     let workerConfig = Configuration(
         arguments: CommandLine.arguments,
         timeout: timeout.maxTimeout(),
+        fixedMinimizationTimeout: fixedMinimizationTimeout,
         logLevel: .warning,
         startupTests: profile.startupTests,
         enableDiagnostics: false,

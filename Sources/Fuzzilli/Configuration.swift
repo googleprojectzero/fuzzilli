@@ -48,6 +48,10 @@ public struct Configuration {
     /// Timeout in milliseconds after which child processes will be killed.
     public var timeout: UInt32
 
+    /// Whether minimization candidates get a fixed timeout (twice `timeout`) instead of one derived
+    /// from the parent's execution time.
+    public var fixedMinimizationTimeout: Bool
+
     /// Log level to use.
     public let logLevel: LogLevel
 
@@ -118,6 +122,7 @@ public struct Configuration {
     public init(
         arguments: [String] = [],
         timeout: UInt32 = 250,
+        fixedMinimizationTimeout: Bool = false,
         skipStartupTests: Bool = false,
         logLevel: LogLevel = .info,
         startupTests: [(String, ExpectedStartupTestResult)] = [],
@@ -139,6 +144,7 @@ public struct Configuration {
     ) {
         self.arguments = arguments
         self.timeout = timeout
+        self.fixedMinimizationTimeout = fixedMinimizationTimeout
         self.logLevel = logLevel
         self.startupTests = startupTests
         self.dropoutRate = dropoutRate
