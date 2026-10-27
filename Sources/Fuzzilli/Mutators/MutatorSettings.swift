@@ -19,3 +19,4 @@
 let defaultMaxSimultaneousMutations = 7
 let defaultMaxSimultaneousCodeGenerations = 3
 let defaultCodeGenerationAmount = 5  // This must be at least ProgramBuilder.minBudgetForRecursiveCodeGeneration
+let defaultWasmFunctionCodeGenerationAmount = 10

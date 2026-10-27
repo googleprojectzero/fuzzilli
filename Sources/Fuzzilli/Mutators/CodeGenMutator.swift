@@ -21,6 +21,9 @@ public class CodeGenMutator: BaseInstructionMutator {
     public init() {
         super.init(maxSimultaneousMutations: defaultMaxSimultaneousCodeGenerations)
         assert(defaultCodeGenerationAmount >= ProgramBuilder.minBudgetForRecursiveCodeGeneration)
+        assert(
+            defaultWasmFunctionCodeGenerationAmount
+                >= ProgramBuilder.minBudgetForRecursiveCodeGeneration)
     }
 
     public override func beginMutation(of program: Program) {
@@ -74,7 +77,10 @@ public class CodeGenMutator: BaseInstructionMutator {
             assert(!b.context.contains(.switchBlock) || b.numberOfVisibleJsVariables > 0)
             assert(!b.context.contains(.classDefinition) || b.numberOfVisibleJsVariables > 0)
             assert(!b.context.contains(.objectLiteral) || b.numberOfVisibleJsVariables > 0)
-            b.build(n: defaultCodeGenerationAmount, by: .generating)
+            let budget =
+                b.context.contains(.wasmFunction)
+                ? defaultWasmFunctionCodeGenerationAmount : defaultCodeGenerationAmount
+            b.build(n: budget, by: .generating)
         }
     }
 }

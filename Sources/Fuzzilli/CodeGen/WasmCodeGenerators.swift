@@ -205,7 +205,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 if (shouldCallExports || probability(0.5)) && module.getExportedMethods().isEmpty {
                     module.addWasmFunction(signature: chooseWasmFunctionSignatureDef(in: b)) {
                         function, _, _ in
-                        b.buildRecursive(n: defaultCodeGenerationAmount)
+                        b.buildRecursive(n: defaultWasmFunctionCodeGenerationAmount)
                         return function.signature.outputTypes.map(function.findOrGenerateWasmVar)
                     }
                 }

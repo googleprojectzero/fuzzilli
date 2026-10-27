@@ -5182,6 +5182,80 @@ struct ProgramBuilderTests {
                     of: "GenRecursionRoot")!)
         }
     }
+
+    @Test func testRecursiveCodeGenerationBudgetInWasmModuleAndFunction() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+            let wasmModuleGenerator = fuzzer.codeGenerators.first {
+                $0.name == "WasmModuleGenerator"
+            }!
+            let wasmFunctionGenerator = fuzzer.codeGenerators.first {
+                $0.name == "WasmFunctionGenerator"
+            }!
+            let wasmArrayTypeGenerator = fuzzer.codeGenerators.first {
+                $0.name == "WasmArrayTypeGenerator"
+            }!
+
+            var bodyGeneratorInvocations = 0
+            let wasmBodyGenerator = CodeGenerator(
+                "WasmBodyGenerator", inContext: .single(.wasmFunction), produces: [.wasmi32],
+                useInPrefix: true
+            ) { b in
+                bodyGeneratorInvocations += 1
+                b.currentWasmModule.currentWasmFunction.consti32(1337)
+            }
+
+            fuzzer.setCodeGenerators(
+                WeightedList<CodeGenerator>([
+                    (wasmModuleGenerator, 1),
+                    (wasmFunctionGenerator, 1),
+                    (wasmArrayTypeGenerator, 1),
+                    (wasmBodyGenerator, 1),
+                ]))
+
+            // Test 1: Completing WasmModuleGenerator with budget 2 (i.e. defaultCodeGenerationAmount / splitFactor)
+            // keeps the .wasm module-level yield budget small (2) while boosting the newly entered
+            // WasmFunctionGenerator's .wasmFunction body budget to at least defaultWasmFunctionCodeGenerationAmount (10).
+            do {
+                let b = fuzzer.makeBuilder()
+                b.loadInt(42)
+                let numInstructions = b.complete(generator: wasmModuleGenerator, withBudget: 2)
+                let program = b.finalize()
+
+                #expect(numInstructions > 0)
+                #expect(bodyGeneratorInvocations >= defaultWasmFunctionCodeGenerationAmount)
+                #expect(
+                    program.code.contains { instr in
+                        if case .consti32(let op) = instr.op.opcode {
+                            return op.value == 1337
+                        }
+                        return false
+                    })
+            }
+
+            // Test 2: b.build(n: defaultCodeGenerationAmount, by: .generating) (n = 5) has sufficient
+            // budget to recursively enter WasmModuleGenerator -> WasmFunctionGenerator and populate
+            // the function body with at least defaultWasmFunctionCodeGenerationAmount instructions.
+            bodyGeneratorInvocations = 0
+            do {
+                let b = fuzzer.makeBuilder()
+                b.loadInt(42)
+                b.build(n: defaultCodeGenerationAmount, by: .generating)
+                let program = b.finalize()
+
+                #expect(bodyGeneratorInvocations >= defaultWasmFunctionCodeGenerationAmount)
+                #expect(program.code.contains { $0.op is BeginWasmModule })
+                #expect(program.code.contains { $0.op is BeginWasmFunction })
+                #expect(
+                    program.code.contains { instr in
+                        if case .consti32(let op) = instr.op.opcode {
+                            return op.value == 1337
+                        }
+                        return false
+                    })
+            }
+        }
+    }
 }
 
 struct ProgramBuilderRuntimeDataTests {
@@ -5222,6 +5296,10 @@ struct ProgramBuilderRuntimeDataTests {
             do {
                 let v2 = 0;
                 do {
+                    let v4 = 0;
+                    do {
+                        ++v4;
+                    } while (v4 < 3)
                     ++v2;
                 } while (v2 < 3)
                 ++v0;
@@ -5253,6 +5331,7 @@ struct ProgramBuilderRuntimeDataTests {
                 },
             ])
         let expected = """
+            (6 + 7) + 8;
             (3 + 4) + 5;
             (0 + 1) + 2;
 

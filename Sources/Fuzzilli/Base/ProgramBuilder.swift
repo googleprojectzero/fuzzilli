@@ -2494,7 +2494,11 @@ public class ProgramBuilder {
         let depth = scheduled.count
 
         // Split budget evenly at yield points.
-        let budgetPerYieldPoint = budget / generator.parts.count
+        let budgetPerYieldPoint = budget / max(1, generator.parts.count - 1)
+        let enteredNewWasmFunction =
+            !context.contains(.wasmFunction) && generator.providedContexts.contains(.wasmFunction)
+        let wasmFunctionYieldPoints =
+            generator.tail.filter { $0.requiredContext.contains(.wasmFunction) }.count
 
         var numberOfGeneratedInstructions = 0
 
@@ -2592,8 +2596,16 @@ public class ProgramBuilder {
             let codeSizePre = code.count
             // Check if we need to or can create types here.
             createRequiredInputVariables(for: inputRequirements)
-            // Build into the block.
-            buildRecursive(n: budgetPerYieldPoint)
+            // Build into the block. When entering a new Wasm function, ensure the function body
+            // receives at least defaultWasmFunctionCodeGenerationAmount instructions across its
+            // yield points while keeping module-level .wasm budgets small.
+            let yieldBudget =
+                (enteredNewWasmFunction && context.contains(.wasmFunction))
+                ? max(
+                    budgetPerYieldPoint,
+                    defaultWasmFunctionCodeGenerationAmount / max(1, wasmFunctionYieldPoints))
+                : budgetPerYieldPoint
+            buildRecursive(n: yieldBudget)
             // Call the next scheduled stub.
             let _ = callNext()
             numberOfGeneratedInstructions += code.count - codeSizePre
