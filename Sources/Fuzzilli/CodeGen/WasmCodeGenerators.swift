@@ -50,6 +50,20 @@ private func generateBranchOnCast(
     }
 }
 
+private func chooseWasmFunctionSignatureDef(in b: ProgramBuilder) -> Variable {
+    if probability(0.9), let typeGroupSignature = b.randomWasmFunctionSignatureTypeDef() {
+        // Unlike ad hoc signatures, signature types defined in type groups can have
+        // super and sub types.
+        return typeGroupSignature
+    } else {
+        // TODO(mliedtke): If we want to allow non-nullable types, we'll need to ensure
+        // that we are able to also generate them in all cases and contexts.
+        let (signature, indexTypes) = b.randomWasmGcSignature(allowNonNullable: false)
+        return b.wasmDefineAdHocSignatureType(
+            signature: signature, indexTypes: indexTypes)
+    }
+}
+
 public func wasmCodeGenerators(enableCustomDescriptors: Bool) -> [CodeGenerator] {
     return WasmCodeGenerators
         + [wasmTypeGroupWithAllTypesGenerator(withCustomDescriptors: enableCustomDescriptors)]
@@ -174,6 +188,16 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 inContext: .single(.wasm)
             ) { b in
                 let module = b.currentWasmModule
+                let shouldCallExports = probability(0.5)
+                // Most modules should have at least one function.
+                if (shouldCallExports || probability(0.5)) && module.getExportedMethods().isEmpty {
+                    module.addWasmFunction(signature: chooseWasmFunctionSignatureDef(in: b)) {
+                        function, _, _ in
+                        b.buildRecursive(n: defaultCodeGenerationAmount)
+                        return function.signature.outputTypes.map(function.findOrGenerateWasmVar)
+                    }
+                }
+
                 let startFunction = Bool.random() ? nil : b.randomWasmStartFunction()
 
                 if let startFunction {
@@ -182,7 +206,13 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                     b.emit(EndWasmModule(hasStartFunction: false))
                 }
 
-                module.loadExports()
+                let exports = module.loadExports()
+                if shouldCallExports,
+                    let (methodName, signature) = module.getExportedMethods().randomElement()
+                {
+                    let args = b.findOrGenerateArguments(forSignature: signature)
+                    b.callMethod(methodName, on: exports, withArgs: args)
+                }
             },
         ]),
 
@@ -1897,20 +1927,7 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 inContext: .single(.wasm),
                 provides: [.wasmFunction]
             ) { b in
-                let module = b.currentWasmModule
-                let signatureDef: Variable
-                if probability(0.9), let typeGroupSignature = b.randomWasmFunctionSignatureTypeDef()
-                {
-                    // Unlike ad hoc signatures, signature types defined in type groups can have
-                    // super and sub types.
-                    signatureDef = typeGroupSignature
-                } else {
-                    // TODO(mliedtke): If we want to allow non-nullable types, we'll need to ensure
-                    // that we are able to also generate them in all cases and contexts.
-                    let (signature, indexTypes) = b.randomWasmGcSignature(allowNonNullable: false)
-                    signatureDef = b.wasmDefineAdHocSignatureType(
-                        signature: signature, indexTypes: indexTypes)
-                }
+                let signatureDef = chooseWasmFunctionSignatureDef(in: b)
                 let signature = b.type(of: signatureDef).wasmFunctionSignatureDefSignature
                 b.emit(
                     BeginWasmFunction(parameterCount: signature.parameterTypes.count),
