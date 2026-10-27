@@ -182,6 +182,13 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 inContext: .single(.javascript),
                 provides: [.wasm]
             ) { b in
+                // Generate a type group if none is in scope so that WasmGC operations have type
+                // definitions available if needed.
+                if !b.hasVisibleVariables || b.randomWasmTypeDef() == nil {
+                    b.wasmDefineTypeGroup {
+                        b.buildRecursive(n: 5)
+                    }
+                }
                 b.emit(BeginWasmModule())
             },
             GeneratorStub(

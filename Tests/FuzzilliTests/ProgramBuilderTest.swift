@@ -4062,6 +4062,30 @@ struct ProgramBuilderTests {
         test("WasmThrowRefGenerator", expectAny: WasmThrowRef.self)
         test("WasmExternConvertAnyGenerator", expectAny: WasmExternConvertAny.self)
         test("WasmAnyConvertExternGenerator", expectAny: WasmAnyConvertExtern.self)
+
+        // Verify that WasmModuleGenerator emits a WasmTypeGroup when no Wasm type definitions are
+        // visible in scope, and that it does not emit a duplicate WasmTypeGroup when a Wasm type
+        // definition is already visible in scope.
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+            let b1 = fuzzer.makeBuilder()
+            b1.loadInt(123)
+            let moduleGen = fuzzer.codeGenerators.filter { $0.name == "WasmModuleGenerator" }[0]
+            _ = b1.complete(generator: moduleGen, withBudget: 5)
+            let program1 = b1.finalize()
+            #expect(
+                program1.code.filter { $0.op is WasmBeginTypeGroup }.count == 1)
+
+            let b2 = fuzzer.makeBuilder()
+            b2.loadInt(123)
+            b2.wasmDefineTypeGroup {
+                [b2.wasmDefineArrayType(elementType: .wasmi32, mutability: true)]
+            }
+            _ = b2.complete(generator: moduleGen, withBudget: 5)
+            let program2 = b2.finalize()
+            #expect(
+                program2.code.filter { $0.op is WasmBeginTypeGroup }.count == 1)
+        }
     }
 
     @Test func testWasmHasUnresolvedSelfReferences() throws {

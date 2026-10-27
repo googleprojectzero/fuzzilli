@@ -28,6 +28,9 @@ public let ProgramTemplates = [
 
     WasmProgramTemplate("WasmCodegen50") { b in
         b.buildPrefix()
+        b.wasmDefineTypeGroup {
+            b.build(n: 5)
+        }
         let m = b.buildWasmModule(possiblyWithStartFunction: true) { _ in
             b.build(n: 50)
         }
@@ -40,6 +43,9 @@ public let ProgramTemplates = [
 
     WasmProgramTemplate("WasmCodegen100") { b in
         b.buildPrefix()
+        b.wasmDefineTypeGroup {
+            b.build(n: 5)
+        }
         let m = b.buildWasmModule(possiblyWithStartFunction: true) { _ in
             b.build(n: 100)
         }
@@ -52,6 +58,9 @@ public let ProgramTemplates = [
 
     WasmProgramTemplate("MixedJsAndWasm1") { b in
         b.buildPrefix()
+        b.wasmDefineTypeGroup {
+            b.build(n: 5)
+        }
         b.build(n: 10)
         let m = b.buildWasmModule(possiblyWithStartFunction: true) { _ in
             b.build(n: 30)
@@ -65,6 +74,9 @@ public let ProgramTemplates = [
 
     WasmProgramTemplate("MixedJsAndWasm2") { b in
         b.buildPrefix()
+        b.wasmDefineTypeGroup {
+            b.build(n: 5)
+        }
         b.build(n: 10)
         b.buildWasmModule(possiblyWithStartFunction: true) { _ in
             b.build(n: 20)
@@ -82,6 +94,9 @@ public let ProgramTemplates = [
 
     WasmProgramTemplate("JSPI") { b in
         b.buildPrefix()
+        b.wasmDefineTypeGroup {
+            b.build(n: 5)
+        }
         b.build(n: 20)
 
         var f: Variable? = nil
@@ -149,6 +164,9 @@ public let ProgramTemplates = [
 
     WasmProgramTemplate("ThrowInWasmCatchInJS") { b in
         b.buildPrefix()
+        b.wasmDefineTypeGroup {
+            b.build(n: 5)
+        }
         b.build(n: 10)
 
         // A few tags (wasm exception kinds) to be used later on.
@@ -207,6 +225,9 @@ public let ProgramTemplates = [
 
     WasmProgramTemplate("WasmReturnCalls") { b in
         b.buildPrefix()
+        b.wasmDefineTypeGroup {
+            b.build(n: 5)
+        }
         b.build(n: 10)
 
         let (calleeSig, calleeIndexTypes) = b.randomWasmGcSignature(allowNonNullable: false)
@@ -567,6 +588,9 @@ public let ProgramTemplates = [
 
     WasmProgramTemplate("WasmResizableMemory") { b in
         b.buildPrefix()
+        b.wasmDefineTypeGroup {
+            b.build(n: 5)
+        }
         b.build(n: 50)
 
         // 1. Define a Wasm module with a randomly configured memory and a single exported function.
@@ -631,6 +655,9 @@ public let ProgramTemplates = [
 
     WasmProgramTemplate("WasmMemoryBufferReattachment") { b in
         b.buildPrefix()
+        b.wasmDefineTypeGroup {
+            b.build(n: 5)
+        }
         b.build(n: 15)
 
         let jsMemory = b.createWasmMemory(

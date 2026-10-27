@@ -7035,7 +7035,15 @@ public class ProgramBuilder {
     ) {
         var indexTypes: [Variable] = []
 
-        let fields = (0..<Int.random(in: 0...n)).map { _ in
+        assert(n >= 1)
+        // Only generate empty structs if a non-empty struct type is already visible in scope.
+        let hasNonEmptyStruct =
+            findVariable {
+                (self.type(of: $0).wasmTypeDefinition?.description as? WasmStructTypeDescription)?
+                    .fields.isEmpty == false
+            } != nil
+        let minFields = hasNonEmptyStruct ? 0 : 1
+        let fields = (0..<Int.random(in: minFields...n)).map { _ in
             var type: ILType
             // TODO(mliedtke): Allow non-nullable reference types. Right now we can't do this as
             // the WasmStructNewGenerator might then fail to generate a struct.
