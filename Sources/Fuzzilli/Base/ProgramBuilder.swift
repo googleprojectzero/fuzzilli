@@ -7130,11 +7130,17 @@ public class ProgramBuilder {
                 !desc.isAdHoc, !desc.hasUnresolvedSelfReferences()
             else { return false }
             let signature = desc.signature
-            // Functions with simd128 parameters or results can't be called from JS.
+            // Functions with simd128 or exnref parameters or results can't be called from JS.
             // TODO(mliedtke): They could be exported and then imported by another Wasm module once
             // we preserve the correct import type. Allow these signatures once we stop losing
             // the signature data when exporting the function to JS.
-            if (signature.parameterTypes + signature.outputTypes).contains(.wasmSimd128) {
+            if !(signature.parameterTypes + signature.outputTypes).allSatisfy({ type in
+                if type == .wasmSimd128 { return false }
+                if case .Abstract(let heapTypeInfo) = type.wasmReferenceType?.kind {
+                    return heapTypeInfo.heapType.isUsableInJS()
+                }
+                return true
+            }) {
                 return false
             }
             // The function needs to be able to produce its results.
@@ -7210,7 +7216,9 @@ public class ProgramBuilder {
         return params => returnTypes
     }
 
-    public func randomWasmGcSignature(withResults: Bool = true, allowNonNullable: Bool = true)
+    public func randomWasmGcSignature(
+        withResults: Bool = true, allowNonNullable: Bool = true, isJsCompatible: Bool = false
+    )
         -> (signature: WasmSignature, indexTypes: [Variable])
     {
         let typeCount = Int.random(in: 0...10)
@@ -7229,13 +7237,21 @@ public class ProgramBuilder {
                 return ILType.wasmRef(.Index(isExact: isExact), nullability: nullability)
             } else {
                 let nullability = !allowNonNullable || probability(0.5)
-                let abstractRefTypes = WasmAbstractHeapType.allCases.map {
+                let heapTypes =
+                    isJsCompatible
+                    ? WasmAbstractHeapType.allCases.filter { $0.isUsableInJS() }
+                    : WasmAbstractHeapType.allCases
+                let abstractRefTypes = heapTypes.map {
                     ILType.wasmRef($0, nullability: nullability)
                 }
+                let valueTypes =
+                    isJsCompatible
+                    ? ILType.wasmNonRefValueTypes.filter { $0 != .wasmSimd128 }
+                    : ILType.wasmNonRefValueTypes
                 // Prefer value types.
                 return chooseUniform(
                     from: chooseBiased(
-                        from: [abstractRefTypes, ILType.wasmNonRefValueTypes], factor: 2))
+                        from: [abstractRefTypes, valueTypes], factor: 2))
             }
         }
         let signature =

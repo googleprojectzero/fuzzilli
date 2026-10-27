@@ -58,7 +58,8 @@ private func chooseWasmFunctionSignatureDef(in b: ProgramBuilder) -> Variable {
     } else {
         // TODO(mliedtke): If we want to allow non-nullable types, we'll need to ensure
         // that we are able to also generate them in all cases and contexts.
-        let (signature, indexTypes) = b.randomWasmGcSignature(allowNonNullable: false)
+        let (signature, indexTypes) = b.randomWasmGcSignature(
+            allowNonNullable: false, isJsCompatible: probability(0.9))
         return b.wasmDefineAdHocSignatureType(
             signature: signature, indexTypes: indexTypes)
     }
