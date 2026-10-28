@@ -70,7 +70,7 @@ public class CodeGenMutator: BaseInstructionMutator {
                 }
                 // Otherwise, we are in a context where we only run code generators which don't require JS variables (such as wasm contexts).
             }
-            assert(b.numberOfVisibleVariables > 0)
+            assert(b.numberOfVisibleVariables > 0 || b.context.inWasm)
             assert(!b.context.contains(.switchBlock) || b.numberOfVisibleJsVariables > 0)
             assert(!b.context.contains(.classDefinition) || b.numberOfVisibleJsVariables > 0)
             assert(!b.context.contains(.objectLiteral) || b.numberOfVisibleJsVariables > 0)

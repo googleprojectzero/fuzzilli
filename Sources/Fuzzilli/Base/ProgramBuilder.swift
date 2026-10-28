@@ -1212,10 +1212,11 @@ public class ProgramBuilder {
 
     /// Returns a random variable satisfying the given constraints or nil if none is found.
     public func findVariable(satisfying filter: ((Variable) -> Bool) = { _ in true }) -> Variable? {
-        if (isBundle || context.contains(.wasmTypeGroup)) && !hasVisibleVariables {
+        if (isBundle || context.contains(.wasmTypeGroup) || context.inWasm) && !hasVisibleVariables
+        {
             // Bundles don't have visible variables before we've started generating the bundle items.
-            // Generators in a .wasmTypeGroup query `findVariable` for optional existing Wasm type
-            // definitions (e.g. supertypes or index types), which may happen before any variables exist.
+            // Generators in .wasmTypeGroup and Wasm contexts query `findVariable` for optional existing
+            // Wasm definitions (e.g. supertypes, signatures, or functions), which may happen before any variables exist.
             return nil
         }
         assert(hasVisibleVariables)
@@ -2281,7 +2282,8 @@ public class ProgramBuilder {
                 // visible Variables. Therefore we should always have some Variables visible if we want to use them.
 
                 assert(
-                    isBundle || hasVisibleJsVariables || context.contains(.wasmTypeGroup),
+                    isBundle || hasVisibleJsVariables || context.contains(.wasmTypeGroup)
+                        || context.inWasm,
                     "CodeGenerators assume that there are visible variables to use. Use buildPrefix() to generate some initial variables in a new program"
                 )
 
