@@ -78,6 +78,8 @@ if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 
                                            determinism check, import, ...) summed over all instances of this process. With
                                            --corpus=rarity, also log how often a program picked for mutation was picked by another
                                            instance shortly before. Logged every 10 minutes and on shutdown.
+            --machine-readable-stats     : Emit single-line JSON objects immediately before each statistics block for
+                                           machine parsing.
             --shutdownAfterImport        : Terminate the fuzzer after the initial corpus import is complete.
                                            Requires --resume or --importCorpus.
             --importCorpus=path          : Imports an existing corpus of FuzzIL programs to build the initial corpus for fuzzing.
@@ -199,6 +201,7 @@ let fixedMinimizationTimeout = args.has("--fixedMinimizationTimeout")
 let exportStatistics = args.has("--exportStatistics")
 let statisticsExportInterval = args.uint(for: "--statisticsExportInterval") ?? 10
 let execPurposeStatistics = args.has("--execPurposeStats") ? ExecutionPurposeStatistics() : nil
+let machineReadableStats = args.has("--machine-readable-stats")
 let shutdownAfterImport = args.has("--shutdownAfterImport")
 let corpusImportPath = args["--importCorpus"]
 let corpusImportModeName = args["--corpusImportMode"] ?? "default"
@@ -777,7 +780,8 @@ let mainConfig = Configuration(
     instanceId: 0,
     dumplingEnabled: profile.isDifferential,
     enableCustomDescriptors: enableCustomDescriptors,
-    trackConvergencePatterns: trackConvergencePatterns)
+    trackConvergencePatterns: trackConvergencePatterns,
+    machineReadableStats: machineReadableStats)
 
 let fuzzer = makeFuzzer(with: mainConfig)
 
@@ -1010,7 +1014,8 @@ for i in 1..<numJobs {
         instanceId: i,
         dumplingEnabled: profile.isDifferential,
         enableCustomDescriptors: enableCustomDescriptors,
-        trackConvergencePatterns: trackConvergencePatterns)
+        trackConvergencePatterns: trackConvergencePatterns,
+        machineReadableStats: false)
 
     let worker = makeFuzzer(with: workerConfig)
     workers.append(worker)

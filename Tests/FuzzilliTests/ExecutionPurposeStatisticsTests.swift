@@ -77,4 +77,52 @@ import Testing
         #expect(fuzzingTime > 0)
         #expect(abs(fuzzingTime - 2 * minimizationTime) < 1e-9)
     }
+
+    @Test func testMachineReadableStatsLoggedImmediatelyAboveHeader() throws {
+        let config = Configuration(
+            logLevel: .info,
+            tag: "v8:abc123",
+            machineReadableStats: true
+        )
+        let fuzzer = makeMockFuzzer(config: config)
+        let stats = ExecutionPurposeStatistics()
+        var loggedMessages = [String]()
+
+        try fuzzer.sync {
+            fuzzer.registerEventListener(for: fuzzer.events.Log) { ev in
+                if ev.label == "ExecutionPurposeStatistics" {
+                    loggedMessages.append(ev.message)
+                }
+            }
+            stats.initialize(with: fuzzer)
+            let program = fuzzer.makeBuilder().finalize()
+            _ = fuzzer.execute(program, purpose: .fuzzing)
+            _ = fuzzer.execute(program, purpose: .minimization)
+            let (a, b) = (UUID(), UUID())
+            let now = Date()
+            stats.recordMutationPick(of: program, by: a, at: now)
+            stats.recordMutationPick(of: program, by: b, at: now + 1)
+
+            fuzzer.dispatchEvent(fuzzer.events.Shutdown, data: .finished)
+
+            #expect(loggedMessages.count >= 2)
+            let jsonLine = loggedMessages[0]
+            #expect(!jsonLine.contains("\n"))
+            #expect(jsonLine.utf8.count < 10_000)
+            #expect(
+                loggedMessages[1] == "Executions by purpose (main instance and thread workers):")
+
+            let parsed = try #require(
+                JSONSerialization.jsonObject(with: Data(jsonLine.utf8)) as? [String: Any]
+            )
+            #expect(parsed["fuzzilliStats"] as? String == "executionPurpose")
+            #expect(parsed["tag"] as? String == "v8:abc123")
+            #expect(parsed["totalExecs"] as? Int == 2)
+            #expect(parsed["mutationPicks"] as? Int == 2)
+            #expect(parsed["overlappingMutationPicks"] as? Int == 1)
+            let purposes = try #require(parsed["purposes"] as? [String: [String: Any]])
+            #expect(purposes["fuzzing"]?["count"] as? Int == 1)
+            #expect(purposes["minimization"]?["count"] as? Int == 1)
+        }
+    }
 }

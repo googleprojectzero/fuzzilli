@@ -82,6 +82,9 @@ public struct Configuration {
     /// Whether to track convergence patterns during corpus import.
     public let trackConvergencePatterns: Bool
 
+    /// Whether to emit single-line JSON objects immediately before each statistics block.
+    public let machineReadableStats: Bool
+
     /// Determines if we want to have a static corpus, i.e. we don't add any
     /// programs to the corpus even if they find new coverage.
     public let staticCorpus: Bool
@@ -140,7 +143,8 @@ public struct Configuration {
         instanceId: Int = -1,
         dumplingEnabled: Bool = false,
         enableCustomDescriptors: Bool = false,
-        trackConvergencePatterns: Bool = false
+        trackConvergencePatterns: Bool = false,
+        machineReadableStats: Bool = false
     ) {
         self.arguments = arguments
         self.timeout = timeout
@@ -152,6 +156,7 @@ public struct Configuration {
         // If we have enabledDiagnostics we should also enable inspection.
         self.enableInspection = enableDiagnostics || enableInspection
         self.trackConvergencePatterns = trackConvergencePatterns
+        self.machineReadableStats = machineReadableStats
         self.staticCorpus = staticCorpus
         self.tag = tag
         self.isWasmEnabled = isWasmEnabled

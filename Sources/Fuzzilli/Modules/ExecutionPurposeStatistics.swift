@@ -53,6 +53,7 @@ public class ExecutionPurposeStatistics: Module {
     private let isMainInstance: Bool
     private let logInterval: TimeInterval
     private let logger = Logger(withLabel: "ExecutionPurposeStatistics")
+    private weak var fuzzer: Fuzzer?
     private var currentPurpose = ExecutionPurpose.other
 
     /// Creates the module of the main instance.
@@ -84,6 +85,7 @@ public class ExecutionPurposeStatistics: Module {
         }
 
         guard isMainInstance else { return }
+        self.fuzzer = fuzzer
         fuzzer.timers.scheduleTask(every: logInterval) {
             self.logTotals()
         }
@@ -131,6 +133,16 @@ public class ExecutionPurposeStatistics: Module {
         let totalTime = totals.values.reduce(0.0) { $0 + $1.time }
         guard totalCount > 0 else { return }
 
+        if fuzzer?.config.machineReadableStats == true,
+            let json = Self.machineReadableStats(
+                totals: totals,
+                picks: (picks: picks, overlapping: overlapping),
+                tag: fuzzer?.config.tag,
+                uptime: fuzzer?.uptime() ?? 0.0
+            )
+        {
+            logger.info(json)
+        }
         logger.info("Executions by purpose (main instance and thread workers):")
         for (purpose, entry) in totals.sorted(by: { $0.value.count > $1.value.count }) {
             let name = "\(purpose)".rightPadded(toLength: 30)
@@ -152,4 +164,50 @@ public class ExecutionPurposeStatistics: Module {
             )
         }
     }
+
+    static func machineReadableStats(
+        totals: [ExecutionPurpose: Totals],
+        picks: (picks: UInt64, overlapping: UInt64),
+        tag: String?,
+        uptime: TimeInterval
+    ) -> String? {
+        let totalCount = totals.values.reduce(0) { $0 + $1.count }
+        let totalTime = totals.values.reduce(0.0) { $0 + $1.time }
+        var purposes = [String: MachineReadablePurposeEntry]()
+        for (purpose, entry) in totals {
+            purposes["\(purpose)"] = MachineReadablePurposeEntry(
+                count: entry.count,
+                time: entry.time.isFinite ? entry.time : 0.0
+            )
+        }
+        let payload = MachineReadableExecutionPurposePayload(
+            tag: tag,
+            uptime: uptime.isFinite ? uptime : 0.0,
+            totalExecs: totalCount,
+            totalTime: totalTime.isFinite ? totalTime : 0.0,
+            purposes: purposes,
+            mutationPicks: picks.picks > 0 ? picks.picks : nil,
+            overlappingMutationPicks: picks.picks > 0 ? picks.overlapping : nil,
+            pickOverlapWindow: picks.picks > 0 ? Self.pickOverlapWindow : nil
+        )
+        return encodeMachineReadableStatsJSON(
+            payload, loggerLabel: "ExecutionPurposeStatistics")
+    }
+}
+
+private struct MachineReadablePurposeEntry: Encodable {
+    let count: UInt64
+    let time: Double
+}
+
+private struct MachineReadableExecutionPurposePayload: Encodable {
+    let fuzzilliStats = "executionPurpose"
+    let tag: String?
+    let uptime: Double
+    let totalExecs: UInt64
+    let totalTime: Double
+    let purposes: [String: MachineReadablePurposeEntry]
+    let mutationPicks: UInt64?
+    let overlappingMutationPicks: UInt64?
+    let pickOverlapWindow: Double?
 }

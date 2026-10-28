@@ -148,6 +148,16 @@ class TerminalUI {
         let maybeAvgCorpusSize =
             stats.numChildNodes > 0 ? " (global average: \(Int(stats.avgCorpusSize)))" : ""
 
+        if fuzzer.config.machineReadableStats,
+            let json = Statistics.machineReadableFuzzerStats(
+                stats,
+                of: fuzzer,
+                state: state,
+                timeSinceLastInterestingSample: timeSinceLastInterestingProgram
+            )
+        {
+            print(json)
+        }
         if let tag = fuzzer.config.tag {
             print("Fuzzer Statistics (tag: \(tag))")
         } else {

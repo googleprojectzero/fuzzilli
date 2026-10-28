@@ -331,4 +331,207 @@ class TestAspects: ProgramAspects {
             #expect(postImportRate == 7.0 / 8.0 || postImportRate == 6.0 / 8.0)
         }
     }
+
+    @Test func testMachineReadableFuzzerAndMutatorStats() throws {
+        let config = Configuration(
+            logLevel: .info,
+            tag: "v8:deadbeef commit-position:12345",
+            machineReadableStats: true
+        )
+        let fuzzer = makeMockFuzzer(config: config)
+
+        try fuzzer.sync {
+            let stats = Statistics()
+            stats.initialize(with: fuzzer)
+
+            let mutator = Array(fuzzer.mutators).first!
+            mutator.invoked()
+            mutator.addedInstructions(8)
+            mutator.generatedValidSample()
+            mutator.generatedInterestingSample()
+            mutator.failedToGenerate()
+
+            var data = stats.compute()
+            data.totalSamples = 100
+            data.validSamples = 60
+            data.interestingSamples = 15
+            data.timedOutSamples = 2
+            data.crashingSamples = 1
+            data.totalExecs = 500
+            data.coverage = 0.125
+            data.fuzzerOverhead = .nan  // Non-finite values must not fail JSON encoding
+
+            let standaloneJSON = try #require(
+                Statistics.machineReadableFuzzerStats(
+                    data,
+                    of: fuzzer,
+                    state: "Fuzzing (with MutationEngine)",
+                    timeSinceLastInterestingSample: 4.5
+                )
+            )
+            #expect(!standaloneJSON.contains("\n"))
+            #expect(standaloneJSON.utf8.count < 10_000)
+
+            let parsedStandalone = try #require(
+                JSONSerialization.jsonObject(with: Data(standaloneJSON.utf8)) as? [String: Any]
+            )
+            #expect(parsedStandalone["fuzzilliStats"] as? String == "fuzzer")
+            #expect(parsedStandalone["tag"] as? String == "v8:deadbeef commit-position:12345")
+            #expect(parsedStandalone["state"] as? String == "Fuzzing (with MutationEngine)")
+            #expect(parsedStandalone["uptime"] as? Double != nil)
+
+            let metrics = try #require(parsedStandalone["stats"] as? [String: Any])
+            #expect(metrics["totalSamples"] as? Int == 100)
+            #expect(metrics["validSamples"] as? Int == 60)
+            #expect(metrics["interestingSamples"] as? Int == 15)
+            #expect(metrics["lastInterestingSample"] as? Double == 4.5)
+            #expect(metrics["overallCorrectnessRate"] as? Double == 0.6)
+            #expect(metrics["overallTimeoutRate"] as? Double == 0.02)
+            #expect(metrics["coverage"] as? Double == 0.125)
+            #expect(metrics["fuzzerOverhead"] as? Double == 0.0)
+            #expect(metrics["totalExecs"] as? Int == 500)
+            #expect(metrics["avgCorpusSize"] == nil)
+            #expect(metrics["differentialSamples"] == nil)
+
+            // With child nodes connected, avgCorpusSize is included.
+            data.numChildNodes = 3
+            data.avgCorpusSize = 42.5
+            let distributedJSON = try #require(
+                Statistics.machineReadableFuzzerStats(
+                    data,
+                    of: fuzzer,
+                    state: "Fuzzing (with MutationEngine)",
+                    timeSinceLastInterestingSample: 1.0
+                )
+            )
+            let distributedMetrics = try #require(
+                (JSONSerialization.jsonObject(with: Data(distributedJSON.utf8)) as? [String: Any])?[
+                    "stats"] as? [String: Any]
+            )
+            #expect(distributedMetrics["avgCorpusSize"] as? Double == 42.5)
+
+            // Verify per-mutator JSON lines (one independent line per mutator).
+            let mutatorLines = Statistics.machineReadableMutatorStats(data, of: fuzzer)
+            #expect(mutatorLines.count == fuzzer.mutators.count)
+
+            var parsedByMutator = [String: [String: Any]]()
+            for line in mutatorLines {
+                #expect(!line.contains("\n"))
+                #expect(line.utf8.count < maxMachineReadableStatsLineLength)
+                let parsed = try #require(
+                    JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any]
+                )
+                #expect(parsed["fuzzilliStats"] as? String == "mutator")
+                #expect(parsed["tag"] as? String == "v8:deadbeef commit-position:12345")
+                #expect(parsed["uptime"] as? Double != nil)
+                let name = try #require(parsed["mutator"] as? String)
+                let entryStats = try #require(parsed["stats"] as? [String: Any])
+                parsedByMutator[name] = entryStats
+            }
+
+            let firstMutator = try #require(parsedByMutator[mutator.name])
+            #expect(firstMutator["invocationCount"] as? Int == 1)
+            #expect(firstMutator["successfulGenerationCount"] as? Int == 1)
+            #expect(firstMutator["totalSamples"] as? Int == 2)
+            #expect(firstMutator["correctSamples"] as? Int == 2)
+            #expect(firstMutator["interestingSamples"] as? Int == 1)
+            #expect(firstMutator["failures"] as? Int == 1)
+            #expect(firstMutator["totalInstructionsProduced"] as? Int == 8)
+            #expect(firstMutator["correctnessRate"] as? Double == 1.0)
+
+            // Mutators with 0 samples omit undefined rates instead of emitting NaN.
+            if let unusedMutator = fuzzer.mutators.first(where: { $0.name != mutator.name }) {
+                let unusedEntry = try #require(parsedByMutator[unusedMutator.name])
+                #expect(unusedEntry["totalSamples"] as? Int == 0)
+                #expect(unusedEntry["correctnessRate"] == nil)
+            }
+        }
+    }
+
+    @Test func testMachineReadableStatsAllMutatorsAndLineLengthHardLimit() throws {
+        let longTag =
+            "chromium:0123456789abcdef0123456789abcdef01234567 commit-position:1500000 "
+            + "instance:autozilli-chromium-mojo-experimental-99 corpus:rarity started:2026-10-28"
+        let config = Configuration(
+            logLevel: .info,
+            tag: longTag,
+            machineReadableStats: true
+        )
+        let allMutators = WeightedList<Mutator>([
+            (ExplorationMutator(), 3),
+            (CodeGenMutator(), 2),
+            (SpliceMutator(), 2),
+            (ProbingMutator(), 2),
+            (InputMutator(typeAwareness: .loose), 2),
+            (InputMutator(typeAwareness: .aware), 1),
+            (ConcatMutator(), 1),
+            (OperationMutator(), 1),
+            (PropertyAccessorMutator(), 1),
+            (CombineMutator(), 1),
+            (FixupMutator(), 1),
+            (BinaryenWasmMutator(), 1),
+        ])
+        let env = JavaScriptEnvironment()
+        let fuzzer = Fuzzer(
+            configuration: config,
+            scriptRunner: MockScriptRunner(),
+            referenceScriptRunner: nil,
+            engine: MutationEngine(numConsecutiveMutations: 5),
+            mutators: allMutators,
+            codeGenerators: WeightedList<CodeGenerator>([(CodeGenerators[0], 1)]),
+            programTemplates: WeightedList<ProgramTemplate>([(ProgramTemplates[0], 1)]),
+            evaluator: MockEvaluator(),
+            environment: env,
+            lifter: JavaScriptLifter(
+                prefix: "", suffix: "", ecmaVersion: .es6, environment: env,
+                alwaysEmitVariables: false),
+            corpus: BasicCorpus(minSize: 1000, maxSize: 2000, minMutationsPerSample: 5),
+            minimizer: Minimizer()
+        )
+
+        fuzzer.sync {
+            fuzzer.initialize()
+            var data = Fuzzilli_Protobuf_Statistics()
+            for mutator in allMutators {
+                data.contributorStats.append(
+                    Fuzzilli_Protobuf_Statistics.ContributorStats.with {
+                        $0.name = mutator.name
+                        $0.invocationCount = 9_876_543_210
+                        $0.successfulGenerationCount = 9_123_456_789
+                        $0.totalSamples = 9_000_000_003
+                        $0.correctSamples = 6_000_000_001
+                        $0.interestingSamples = 123_456_789
+                        $0.invalidSamples = 3_000_000_002
+                        $0.timedOutSamples = 45_678_901
+                        $0.crashingSamples = 42
+                        $0.differentialSamples = 7
+                        $0.failures = 876_543_207
+                        $0.totalInstructionsProduced = 98_765_432_101
+                    }
+                )
+            }
+
+            let lines = Statistics.machineReadableMutatorStats(data, of: fuzzer)
+            #expect(lines.count == 12)
+            for line in lines {
+                // TerminalUI adds 26 bytes ("\u{001B}[0;37m[Statistics] ...\u{001B}[0;0m").
+                #expect(line.utf8.count + 26 < maxMachineReadableStatsLineLength)
+                #expect(line.utf8.count < 1_500)
+            }
+
+            // Exceeding the 10,000-byte line limit triggers the overflow hard-error handler.
+            struct OversizedPayload: Encodable {
+                let fuzzilliStats = "fuzzer"
+                let padding: String
+            }
+            var capturedOverflow: String?
+            let result = encodeMachineReadableStatsJSON(
+                OversizedPayload(padding: String(repeating: "x", count: 10_001)),
+                loggerLabel: "Statistics",
+                onOverflow: { capturedOverflow = $0 }
+            )
+            #expect(result == nil)
+            #expect(capturedOverflow?.contains("exceeds limit of 10000 bytes") == true)
+        }
+    }
 }
