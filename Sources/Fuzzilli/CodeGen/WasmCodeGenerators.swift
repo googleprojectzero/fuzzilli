@@ -2959,10 +2959,21 @@ public let WasmCodeGenerators: [CodeGenerator] = [
         inputs: .required(.wasmi64, .wasmi64, .wasmi64, .wasmi64),
         produces: [.wasmi64, .wasmi64]
     ) { b, lo1, hi1, lo2, hi2 in
-        b.currentWasmModule.currentWasmFunction.wasmi64WideBinOp(
-            lo1, hi1, lo2, hi2, op: chooseUniform(from: WasmWideBinaryOpKind.allCases))
+        let function = b.currentWasmModule.currentWasmFunction
+        if probability(0.1) {
+            // Generate chained 3-way 64-bit addition with zero high inputs (Word64Add3Op).
+            let zero = function.consti64(0)
+            let inner = function.wasmi64WideBinOp(lo1, zero, lo2, zero, op: .add128)
+            if Bool.random() {
+                function.wasmi64WideBinOp(inner[0], inner[1], hi1, zero, op: .add128)
+            } else {
+                function.wasmi64WideBinOp(hi1, zero, inner[0], inner[1], op: .add128)
+            }
+        } else {
+            function.wasmi64WideBinOp(
+                lo1, hi1, lo2, hi2, op: chooseUniform(from: WasmWideBinaryOpKind.allCases))
+        }
     },
-
     CodeGenerator(
         "Wasmi64WideMulOpGenerator",
         inContext: .single(.wasmFunction),
