@@ -48,6 +48,15 @@ public struct WeightedList<Element>: Sequence {
         return r
     }
 
+    /// Returns a new list with the given transformation applied to each element, preserving the weights.
+    public func mapElements(_ transform: (Element) -> Element) -> WeightedList<Element> {
+        var r = WeightedList()
+        for (e, w, _) in elements {
+            r.append(transform(e), withWeight: w)
+        }
+        return r
+    }
+
     public func randomElement() -> Element? {
         // Binary search: pick a random value between 0 and the sum of all weights, then find the
         // first element whose cumulative weight is less-than or equal to the selected one.

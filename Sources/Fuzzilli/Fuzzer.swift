@@ -223,9 +223,8 @@ public class Fuzzer {
         self.timers = Timers(queue: self.queue)
         self.engine = engine
         self.mutators = mutators
-        self.codeGenerators = codeGenerators
-
-        self.programTemplates = programTemplates
+        self.codeGenerators = codeGenerators.mapElements { $0.clone() }
+        self.programTemplates = programTemplates.mapElements { $0.clone() }
         self.evaluator = evaluator
         self.environment = environment
         self.lifter = lifter
@@ -235,7 +234,8 @@ public class Fuzzer {
         self.minimizer = minimizer
         self.logger = Logger(withLabel: "Fuzzer")
         self.contextGraph = ContextGraph(
-            for: codeGenerators, isBundle: configuration.generateBundle, withLogger: self.logger)
+            for: self.codeGenerators, isBundle: configuration.generateBundle,
+            withLogger: self.logger)
 
         self.corpusGenerationEngine = GenerativeEngine(generateBundle: configuration.generateBundle)
         // Pass-through any postprocessor to the generative engine.

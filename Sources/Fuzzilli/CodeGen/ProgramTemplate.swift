@@ -13,7 +13,7 @@
 // limitations under the License.
 
 public class ProgramTemplate: Contributor {
-    private let f: (ProgramBuilder) -> Void
+    fileprivate let f: (ProgramBuilder) -> Void
 
     public init(_ name: String, _ f: @escaping (_: ProgramBuilder) -> Void) {
         self.f = f
@@ -23,8 +23,15 @@ public class ProgramTemplate: Contributor {
     public func generate(in b: ProgramBuilder) {
         f(b)
     }
+
+    public func clone() -> ProgramTemplate {
+        return ProgramTemplate(name, f)
+    }
 }
 
 /// Strongly typed ProgramTemplate that can be used to differentiate templates that make use of Wasm.
 public class WasmProgramTemplate: ProgramTemplate {
+    public override func clone() -> WasmProgramTemplate {
+        return WasmProgramTemplate(name, f)
+    }
 }

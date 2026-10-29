@@ -23,6 +23,7 @@ public class Mutator: Contributor {
     public final func mutate(_ program: Program, for fuzzer: Fuzzer) -> Program? {
         let b = fuzzer.makeBuilder(forMutating: program)
         b.traceHeader("Mutating \(program.id) with \(name)")
+        self.invoked()
         let program = mutate(program, using: b, for: fuzzer)
         program?.contributors.insert(self)
         return program

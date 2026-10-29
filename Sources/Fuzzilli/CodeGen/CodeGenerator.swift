@@ -429,6 +429,12 @@ public class GeneratorStub: Contributor {
             name: name, inputs: inputs, produces: produces, context: context,
             providedContext: provides, adapter: GeneratorAdapter4Args(f: f))
     }
+
+    public func clone() -> GeneratorStub {
+        return GeneratorStub(
+            name: name, inputs: inputs, produces: produces, context: requiredContext,
+            providedContext: providedContext, adapter: adapter)
+    }
 }
 
 public class CodeGenerator {
@@ -496,6 +502,10 @@ public class CodeGenerator {
         } else {
             return self.name
         }
+    }
+
+    public func clone() -> CodeGenerator {
+        return CodeGenerator(name, useInPrefix: useInPrefix, parts.map { $0.clone() })
     }
 
     public convenience init(

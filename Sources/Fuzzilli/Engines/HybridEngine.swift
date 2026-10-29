@@ -52,21 +52,34 @@ public class HybridEngine: FuzzEngine {
                 guard self.programsGenerated > 0 else { return }
 
                 // TODO move into Statistics?
-                self.logger.verbose("Program Template Statistics:")
-                let nameMaxLength = self.fuzzer.programTemplates.map({ $0.name.count }).max()!
-                for template in self.fuzzer.programTemplates {
-                    let name = template.name.rightPadded(toLength: nameMaxLength)
-                    let correctnessRate = Statistics.percentageOrNa(template.correctnessRate, 7)
-                    let interestingSamplesRate = Statistics.percentageOrNa(
-                        template.interestingSamplesRate, 7)
-                    let timeoutRate = Statistics.percentageOrNa(template.timeoutRate, 6)
-                    let avgInstructionsAdded = String(
-                        format: "%.2f", template.avgNumberOfInstructionsGenerated
-                    ).leftPadded(toLength: 5)
-                    let samplesGenerated = template.totalSamples
-                    self.logger.verbose(
-                        "    \(name) : Correctness rate: \(correctnessRate), Interesting sample rate: \(interestingSamplesRate), Timeout rate: \(timeoutRate), Avg. # of instructions generated: \(avgInstructionsAdded), Total # of generated samples: \(samplesGenerated)"
+                if let statistics = Statistics.instance(for: self.fuzzer) {
+                    // Use the aggregated statistics, which include the stats of all
+                    // in-process workers and child nodes.
+                    self.logger.verbose("Program Template Statistics:")
+                    let globalStats = statistics.compute()
+                    let statsByName = Dictionary(
+                        uniqueKeysWithValues: globalStats.contributorStats.map { ($0.name, $0) }
                     )
+                    let nameMaxLength = self.fuzzer.programTemplates.map({ $0.name.count }).max()!
+                    for template in self.fuzzer.programTemplates {
+                        let stats =
+                            statsByName[template.name]
+                            ?? Fuzzilli_Protobuf_Statistics.ContributorStats.with {
+                                $0.name = template.name
+                            }
+                        let name = template.name.rightPadded(toLength: nameMaxLength)
+                        let correctnessRate = Statistics.percentageOrNa(stats.correctnessRate, 7)
+                        let interestingSamplesRate = Statistics.percentageOrNa(
+                            stats.interestingSamplesRate, 7)
+                        let timeoutRate = Statistics.percentageOrNa(stats.timeoutRate, 6)
+                        let avgInstructionsAdded = String(
+                            format: "%.2f", stats.avgNumberOfInstructionsGenerated
+                        ).leftPadded(toLength: 5)
+                        let samplesGenerated = stats.totalSamples
+                        self.logger.verbose(
+                            "    \(name) : Correctness rate: \(correctnessRate), Interesting sample rate: \(interestingSamplesRate), Timeout rate: \(timeoutRate), Avg. # of instructions generated: \(avgInstructionsAdded), Total # of generated samples: \(samplesGenerated)"
+                        )
+                    }
                 }
 
                 let totalOutcomes = self.outcomeCounts.values.reduce(0, +)
@@ -102,6 +115,7 @@ public class HybridEngine: FuzzEngine {
         let program = b.finalize()
 
         program.contributors.insert(template)
+        template.invoked()
         template.addedInstructions(program.size)
         return program
     }
