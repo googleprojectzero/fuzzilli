@@ -2170,7 +2170,8 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 b.runtimeData.push("loopCounter", loopCtr)
                 let signature = b.wasmDefineAdHocSignatureType(signature: [] => [])
                 b.runtimeData.push("loopSignature", signature)
-                b.emit(WasmBeginLoop(with: [] => []), withInputs: [signature])
+                let loopBegin = b.emit(WasmBeginLoop(with: [] => []), withInputs: [signature])
+                b.runtimeData.push("loopLabel", loopBegin.innerOutput(0))
                 // Increase loop counter.
                 let result = function.wasmi32BinOp(
                     loopCtr, function.consti32(1), binOpKind: .Sub)
@@ -2184,6 +2185,9 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 let loopCtr = b.runtimeData.pop("loopCounter")
                 // Backedge of loop, we continue if it is not equal to zero.
                 let isNotZero = function.wasmi32CompareOp(loopCtr, function.consti32(0), using: .Ne)
+                function.wasmBranchIf(
+                    isNotZero, to: b.runtimeData.pop("loopLabel"),
+                    hint: b.randomWasmBranchHint())
                 b.emit(
                     WasmEndLoop(outputCount: 0), withInputs: [b.runtimeData.pop("loopSignature")])
             },
