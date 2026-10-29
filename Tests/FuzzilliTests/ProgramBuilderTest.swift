@@ -4164,6 +4164,28 @@ struct ProgramBuilderTests {
         }
     }
 
+    @Test func testRandomWasmJsCompatibleSignatures() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            let typeGroup = b.wasmDefineTypeGroup {
+                [
+                    b.wasmDefineSignatureType(signature: [.wasmSimd128] => [], indexTypes: []),
+                    b.wasmDefineSignatureType(signature: [.wasmExnRef()] => [], indexTypes: []),
+                ]
+            }
+            #expect(b.randomWasmFunctionSignatureTypeDef(isJsCompatible: true) == nil)
+            let nonJsSig = b.randomWasmFunctionSignatureTypeDef(isJsCompatible: false)
+            #expect(nonJsSig != nil && typeGroup.contains(nonJsSig!))
+
+            let jsSigDef = b.wasmDefineTypeGroup {
+                [b.wasmDefineSignatureType(signature: [.wasmi32] => [.wasmi64], indexTypes: [])]
+            }[0]
+            #expect(b.randomWasmFunctionSignatureTypeDef(isJsCompatible: true) == jsSigDef)
+        }
+    }
+
     // TODO: Fix these generators and remove them from this list.
     // Except for `DynamicImportGenerator`, they all seem to succeed in FuzzilliCli runs.
     static let knownUnbuildableGenerators: Set<String> = [

@@ -51,7 +51,11 @@ private func generateBranchOnCast(
 }
 
 private func chooseWasmFunctionSignatureDef(in b: ProgramBuilder) -> Variable {
-    if probability(0.9), let typeGroupSignature = b.randomWasmFunctionSignatureTypeDef() {
+    let isJsCompatible = probability(0.9)
+    if probability(0.9),
+        let typeGroupSignature = b.randomWasmFunctionSignatureTypeDef(
+            isJsCompatible: isJsCompatible)
+    {
         // Unlike ad hoc signatures, signature types defined in type groups can have
         // super and sub types.
         return typeGroupSignature
@@ -59,7 +63,7 @@ private func chooseWasmFunctionSignatureDef(in b: ProgramBuilder) -> Variable {
         // TODO(mliedtke): If we want to allow non-nullable types, we'll need to ensure
         // that we are able to also generate them in all cases and contexts.
         let (signature, indexTypes) = b.randomWasmGcSignature(
-            allowNonNullable: false, isJsCompatible: probability(0.9))
+            allowNonNullable: false, isJsCompatible: isJsCompatible)
         return b.wasmDefineAdHocSignatureType(
             signature: signature, indexTypes: indexTypes)
     }
@@ -3109,29 +3113,7 @@ private let wasmSignatureTypeGenerator = {
         }
 
         // Define signature type without super type
-        let typeCount = Int.random(in: 0...10)
-        let returnCount = Int.random(in: 0...typeCount)
-        let parameterCount = typeCount - returnCount
-
-        var indexTypes: [Variable] = []
-        let chooseType = {
-            if let elementType = b.randomWasmTypeDef(),
-                probability(0.25)
-            {
-                let nullability =
-                    b.type(of: elementType).wasmTypeDefinition!.description
-                    == .selfReference || probability(0.5)
-                indexTypes.append(elementType)
-                let isExact = b.fuzzer.config.enableCustomDescriptors && probability(0.5)
-                return ILType.wasmRef(.Index(isExact: isExact), nullability: nullability)
-            } else {
-                // TODO(mliedtke): Extend list with abstract heap types.
-                return chooseUniform(from: ILType.wasmNonRefValueTypes)
-            }
-        }
-        let signature =
-            (0..<parameterCount).map { _ in chooseType() }
-            => (0..<returnCount).map { _ in chooseType() }
+        let (signature, indexTypes) = b.randomWasmGcSignature(isJsCompatible: probability(0.9))
         b.wasmDefineSignatureType(signature: signature, indexTypes: indexTypes, isFinal: isFinal)
     }
 }

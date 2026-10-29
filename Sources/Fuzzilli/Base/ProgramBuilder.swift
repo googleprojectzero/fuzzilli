@@ -7130,7 +7130,7 @@ public class ProgramBuilder {
     /// signature of a new Wasm function. Differently to ad hoc signatures, these signature types
     /// can have super and sub types, so the function can be used as an instance of a super type at
     /// runtime (e.g., in casts or when called through the signature of a super type).
-    public func randomWasmFunctionSignatureTypeDef() -> Variable? {
+    public func randomWasmFunctionSignatureTypeDef(isJsCompatible: Bool = false) -> Variable? {
         let isUsable = { (v: Variable) -> Bool in
             guard
                 let desc = self.type(of: v).wasmTypeDefinition?.description
@@ -7142,13 +7142,15 @@ public class ProgramBuilder {
             // TODO(mliedtke): They could be exported and then imported by another Wasm module once
             // we preserve the correct import type. Allow these signatures once we stop losing
             // the signature data when exporting the function to JS.
-            if !(signature.parameterTypes + signature.outputTypes).allSatisfy({ type in
-                if type == .wasmSimd128 { return false }
-                if case .Abstract(let heapTypeInfo) = type.wasmReferenceType?.kind {
-                    return heapTypeInfo.heapType.isUsableInJS()
-                }
-                return true
-            }) {
+            if isJsCompatible
+                && !(signature.parameterTypes + signature.outputTypes).allSatisfy({ type in
+                    if type == .wasmSimd128 { return false }
+                    if case .Abstract(let heapTypeInfo) = type.wasmReferenceType?.kind {
+                        return heapTypeInfo.heapType.isUsableInJS()
+                    }
+                    return true
+                })
+            {
                 return false
             }
             // The function needs to be able to produce its results.
