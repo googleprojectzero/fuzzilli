@@ -36,25 +36,11 @@ public class Minimizer: ComponentBase {
     ///
     /// Minimization will not modify the given program. Instead, it produce a new Program instance.
     /// Once minimization is finished, the passed block will be invoked on the fuzzer's queue with the minimized program.
-    func withMinimizedCopy(
-        _ program: Program, withAspects aspects: ProgramAspects,
-        parentExecTime: TimeInterval? = nil, block: @escaping (Program) -> Void
-    ) {
-        withMinimizedCopy(
-            program, withAspects: aspects, parentExecTime: parentExecTime,
-            collectingCoverageOf: nil
-        ) {
-            minimizedProgram, _ in
-            block(minimizedProgram)
-        }
-    }
-
-    /// Like `withMinimizedCopy(_:withAspects:parentExecTime:block:)`. If `coverageEvaluator` is given, also passes the
-    /// coverage of the minimized code to the block, or nil if no reduction was committed.
+    /// If `coverageEvaluator` is given, also passes the coverage of the minimized code to the block, or nil if no reduction was committed.
     func withMinimizedCopy(
         _ program: Program, withAspects aspects: ProgramAspects,
         parentExecTime: TimeInterval? = nil,
-        collectingCoverageOf coverageEvaluator: ProgramCoverageEvaluator?,
+        collectingCoverageOf coverageEvaluator: ProgramCoverageEvaluator? = nil,
         block: @escaping (Program, CoverageBitmap?) -> Void
     ) {
         minimizationQueue.async {

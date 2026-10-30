@@ -57,6 +57,9 @@ static inline void clear_edge(uint8_t* bits, uint64_t index)
 
 int cov_initialize(struct cov_context* context)
 {
+    context->virgin_bits = NULL;
+    context->crash_bits = NULL;
+    context->edge_count = NULL;
 #if defined(_WIN32)
     char key[1024];
     _snprintf(key, sizeof(key), "shm_id_%u_%u",
@@ -145,10 +148,18 @@ void cov_shutdown(struct cov_context* context)
     (void)UnmapViewOfFile(context->shmem);
     CloseHandle(context->hMapping);
 #else
+    munmap(context->shmem, SHM_SIZE);
     char shm_key[1024];
     snprintf(shm_key, 1024, "shm_id_%d_%d", getpid(), context->id);
     shm_unlink(shm_key);
 #endif
+    free(context->virgin_bits);
+    free(context->crash_bits);
+    free(context->edge_count);
+    context->shmem = NULL;
+    context->virgin_bits = NULL;
+    context->crash_bits = NULL;
+    context->edge_count = NULL;
 }
 
 static uint32_t internal_evaluate(struct cov_context* context, uint8_t* virgin_bits, struct edge_set* new_edges)

@@ -1009,7 +1009,7 @@ public class Fuzzer {
         fuzzGroup.enter()
         minimizer.withMinimizedCopy(
             program, withAspects: ProgramAspects(outcome: .crashed(termsig))
-        ) { minimizedProgram in
+        ) { minimizedProgram, _ in
             self.fuzzGroup.leave()
             processCommon(minimizedProgram)
         }
@@ -1052,7 +1052,7 @@ public class Fuzzer {
 
         fuzzGroup.enter()
         minimizer.withMinimizedCopy(program, withAspects: ProgramAspects(outcome: .differential)) {
-            minimizedProgram in
+            minimizedProgram, _ in
             self.fuzzGroup.leave()
             processCommon(minimizedProgram)
         }

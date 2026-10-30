@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import Foundation
+import Synchronization
 import libcoverage
 
 /// Represents a set of newly discovered CFG edges in the target program.
@@ -90,8 +91,7 @@ public final class CoverageBitmap {
 
 public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     /// Counts the number of instances. Used to create unique shared memory regions in every instance.
-    private static var instances = 0
-    private static let instancesLock = NSLock()
+    private static let instances = Atomic<Int>(0)
 
     /// Whether per-edge hit counts should be tracked as well.
     /// These are expensive to compute, so this need to be enabled explicitly.
@@ -120,11 +120,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
 
         super.init(name: "Coverage")
 
-        // Locked because tests create evaluators in parallel.
-        let id = Self.instancesLock.withLock {
-            defer { Self.instances += 1 }
-            return Self.instances
-        }
+        let id = Self.instances.wrappingAdd(1, ordering: .relaxed).oldValue
 
         context.id = Int32(id)
         guard libcoverage.cov_initialize(&context) == 0 else {
