@@ -992,6 +992,17 @@ fuzzer.sync {
     fuzzer.start(runUntil: exitCondition)
 }
 
+/// Adds the worker modules, registers the worker with the main instance and initializes it.
+/// Must be called on the worker's dispatch queue.
+func initializeWorker(_ worker: Fuzzer) {
+    worker.addModule(Statistics())
+    if let execPurposeStatistics {
+        worker.addModule(ExecutionPurposeStatistics(addingTo: execPurposeStatistics))
+    }
+    worker.addModule(ThreadChild(for: worker, parent: fuzzer))
+    worker.initialize()
+}
+
 for i in 1..<numJobs {
     // Add thread worker instances if requested
     // Worker instances use a slightly different configuration, mostly just a lower log level.
@@ -1046,13 +1057,7 @@ for i in 1..<numJobs {
     DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
         worker.async {
             guard !worker.isStopped else { return }
-
-            worker.addModule(Statistics())
-            if let execPurposeStatistics {
-                worker.addModule(ExecutionPurposeStatistics(addingTo: execPurposeStatistics))
-            }
-            worker.addModule(ThreadChild(for: worker, parent: fuzzer))
-            worker.initialize()
+            initializeWorker(worker)
             worker.start()
         }
     }
