@@ -42,7 +42,7 @@ jobs:
         run: npm install
       - uses: actions/setup-node@v7
         with:
-          node-version: 27-nightly
+          node-version: 28-nightly
       - name: V8 version used by Node.js
         run: node -p process.versions.v8
       - name: Swift Version

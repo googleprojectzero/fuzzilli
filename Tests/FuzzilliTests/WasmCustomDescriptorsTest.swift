@@ -168,7 +168,7 @@ struct WasmCustomDescriptorsTests {
             let exports = module.loadExports()
             let res = b.callMethod(module.getExportedMethod(at: 0), on: exports)
             let outputFunc = b.createNamedVariable(forBuiltin: "output")
-            b.callFunction(outputFunc, withArgs: [res])
+            b.callFunction(outputFunc, withArgs: [b.arrayToStringForTesting(res)])
         }
         testForOutput(program: jsProg, runner: runner, outputString: "42,43,0,44\n")
     }
