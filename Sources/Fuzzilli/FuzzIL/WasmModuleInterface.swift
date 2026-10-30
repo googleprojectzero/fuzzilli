@@ -83,45 +83,47 @@ public struct WasmModuleInterface {
     /// Records the imports and definitions of the given instruction, which has to be the next
     /// instruction of the module. `typeOf` has to return the current type of a variable.
     ///
-    /// An instruction imports the tables, memories, globals and tags that it takes as inputs, unless
-    /// they are defined in this module. Objects defined in an earlier module are imported, too, as
-    /// they are only accessible through the `exports` object of that module's instance. Functions
-    /// and suspending objects are only imported by WasmJsCall and WasmDefineTable. (The WasmLifter
-    /// fails for other operations with such inputs.) Each object is imported once, except for
-    /// functions, which are imported once per signature.
+    /// An instruction imports the functions, tables, memories, globals and tags that it takes as
+    /// inputs, unless they are defined in this module. Objects defined in an earlier module are
+    /// imported, too, as they are only accessible through the `exports` object of that module's
+    /// instance. Each object is imported once, except for functions, which are imported once per
+    /// signature.
     public mutating func record(_ instr: Instruction, typeOf: (Variable) -> ILType) {
-        for (idx, input) in instr.inputs.enumerated() where !definedVariables.contains(input) {
-            let type = typeOf(input)
-            if type.Is(.object(ofGroup: "WasmTable")) {
-                addImport(.table, input)
-            } else if type.Is(.object(ofGroup: "WasmMemory")) {
-                addImport(.memory, input)
-            } else if type.Is(.object(ofGroup: "WasmGlobal")) {
-                addImport(.global, input)
-            } else if type.Is(.object(ofGroup: "WasmTag")) {
-                // The WasmLifter can't import a tag without knowing its type and fails instead.
-                if type.isWasmTagType {
-                    addImport(.tag, input)
+        switch instr.op.opcode {
+        case .wasmJsCall(_):
+            let signatureType = typeOf(instr.input(0))
+            let function = instr.input(1)
+            if signatureType.isWasmSignatureTypeDef && !definedVariables.contains(function) {
+                addImport(
+                    .function, function,
+                    .wasmSignature(signatureType.wasmFunctionSignatureDefSignature))
+            }
+        case .wasmDefineTable(_):
+            // The inputs are pairs of a function and its signature type definition.
+            assert(instr.inputs.count % 2 == 0)
+            for idx in stride(from: 0, to: instr.inputs.count, by: 2) {
+                let function = instr.input(idx)
+                if !definedVariables.contains(function) {
+                    addImport(.function, function, .signatureDef(instr.input(idx + 1)))
                 }
-            } else if type.Is(.function()) || type.Is(.object(ofGroup: "WasmSuspendingObject")) {
-                switch instr.op.opcode {
-                case .wasmJsCall(_):
-                    let signatureType = typeOf(instr.input(0))
-                    if signatureType.isWasmSignatureTypeDef {
-                        addImport(
-                            .function, input,
-                            .wasmSignature(signatureType.wasmFunctionSignatureDefSignature))
+            }
+        default:
+            for input in instr.inputs where !definedVariables.contains(input) {
+                let type = typeOf(input)
+                if type.Is(.object(ofGroup: "WasmTable")) {
+                    addImport(.table, input)
+                } else if type.Is(.object(ofGroup: "WasmMemory")) {
+                    addImport(.memory, input)
+                } else if type.Is(.object(ofGroup: "WasmGlobal")) {
+                    addImport(.global, input)
+                } else if type.Is(.object(ofGroup: "WasmTag")) {
+                    // The WasmLifter can't import a tag without knowing its type and fails instead.
+                    if type.isWasmTagType {
+                        addImport(.tag, input)
                     }
-                case .wasmDefineTable(_):
-                    // The inputs are pairs of a function and its signature type definition.
-                    if idx % 2 == 0 {
-                        addImport(.function, input, .signatureDef(instr.input(idx + 1)))
-                    }
-                default:
-                    break
+                } else {
+                    // Other inputs, e.g. Wasm values, labels and type definitions, aren't imported.
                 }
-            } else {
-                // Other inputs, e.g. Wasm values, labels and type definitions, aren't imported.
             }
         }
 

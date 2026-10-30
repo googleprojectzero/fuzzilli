@@ -6558,6 +6558,61 @@ struct WasmFoundationTests {
         testForOutput(program: jsProg, runner: runner, outputString: expectedOutput)
     }
 
+    @Test func testImportingFunctionWithWidenedType() throws {
+        let runner = JavaScriptExecutor()!
+        var expectedOutput = ""
+
+        let jsProg = buildAndLiftProgram(withLiftingOptions: .includeComments) { b in
+            let fn = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+                b.doReturn(b.binary(args[0], b.loadInt(1), with: .Add))
+            }
+            let asyncFn = b.buildAsyncFunction(with: .parameters(n: 1)) { args in
+                b.doReturn(args[0])
+            }
+            b.buildIfElse(
+                b.loadBool(false),
+                ifBody: {
+                    let suspending = b.wrapSuspending(function: asyncFn)
+                    b.reassign(variable: fn, value: suspending)
+                },
+                elseBody: {})
+            // Merging .function() and WasmSuspendingObject widens the static type so it is neither
+            // a subtype of .function() nor of WasmSuspendingObject.
+            #expect(!b.type(of: fn).Is(.function()))
+            #expect(!b.type(of: fn).Is(.object(ofGroup: "WasmSuspendingObject")))
+
+            let module = b.buildWasmModule { wasmModule in
+                let signature = wasmModule.wasmDefineAdHocSignatureType(
+                    signature: [.wasmi32] => [.wasmi32])
+                let table = b.emit(
+                    WasmDefineTable(
+                        elementType: .wasmFuncRef(), limits: Limits(min: 1),
+                        initializedSlotCount: 1, isTable64: false),
+                    withInputs: [fn, signature]
+                ).output
+                wasmModule.addWasmFunction(with: [.wasmi32] => [.wasmi32]) { function, _, args in
+                    let direct = b.emit(
+                        WasmJsCall(parameterCount: 1, outputCount: 1),
+                        withInputs: [signature, fn, args[0]]
+                    ).output
+                    return function.wasmCallIndirect(
+                        signatureDef: signature, table: table, functionArgs: [direct],
+                        tableIndex: function.consti32(0))
+                }
+            }
+
+            let exports = module.loadExports()
+            expectedOutput += outputExportNames(of: exports, using: b)
+
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+            let res = b.callMethod("wf0", on: exports, withArgs: [b.loadInt(40)])
+            b.callFunction(outputFunc, withArgs: [res])
+            expectedOutput += "42\n"
+        }
+
+        testForOutput(program: jsProg, runner: runner, outputString: expectedOutput)
+    }
+
     @Test func testDefineElementSegments() throws {
         let runner = JavaScriptExecutor()!
 
