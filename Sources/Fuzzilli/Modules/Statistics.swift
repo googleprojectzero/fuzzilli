@@ -39,9 +39,6 @@ public class Statistics: Module {
     /// Since we may easily spent hundreds of executions on a single minimization task, the context window here is larger than the other ones.
     private var minimizationOverheadAvg = MovingAverage(n: 10000)
 
-    /// Current corpus size. Updated when new samples are added to the corpus.
-    private var corpusSize = 0
-
     /// Moving average to keep track of average program size.
     private var programSizeAvg = MovingAverage(n: 1000)
 
@@ -86,7 +83,7 @@ public class Statistics: Module {
         assert(nodes.count - inactiveNodes.count == ownData.numChildNodes)
 
         // Update local statistics data
-        ownData.avgCorpusSize = Double(corpusSize)
+        ownData.avgCorpusSize = Double(fuzzer?.corpus.size ?? 0)
         ownData.avgProgramSize = programSizeAvg.currentValue
         ownData.avgCorpusProgramSize = corpusProgramSizeAvg.currentValue
         ownData.avgExecutionTime = executionTimeAvg.currentValue
@@ -271,7 +268,6 @@ public class Statistics: Module {
             self.ownData.interestingSamples += 1
             self.ownData.coverage = fuzzer.evaluator.currentScore
             self.corpusProgramSizeAvg.add(ev.program.size)
-            self.corpusSize = fuzzer.corpus.size
         }
         fuzzer.registerEventListener(for: fuzzer.events.ProgramGenerated) { program in
             self.ownData.totalSamples += 1

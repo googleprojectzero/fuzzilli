@@ -101,6 +101,26 @@ class TestAspects: ProgramAspects {
         }
     }
 
+    @Test func testCorpusSizeReflectsCurrentCorpus() {
+        let fuzzer = makeMockFuzzer(config: Configuration(logLevel: .error))
+
+        fuzzer.sync {
+            let stats = Statistics()
+            stats.initialize(with: fuzzer)
+
+            // Simulate a bulk state synchronization: the programs are added to the corpus directly,
+            // without dispatching any events. The reported corpus size must still be up to date.
+            let initialCorpusSize = fuzzer.corpus.size
+            #expect(stats.compute().avgCorpusSize == Double(initialCorpusSize))
+            for i in 0..<3 {
+                let b = fuzzer.makeBuilder()
+                b.loadInt(Int64(i))
+                fuzzer.corpus.add(b.finalize(), ProgramAspects(outcome: .succeeded))
+            }
+            #expect(stats.compute().avgCorpusSize == Double(initialCorpusSize + 3))
+        }
+    }
+
     @Test func testCorpusImportUninterestingCounter() {
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
         let fuzzer = makeMockFuzzer(config: liveTestConfig)
