@@ -21,8 +21,70 @@ import Foundation
 /// Since the corpus is shuffled before population, popping from the end yields
 /// unbiased random samples without requiring an upfront array reversal.
 public class ThreadSafeImportQueue {
+    public struct Statistics {
+        /// The number of programs whose import outcome was recorded. Programs that were dequeued
+        /// but are still being processed (e.g. by other instances sharing the queue) aren't counted.
+        public var numberOfProgramsProcessedSoFar = 0
+        public var numberOfProgramsThatExecutedSuccessfullyDuringImport = 0
+        public var numberOfProgramsThatWereImport = 0
+        public var numberOfProgramsNotImportedBecauseUninteresting = 0
+        public var numberOfProgramsThatFailedDuringImport = 0
+        public var numberOfProgramsThatTimedOutDuringImport = 0
+        public var numberOfProgramsThatNeededOneFixupAttempt = 0
+        public var numberOfProgramsThatNeededTwoFixupAttempts = 0
+        public var numberOfProgramsThatNeededThreeFixupAttempts = 0
+        public var numberOfProgramsRequiringWasmButDisabled = 0
+        public var numberOfProgramsRequiringBundlesButDisabled = 0
+        public var convergencePatterns = [String: Int]()
+
+        public var numberOfProgramsThatNeededFixup: Int {
+            return numberOfProgramsThatNeededOneFixupAttempt
+                + numberOfProgramsThatNeededTwoFixupAttempts
+                + numberOfProgramsThatNeededThreeFixupAttempts
+        }
+
+        /// Records the execution outcome and fixup attempts for an imported program.
+        mutating func recordOutcome(_ result: Fuzzer.ImportResult, fixupAttempts: Int) {
+            numberOfProgramsProcessedSoFar += 1
+            switch result {
+            case .imported:
+                numberOfProgramsThatExecutedSuccessfullyDuringImport += 1
+                numberOfProgramsThatWereImport += 1
+                switch fixupAttempts {
+                case 0: break
+                case 1: numberOfProgramsThatNeededOneFixupAttempt += 1
+                case 2: numberOfProgramsThatNeededTwoFixupAttempts += 1
+                case 3: numberOfProgramsThatNeededThreeFixupAttempts += 1
+                default: fatalError("Unexpected number of fixup rounds: \(fixupAttempts)")
+                }
+            case .dropped:
+                // Dropping a program is treated as success.
+                numberOfProgramsThatExecutedSuccessfullyDuringImport += 1
+            case .needsWasm:
+                numberOfProgramsRequiringWasmButDisabled += 1
+            case .needsBundles:
+                numberOfProgramsRequiringBundlesButDisabled += 1
+            case .failed(let outcome):
+                switch outcome {
+                case .succeeded:
+                    // The execution succeeded, but the program was not imported (e.g. because it was not interesting).
+                    numberOfProgramsThatExecutedSuccessfullyDuringImport += 1
+                    numberOfProgramsNotImportedBecauseUninteresting += 1
+                case .failed:
+                    numberOfProgramsThatFailedDuringImport += 1
+                case .timedOut:
+                    numberOfProgramsThatTimedOutDuringImport += 1
+                case .crashed, .differential:
+                    // This is unexpected during corpus import (unless it's a crash/differential corpus), so we don't track these.
+                    break
+                }
+            }
+        }
+    }
+
     private let queue = DispatchQueue(label: "fuzzilli.import-queue")
     private var programs: [Program]
+    private var stats = Statistics()
     public let initialCount: Int
 
     public init(_ programs: [Program]) {
@@ -43,6 +105,25 @@ public class ThreadSafeImportQueue {
             let program = programs.removeLast()
             return (program, initialCount - programs.count)
         }
+    }
+
+    /// Records the execution outcome and fixup attempts for an imported program.
+    public func recordOutcome(_ result: Fuzzer.ImportResult, fixupAttempts: Int) {
+        queue.sync {
+            stats.recordOutcome(result, fixupAttempts: fixupAttempts)
+        }
+    }
+
+    /// Records a convergence pattern observed during program import.
+    public func recordConvergencePattern(_ pattern: String) {
+        queue.sync {
+            stats.convergencePatterns[pattern, default: 0] += 1
+        }
+    }
+
+    /// Returns a snapshot of the current aggregated import statistics.
+    public var statistics: Statistics {
+        return queue.sync { stats }
     }
 
     /// Number of programs remaining in the queue.

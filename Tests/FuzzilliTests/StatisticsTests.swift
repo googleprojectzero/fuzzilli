@@ -128,29 +128,29 @@ class TestAspects: ProgramAspects {
         fuzzer.sync {
             let b = fuzzer.makeBuilder()
             let prog = b.finalize()
-            var job = Fuzzer.CorpusImportJob(
+            let job = Fuzzer.CorpusImportJob(
                 corpus: [prog], mode: .interestingOnly(shouldMinimize: false))
 
-            #expect(job.numberOfProgramsNotImportedBecauseUninteresting == 0)
-            #expect(job.numberOfProgramsThatExecutedSuccessfullyDuringImport == 0)
+            #expect(job.statistics.numberOfProgramsNotImportedBecauseUninteresting == 0)
+            #expect(job.statistics.numberOfProgramsThatExecutedSuccessfullyDuringImport == 0)
 
             // Test failed with succeeded outcome (uninteresting)
             job.notifyImportOutcome(.failed(.succeeded), fixupAttempts: 0)
-            #expect(job.numberOfProgramsNotImportedBecauseUninteresting == 1)
-            #expect(job.numberOfProgramsThatExecutedSuccessfullyDuringImport == 1)
+            #expect(job.statistics.numberOfProgramsNotImportedBecauseUninteresting == 1)
+            #expect(job.statistics.numberOfProgramsThatExecutedSuccessfullyDuringImport == 1)
 
             // Test other outcomes (should not increment the uninteresting counter)
             job.notifyImportOutcome(.imported, fixupAttempts: 0)
-            #expect(job.numberOfProgramsNotImportedBecauseUninteresting == 1)
-            #expect(job.numberOfProgramsThatExecutedSuccessfullyDuringImport == 2)
+            #expect(job.statistics.numberOfProgramsNotImportedBecauseUninteresting == 1)
+            #expect(job.statistics.numberOfProgramsThatExecutedSuccessfullyDuringImport == 2)
 
             job.notifyImportOutcome(.dropped, fixupAttempts: 0)
-            #expect(job.numberOfProgramsNotImportedBecauseUninteresting == 1)
-            #expect(job.numberOfProgramsThatExecutedSuccessfullyDuringImport == 3)
+            #expect(job.statistics.numberOfProgramsNotImportedBecauseUninteresting == 1)
+            #expect(job.statistics.numberOfProgramsThatExecutedSuccessfullyDuringImport == 3)
 
             job.notifyImportOutcome(.failed(.failed(1)), fixupAttempts: 0)
-            #expect(job.numberOfProgramsNotImportedBecauseUninteresting == 1)
-            #expect(job.numberOfProgramsThatExecutedSuccessfullyDuringImport == 3)
+            #expect(job.statistics.numberOfProgramsNotImportedBecauseUninteresting == 1)
+            #expect(job.statistics.numberOfProgramsThatExecutedSuccessfullyDuringImport == 3)
         }
     }
 

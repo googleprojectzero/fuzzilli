@@ -137,25 +137,31 @@ import Testing
         let p1 = makeTestProgram(intVal: 20)
         let queue = ThreadSafeImportQueue([p0, p1])
 
-        var job1 = Fuzzer.CorpusImportJob(queue: queue, mode: .full)
-        var job2 = Fuzzer.CorpusImportJob(queue: queue, mode: .full)
+        let job1 = Fuzzer.CorpusImportJob(queue: queue, mode: .full)
+        let job2 = Fuzzer.CorpusImportJob(queue: queue, mode: .full)
         #expect(job1.totalNumberOfProgramsToImport == 2)
+        #expect(job1.statistics.numberOfProgramsProcessedSoFar == 0)
         #expect(job1.isFinished == false)
         #expect(job1.progress() == 0.0)
 
+        // Jobs sharing a queue also share its statistics. A program only counts as processed once
+        // its outcome was recorded.
         let first = job1.nextProgram()
         #expect(first?.program == p1)
         #expect(first?.totalProcessed == 1)
-        #expect(job1.numberOfProgramsProcessedSoFar == 1)
-        #expect(job2.numberOfProgramsProcessedSoFar == 0)
+        #expect(job1.statistics.numberOfProgramsProcessedSoFar == 0)
+        job1.notifyImportOutcome(.imported, fixupAttempts: 0)
+        #expect(job1.statistics.numberOfProgramsProcessedSoFar == 1)
+        #expect(job2.statistics.numberOfProgramsProcessedSoFar == 1)
         #expect(job1.progress() == 0.5)
         #expect(job1.isFinished == false)
 
         let second = job2.nextProgram()
         #expect(second?.program == p0)
         #expect(second?.totalProcessed == 2)
-        #expect(job1.numberOfProgramsProcessedSoFar == 1)
-        #expect(job2.numberOfProgramsProcessedSoFar == 1)
+        job2.notifyImportOutcome(.imported, fixupAttempts: 0)
+        #expect(job1.statistics.numberOfProgramsProcessedSoFar == 2)
+        #expect(job2.statistics.numberOfProgramsProcessedSoFar == 2)
         #expect(job1.progress() == 1.0)
         #expect(job1.isFinished == true)
         #expect(job2.isFinished == true)
@@ -163,8 +169,76 @@ import Testing
         // Dequeueing on a depleted job must safely return nil without incrementing counter
         let third = job1.nextProgram()
         #expect(third == nil)
-        #expect(job1.numberOfProgramsProcessedSoFar == 1)
+        #expect(job1.statistics.numberOfProgramsProcessedSoFar == 2)
         #expect(job1.isFinished == true)
+    }
+
+    @Test func testRecordedImportStatistics() {
+        let queue = ThreadSafeImportQueue(makeTestPrograms(count: 2))
+
+        queue.recordOutcome(.imported, fixupAttempts: 0)
+        queue.recordOutcome(.imported, fixupAttempts: 1)
+        queue.recordOutcome(.imported, fixupAttempts: 2)
+        queue.recordOutcome(.imported, fixupAttempts: 3)
+        queue.recordOutcome(.dropped, fixupAttempts: 0)
+        queue.recordOutcome(.needsWasm, fixupAttempts: 0)
+        queue.recordOutcome(.needsBundles, fixupAttempts: 0)
+        queue.recordOutcome(.failed(.succeeded), fixupAttempts: 0)
+        queue.recordOutcome(.failed(.failed(1)), fixupAttempts: 0)
+        queue.recordOutcome(.failed(.timedOut), fixupAttempts: 0)
+        queue.recordConvergencePattern("a")
+        queue.recordConvergencePattern("a")
+        queue.recordConvergencePattern("b")
+
+        let stats = queue.statistics
+        #expect(stats.numberOfProgramsProcessedSoFar == 10)
+        #expect(stats.numberOfProgramsThatWereImport == 4)
+        // Imported, dropped and uninteresting programs all executed successfully.
+        #expect(stats.numberOfProgramsThatExecutedSuccessfullyDuringImport == 6)
+        #expect(stats.numberOfProgramsNotImportedBecauseUninteresting == 1)
+        #expect(stats.numberOfProgramsThatFailedDuringImport == 1)
+        #expect(stats.numberOfProgramsThatTimedOutDuringImport == 1)
+        #expect(stats.numberOfProgramsThatNeededOneFixupAttempt == 1)
+        #expect(stats.numberOfProgramsThatNeededTwoFixupAttempts == 1)
+        #expect(stats.numberOfProgramsThatNeededThreeFixupAttempts == 1)
+        #expect(stats.numberOfProgramsThatNeededFixup == 3)
+        #expect(stats.numberOfProgramsRequiringWasmButDisabled == 1)
+        #expect(stats.numberOfProgramsRequiringBundlesButDisabled == 1)
+        #expect(stats.convergencePatterns == ["a": 2, "b": 1])
+
+        // Dequeueing alone doesn't update the processed counter: programs that are still being
+        // processed (e.g. by other instances) must not skew the final statistics.
+        _ = queue.next()
+        #expect(queue.statistics.numberOfProgramsProcessedSoFar == 10)
+    }
+
+    @Test func testInFlightProgramsAreNotCountedAsProcessed() {
+        let queue = ThreadSafeImportQueue(makeTestPrograms(count: 2))
+
+        // Two instances dequeue a program each, but only one of them finished processing it.
+        _ = queue.next()
+        _ = queue.next()
+        #expect(queue.isEmpty)
+        queue.recordOutcome(.imported, fixupAttempts: 0)
+
+        let stats = queue.statistics
+        #expect(stats.numberOfProgramsProcessedSoFar == 1)
+        #expect(stats.numberOfProgramsThatExecutedSuccessfullyDuringImport == 1)
+    }
+
+    @Test func testConcurrentlyRecordedImportStatistics() {
+        let queue = ThreadSafeImportQueue(makeTestPrograms(count: 1))
+        let iterations = 1000
+
+        DispatchQueue.concurrentPerform(iterations: iterations) { i in
+            queue.recordOutcome(.imported, fixupAttempts: i % 2)
+            queue.recordConvergencePattern("pattern")
+        }
+
+        let stats = queue.statistics
+        #expect(stats.numberOfProgramsThatWereImport == iterations)
+        #expect(stats.numberOfProgramsThatNeededOneFixupAttempt == iterations / 2)
+        #expect(stats.convergencePatterns["pattern"] == iterations)
     }
 
     @Test func testFuzzerScheduleCorpusImportWithQueue() {
@@ -208,10 +282,11 @@ import Testing
             fuzzer.scheduleCorpusImport(queue, importMode: .full)
             fuzzer.initialize()
 
-            // Simulate other workers consuming 3 of the 4 programs from the shared queue.
-            _ = queue.next()
-            _ = queue.next()
-            _ = queue.next()
+            // Simulate other workers importing 3 of the 4 programs from the shared queue.
+            for _ in 0..<3 {
+                _ = queue.next()
+                queue.recordOutcome(.imported, fixupAttempts: 0)
+            }
             #expect(queue.count == 1)
 
             fuzzer.start()
@@ -219,13 +294,14 @@ import Testing
 
         done.wait()
 
-        fuzzer.sync {
-            #expect(infoMessages.contains("1/1 programs executed successfully"))
-            #expect(
-                !warningMessages.contains(where: {
-                    $0.contains("of imported programs failed to")
-                }))
-        }
+        // The import statistics are shared by all instances consuming from the same queue, so the
+        // final summary reports the totals of all of them.
+        // Note: This uses the value-returning sync overload, since the Void overload doesn't execute
+        // the block anymore once the fuzzer was shut down.
+        let (info, warnings) = fuzzer.sync { (infoMessages, warningMessages) }
+        #expect(info.contains("Corpus import finished:"))
+        #expect(info.contains("4/4 programs executed successfully"))
+        #expect(!warnings.contains(where: { $0.contains("of imported programs failed to") }))
     }
 
     @Test func testSharedQueueDepletedBeforeWorkerStarts() {
@@ -255,9 +331,11 @@ import Testing
             fuzzer.scheduleCorpusImport(queue, importMode: .full)
             fuzzer.initialize()
 
-            // Simulate other workers draining the entire queue before this worker processes any program.
-            _ = queue.next()
-            _ = queue.next()
+            // Simulate other workers importing the entire queue before this worker processes any program.
+            for _ in 0..<2 {
+                _ = queue.next()
+                queue.recordOutcome(.imported, fixupAttempts: 0)
+            }
             #expect(queue.isEmpty)
 
             fuzzer.start()
@@ -265,12 +343,12 @@ import Testing
 
         done.wait()
 
-        fuzzer.sync {
-            #expect(!infoMessages.contains("Corpus import finished:"))
-            #expect(
-                !warningMessages.contains(where: {
-                    $0.contains("of imported programs failed to")
-                }))
-        }
+        // Even though this instance didn't import any program itself, it reports the shared totals.
+        // Note: This uses the value-returning sync overload, since the Void overload doesn't execute
+        // the block anymore once the fuzzer was shut down.
+        let (info, warnings) = fuzzer.sync { (infoMessages, warningMessages) }
+        #expect(info.contains("Corpus import finished:"))
+        #expect(info.contains("2/2 programs executed successfully"))
+        #expect(!warnings.contains(where: { $0.contains("of imported programs failed to") }))
     }
 }

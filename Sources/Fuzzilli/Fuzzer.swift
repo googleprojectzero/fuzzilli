@@ -132,7 +132,7 @@ public class Fuzzer {
     }
 
     func getConvergencePatternsForTesting() -> [String: Int] {
-        return self.currentCorpusImportJob.convergencePatterns
+        return self.currentCorpusImportJob.statistics.convergencePatterns
     }
 
     /// Start time of this fuzzing session
@@ -1154,42 +1154,43 @@ public class Fuzzer {
     }
 
     private func printFinalCorpusImportStats() {
-        let processed = currentCorpusImportJob.numberOfProgramsProcessedSoFar
+        let stats = currentCorpusImportJob.statistics
+        let processed = stats.numberOfProgramsProcessedSoFar
         guard processed > 0 else { return }
 
         logger.info("Corpus import finished:")
         logger.info(
-            "\(currentCorpusImportJob.numberOfProgramsThatExecutedSuccessfullyDuringImport)/\(processed) programs executed successfully"
+            "\(stats.numberOfProgramsThatExecutedSuccessfullyDuringImport)/\(processed) programs executed successfully"
         )
         logger.info(
-            "    Of which \(currentCorpusImportJob.numberOfProgramsThatWereImport) programs were added to the corpus"
+            "    Of which \(stats.numberOfProgramsThatWereImport) programs were added to the corpus"
         )
         logger.info(
-            "    Of which \(currentCorpusImportJob.numberOfProgramsNotImportedBecauseUninteresting) programs were not interesting (e.g. lack of coverage)"
+            "    Of which \(stats.numberOfProgramsNotImportedBecauseUninteresting) programs were not interesting (e.g. lack of coverage)"
         )
         logger.info(
-            "\(currentCorpusImportJob.numberOfProgramsThatNeededFixup)/\(processed) programs needed fixup during import"
+            "\(stats.numberOfProgramsThatNeededFixup)/\(processed) programs needed fixup during import"
         )
         logger.info(
-            "    \(currentCorpusImportJob.numberOfProgramsThatNeededOneFixupAttempt) succeeded after attempt 1"
+            "    \(stats.numberOfProgramsThatNeededOneFixupAttempt) succeeded after attempt 1"
         )
         logger.info(
-            "    \(currentCorpusImportJob.numberOfProgramsThatNeededTwoFixupAttempts) succeeded after attempt 2"
+            "    \(stats.numberOfProgramsThatNeededTwoFixupAttempts) succeeded after attempt 2"
         )
         logger.info(
-            "    \(currentCorpusImportJob.numberOfProgramsThatNeededThreeFixupAttempts) succeeded after attempt 3"
+            "    \(stats.numberOfProgramsThatNeededThreeFixupAttempts) succeeded after attempt 3"
         )
         logger.info(
-            "\(currentCorpusImportJob.numberOfProgramsThatFailedDuringImport)/\(processed) programs failed to execute (even after fixup) and weren't imported"
+            "\(stats.numberOfProgramsThatFailedDuringImport)/\(processed) programs failed to execute (even after fixup) and weren't imported"
         )
         logger.info(
-            "\(currentCorpusImportJob.numberOfProgramsThatTimedOutDuringImport)/\(processed) programs timed out and weren't imported"
+            "\(stats.numberOfProgramsThatTimedOutDuringImport)/\(processed) programs timed out and weren't imported"
         )
         if !config.isWasmEnabled {
             logger.info(
-                "\(currentCorpusImportJob.numberOfProgramsRequiringWasmButDisabled)/\(processed) programs require Wasm which is disabled"
+                "\(stats.numberOfProgramsRequiringWasmButDisabled)/\(processed) programs require Wasm which is disabled"
             )
-            if currentCorpusImportJob.numberOfProgramsRequiringWasmButDisabled > 0
+            if stats.numberOfProgramsRequiringWasmButDisabled > 0
                 && config.storagePath != nil
             {
                 logger.info(
@@ -1199,13 +1200,13 @@ public class Fuzzer {
         }
         if !config.generateBundle {
             logger.info(
-                "\(currentCorpusImportJob.numberOfProgramsRequiringBundlesButDisabled)/\(processed) programs require bundles which are disabled"
+                "\(stats.numberOfProgramsRequiringBundlesButDisabled)/\(processed) programs require bundles which are disabled"
             )
         }
 
         let successRatio =
             Double(
-                currentCorpusImportJob.numberOfProgramsThatExecutedSuccessfullyDuringImport)
+                stats.numberOfProgramsThatExecutedSuccessfullyDuringImport)
             / Double(processed)
         let failureRatio = 1.0 - successRatio
         if failureRatio >= 0.25 {
@@ -1220,7 +1221,7 @@ public class Fuzzer {
 
         if config.trackConvergencePatterns {
             logger.info("Convergence patterns report:")
-            let sortedPatterns = currentCorpusImportJob.convergencePatterns.sorted {
+            let sortedPatterns = stats.convergencePatterns.sorted {
                 $0.value > $1.value
             }
             for (pattern, count) in sortedPatterns {
@@ -1469,24 +1470,10 @@ public class Fuzzer {
         // We use a fixup mutator for fixing imported programs that throw an exception.
         let fixupMutator = FixupMutator(name: "CorpusImportFixupMutator")
 
-        private(set) var numberOfProgramsProcessedSoFar = 0
-        private(set) var numberOfProgramsThatExecutedSuccessfullyDuringImport = 0
-        private(set) var numberOfProgramsThatWereImport = 0
-        private(set) var numberOfProgramsNotImportedBecauseUninteresting = 0
-        private(set) var numberOfProgramsThatFailedDuringImport = 0
-        private(set) var numberOfProgramsThatTimedOutDuringImport = 0
-        private(set) var numberOfProgramsThatNeededOneFixupAttempt = 0
-        private(set) var numberOfProgramsThatNeededTwoFixupAttempts = 0
-        private(set) var numberOfProgramsThatNeededThreeFixupAttempts = 0
-        private(set) var numberOfProgramsRequiringWasmButDisabled = 0
-        private(set) var numberOfProgramsRequiringBundlesButDisabled = 0
-        private(set) var convergencePatterns = [String: Int]()
-
-        var numberOfProgramsThatNeededFixup: Int {
-            assert(Fuzzer.maxProgramImportFixupAttempts == 3)
-            return numberOfProgramsThatNeededOneFixupAttempt
-                + numberOfProgramsThatNeededTwoFixupAttempts
-                + numberOfProgramsThatNeededThreeFixupAttempts
+        /// A snapshot of the import statistics. These are tracked by the (thread-safe) import queue,
+        /// so that they are shared by all import jobs consuming programs from the same queue.
+        var statistics: ThreadSafeImportQueue.Statistics {
+            return importQueue.statistics
         }
 
         init(corpus: [Program], mode: CorpusImportMode) {
@@ -1507,53 +1494,20 @@ public class Fuzzer {
             return importQueue
         }
 
-        mutating func nextProgram() -> (program: Program, totalProcessed: Int)? {
-            guard let result = importQueue.nextWithProcessedCount() else {
-                return nil
-            }
-            numberOfProgramsProcessedSoFar += 1
-            return result
+        /// Dequeues the next program together with the total number of programs dequeued so far by
+        /// all jobs sharing the same import queue, or returns nil if the queue is depleted.
+        func nextProgram() -> (program: Program, totalProcessed: Int)? {
+            return importQueue.nextWithProcessedCount()
         }
 
-        mutating func recordConvergencePattern(_ pattern: String) {
-            convergencePatterns[pattern, default: 0] += 1
+        func recordConvergencePattern(_ pattern: String) {
+            importQueue.recordConvergencePattern(pattern)
         }
 
-        mutating func notifyImportOutcome(_ result: ImportResult, fixupAttempts: Int) {
-            switch result {
-            case .imported:
-                numberOfProgramsThatExecutedSuccessfullyDuringImport += 1
-                numberOfProgramsThatWereImport += 1
-                switch fixupAttempts {
-                case 0: break
-                case 1: numberOfProgramsThatNeededOneFixupAttempt += 1
-                case 2: numberOfProgramsThatNeededTwoFixupAttempts += 1
-                case 3: numberOfProgramsThatNeededThreeFixupAttempts += 1
-                default: fatalError("Unexpected number of fixup rounds: \(fixupAttempts)")
-                }
-            case .dropped:
-                // Dropping a program is treated as success.
-                numberOfProgramsThatExecutedSuccessfullyDuringImport += 1
-                break
-            case .needsWasm:
-                numberOfProgramsRequiringWasmButDisabled += 1
-            case .needsBundles:
-                numberOfProgramsRequiringBundlesButDisabled += 1
-            case .failed(let outcome):
-                switch outcome {
-                case .succeeded:
-                    // The execution succeeded, but the program was not imported (e.g. because it was not interesting).
-                    numberOfProgramsThatExecutedSuccessfullyDuringImport += 1
-                    numberOfProgramsNotImportedBecauseUninteresting += 1
-                case .failed:
-                    numberOfProgramsThatFailedDuringImport += 1
-                case .timedOut:
-                    numberOfProgramsThatTimedOutDuringImport += 1
-                case .crashed, .differential:
-                    // This is unexpected during corpus import (unless it's a crash/differential corpus), so we don't track these.
-                    break
-                }
-            }
+        func notifyImportOutcome(_ result: ImportResult, fixupAttempts: Int) {
+            // The import statistics track the number of programs per fixup attempt, up to three attempts.
+            assert(Fuzzer.maxProgramImportFixupAttempts == 3)
+            importQueue.recordOutcome(result, fixupAttempts: fixupAttempts)
         }
 
         func progress() -> Double {
