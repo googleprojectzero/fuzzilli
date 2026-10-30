@@ -3546,17 +3546,18 @@ struct MinimizerTests {
     //   B <- DB
     // The test arguments (L1, L2) mean:
     // If the struct types in L1 are used (=marked as important), the result should be L2.
-    @Test(arguments: [
-        (["A"], ["A"]),
-        (["B"], ["A", "B"]),
-        (["DA"], ["A", "DA"]),
-        (["DB"], ["A", "DA", "B", "DB"]),
-        (["A", "B"], ["A", "B"]),
-        (["A", "DA"], ["A", "DA"]),
-        (["A", "DB"], ["A", "DA", "B", "DB"]),
-        (["B", "DA"], ["A", "DA", "B", "DB"]),  // DB is unused but has to be kept.
-        (["B", "DB"], ["A", "DA", "B", "DB"]),
-    ])
+    @Test(
+        arguments: [
+            (["A"], ["A"]),
+            (["B"], ["A", "B"]),
+            (["DA"], ["A", "DA"]),
+            (["DB"], ["A", "DA", "B", "DB"]),
+            (["A", "B"], ["A", "B"]),
+            (["A", "DA"], ["A", "DA"]),
+            (["A", "DB"], ["A", "DA", "B", "DB"]),
+            (["B", "DA"], ["A", "DA", "B", "DB"]),  // DB is unused but has to be kept.
+            (["B", "DB"], ["A", "DA", "B", "DB"]),
+        ] as [([String], [String])])
     func testWasmTypeGroupReducerCustomDescriptors(usedTypes: [String], keptTypes: [String]) {
         let evaluator = EvaluatorForMinimizationTests()
         let fuzzer = makeMockFuzzer(evaluator: evaluator)
