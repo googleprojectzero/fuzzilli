@@ -1118,7 +1118,8 @@ public struct JSTyper: Analyzer {
             for (output, outputType) in zip(instr.outputs, signature.outputTypes) {
                 setType(of: output, to: outputType)
             }
-        case .wasmArrayNewFixed(_),
+        case .wasmArrayNew(_),
+            .wasmArrayNewFixed(_),
             .wasmArrayNewDefault(_),
             .wasmArrayNewData(_),
             .wasmArrayNewElem(_):

@@ -272,21 +272,31 @@ public let WasmCodeGenerators: [CodeGenerator] = [
             as? WasmArrayTypeDescription
         {
             let function = b.currentWasmModule.currentWasmFunction
-            let hasElement =
-                b.findVariable { b.type(of: $0).Is(typeDesc.elementType.unpacked()) } != nil
-            let isDefaultable = typeDesc.elementType.isWasmDefaultable
-            if hasElement && (!isDefaultable || probability(0.5)) {
-                let elements = (0..<Int.random(in: 0...10)).map { _ in
-                    b.findVariable { b.type(of: $0).Is(typeDesc.elementType.unpacked()) }!
+            let elementType = typeDesc.elementType.unpacked()
+            var choices: [() -> Void] = []
+            if let element = b.randomVariable(ofType: elementType) {
+                choices.append {
+                    let elements = (0..<Int.random(in: 0...10)).map { _ in
+                        b.randomVariable(ofType: elementType)!
+                    }
+                    function.wasmArrayNewFixed(arrayType: arrayType, elements: elements)
                 }
-                function.wasmArrayNewFixed(arrayType: arrayType, elements: elements)
-            } else if isDefaultable {
-                function.wasmArrayNewDefault(
-                    arrayType: arrayType,
-                    size: function.consti32(Int32(b.randomSize(upTo: 0x1000))))
-            } else {
+                choices.append {
+                    let size = function.consti32(Int32(b.randomSize(upTo: 0x1000)))
+                    function.wasmArrayNew(arrayType: arrayType, element: element, size: size)
+                }
+            }
+            if typeDesc.elementType.isWasmDefaultable {
+                choices.append {
+                    let size = function.consti32(Int32(b.randomSize(upTo: 0x1000)))
+                    function.wasmArrayNewDefault(arrayType: arrayType, size: size)
+                }
+            }
+            if choices.isEmpty {
                 // Not defaultable and doesn't have an element available, so construct empty array.
                 function.wasmArrayNewFixed(arrayType: arrayType, elements: [])
+            } else {
+                chooseUniform(from: choices)()
             }
         }
     },

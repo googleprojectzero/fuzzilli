@@ -2571,6 +2571,15 @@ final class WasmSimdLoad: WasmOperation {
     }
 }
 
+final class WasmArrayNew: WasmOperation {
+    override var opcode: Opcode { .wasmArrayNew(self) }
+
+    init() {
+        // The inputs are the array type, the initial element value, and the array size.
+        super.init(numInputs: 3, numOutputs: 1, requiredContext: [.wasmFunction])
+    }
+}
+
 final class WasmArrayNewFixed: WasmOperation {
     override var opcode: Opcode { .wasmArrayNewFixed(self) }
 

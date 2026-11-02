@@ -6584,6 +6584,17 @@ public class ProgramBuilder {
         }
 
         @discardableResult
+        public func wasmArrayNew(arrayType: Variable, element: Variable, size: Variable) -> Variable
+        {
+            let arrayDesc = b.jsTyper.getTypeDescription(of: arrayType) as! WasmArrayTypeDescription
+            return b.emit(
+                WasmArrayNew(),
+                withInputs: [arrayType, element, size],
+                types: [.wasmTypeDef(), arrayDesc.elementType.unpacked(), .wasmi32]
+            ).output
+        }
+
+        @discardableResult
         public func wasmArrayNewFixed(arrayType: Variable, elements: [Variable]) -> Variable {
             let arrayDesc = b.jsTyper.getTypeDescription(of: arrayType) as! WasmArrayTypeDescription
             assert(

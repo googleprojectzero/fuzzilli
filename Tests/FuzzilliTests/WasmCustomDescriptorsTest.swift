@@ -203,6 +203,10 @@ struct WasmCustomDescriptorsTests {
                     let nonNullRef = function.wasmRefAsNonNull(structInstDefault)
                     #expect(b.type(of: nonNullRef).wasmReferenceType?.kind.isExact == true)
 
+                    let arrayInst = function.wasmArrayNew(
+                        arrayType: arrayType, element: i32, size: i32)
+                    #expect(b.type(of: arrayInst).wasmReferenceType?.kind.isExact == true)
+
                     let arrayInstFixed = function.wasmArrayNewFixed(
                         arrayType: arrayType, elements: [i32, i32])
                     #expect(b.type(of: arrayInstFixed).wasmReferenceType?.kind.isExact == true)

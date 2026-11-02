@@ -416,4 +416,5 @@ enum Opcode {
     case wasmArrayNewElem(WasmArrayNewElem)
     case wasmArrayInitData(WasmArrayInitData)
     case wasmArrayInitElem(WasmArrayInitElem)
+    case wasmArrayNew(WasmArrayNew)
 }

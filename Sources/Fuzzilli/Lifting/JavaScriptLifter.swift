@@ -2143,6 +2143,7 @@ public class JavaScriptLifter: Lifter {
                 .wasmDefineStructType(_),
                 .wasmDefineForwardOrSelfReference(_),
                 .wasmResolveForwardReference(_),
+                .wasmArrayNew(_),
                 .wasmArrayNewFixed(_),
                 .wasmArrayNewDefault(_),
                 .wasmArrayNewData(_),

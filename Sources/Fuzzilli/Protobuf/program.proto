@@ -411,6 +411,7 @@ message Instruction {
         WasmArrayNewElem wasmArrayNewElem = 385;
         WasmArrayInitData wasmArrayInitData = 386;
         WasmArrayInitElem wasmArrayInitElem = 387;
+        WasmArrayNew wasmArrayNew = 388;
     }
 }
 

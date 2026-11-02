@@ -4055,7 +4055,9 @@ struct ProgramBuilderTests {
             }
         }
 
-        test("WasmArrayNewGenerator", expectAny: WasmArrayNewDefault.self, WasmArrayNewFixed.self)
+        test(
+            "WasmArrayNewGenerator",
+            expectAny: WasmArrayNew.self, WasmArrayNewDefault.self, WasmArrayNewFixed.self)
         test("WasmStructNewDefaultGenerator", expectAny: WasmStructNewDefault.self)
         test("WasmArrayGetGenerator", expectAny: WasmArrayGet.self, requiresTypes: true)
         test("WasmStructGetGenerator", expectAny: WasmStructGet.self, requiresTypes: true)

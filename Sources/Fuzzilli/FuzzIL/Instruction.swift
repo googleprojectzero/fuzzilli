@@ -1856,6 +1856,8 @@ extension Instruction: ProtobufConvertible {
                     Fuzzilli_Protobuf_WasmDefineForwardOrSelfReference()
             case .wasmResolveForwardReference(_):
                 $0.wasmResolveForwardReference = Fuzzilli_Protobuf_WasmResolveForwardReference()
+            case .wasmArrayNew(_):
+                $0.wasmArrayNew = Fuzzilli_Protobuf_WasmArrayNew()
             case .wasmArrayNewFixed(_):
                 $0.wasmArrayNewFixed = Fuzzilli_Protobuf_WasmArrayNewFixed()
             case .wasmArrayNewDefault(_):
@@ -3150,6 +3152,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmDefineForwardOrSelfReference()
         case .wasmResolveForwardReference(_):
             op = WasmResolveForwardReference()
+        case .wasmArrayNew(_):
+            op = WasmArrayNew()
         case .wasmArrayNewFixed(_):
             op = WasmArrayNewFixed(size: inouts.count - 2)
         case .wasmArrayNewDefault(_):

@@ -117,6 +117,54 @@ struct WasmGCTests {
         testForOutput(program: jsProg, runner: runner, outputString: "-100,156,42\n-100,65436,42\n")
     }
 
+    @Test func testArrayNew() throws {
+        let runner = JavaScriptExecutor()!
+        let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
+        let fuzzer = makeMockFuzzer(config: liveTestConfig, environment: JavaScriptEnvironment())
+        let jsProg = fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+
+            let typeGroup = b.wasmDefineTypeGroup {
+                let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
+                let arrayOfArrays = b.wasmDefineArrayType(
+                    elementType: .anyIndexRef, mutability: false, indexType: arrayi32)
+                return [arrayi32, arrayOfArrays]
+            }
+
+            let module = b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmi32, .wasmi32]) {
+                    function, _, _ in
+                    let array1 = function.wasmArrayNew(
+                        arrayType: typeGroup[0], element: function.consti32(42),
+                        size: function.consti32(3))
+                    let array2 = function.wasmArrayNew(
+                        arrayType: typeGroup[1],
+                        element: function.wasmRefNull(typeDef: typeGroup[0]),
+                        size: function.consti32(2))
+                    let sum = function.wasmi32BinOp(
+                        function.wasmArrayGet(array: array1, index: function.consti32(2)),
+                        function.wasmRefIsNull(
+                            function.wasmArrayGet(array: array2, index: function.consti32(1))),
+                        binOpKind: .Add)
+                    let totalLen = function.wasmi32BinOp(
+                        function.wasmArrayLen(array1),
+                        function.wasmArrayLen(array2),
+                        binOpKind: .Add)
+                    return [sum, totalLen]
+                }
+            }
+
+            let exports = module.loadExports()
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+            let wasmOut = b.callMethod(module.getExportedMethod(at: 0), on: exports, withArgs: [])
+            b.callFunction(outputFunc, withArgs: [b.callMethod("toString", on: wasmOut)])
+
+            let prog = b.finalize()
+            return fuzzer.lifter.lift(prog)
+        }
+        testForOutput(program: jsProg, runner: runner, outputString: "43,5\n")
+    }
+
     @Test func testArrayNewDefault() throws {
         let runner = JavaScriptExecutor()!
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)

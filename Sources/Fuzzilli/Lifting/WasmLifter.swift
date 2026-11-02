@@ -2384,6 +2384,10 @@ public class WasmLifter {
             let alignAndMemory = try alignmentAndMemoryBytes(wasmInstruction.input(0))
             return Data([Prefix.Simd.rawValue, op.kind.rawValue]) + alignAndMemory
                 + Leb128.unsignedEncode(op.staticOffset)
+        case .wasmArrayNew(_):
+            let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
+            let arrayIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)
+            return Data([Prefix.GC.rawValue, 0x06]) + arrayIndex
         case .wasmArrayNewFixed(let op):
             let typeDesc = typer.getTypeDescription(of: wasmInstruction.input(0))
             let arrayIndex = Leb128.unsignedEncode(typeDescToIndex[typeDesc]!)

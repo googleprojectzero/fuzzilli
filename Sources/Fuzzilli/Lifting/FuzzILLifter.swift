@@ -1712,6 +1712,9 @@ public class FuzzILLifter: Lifter {
                 "\(output()) <- WasmSimdLoad \(op.kind) \(input(0)), \(input(1)) + \(op.staticOffset)"
             )
 
+        case .wasmArrayNew(_):
+            w.emit("\(output()) <- WasmArrayNew [\(input(0)), \(input(1)), \(input(2))]")
+
         case .wasmArrayNewFixed(_):
             let inputs = instr.inputs.map(lift).joined(separator: ", ")
             w.emit("\(output()) <- WasmArrayNewFixed [\(inputs)]")
