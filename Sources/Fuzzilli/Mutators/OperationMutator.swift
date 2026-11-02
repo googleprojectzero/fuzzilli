@@ -573,9 +573,19 @@ public class OperationMutator: BaseInstructionMutator {
         case .constSimd128(_):
             newOp = ConstSimd128(
                 value: (0..<16).map { _ in UInt8.random(in: UInt8.min...UInt8.max) })
+        case .wasmSimdShuffle(let op):
+            if probability(0.5) {
+                // Mutate a single lane to preserve most of an existing structured shuffle mask.
+                var newValue = op.value
+                newValue[Int.random(in: 0..<16)] = UInt8.random(in: 0..<32)
+                newOp = WasmSimdShuffle(value: newValue)
+            } else {
+                // Replace the entire shuffle mask with a newly generated one.
+                newOp = WasmSimdShuffle(value: WasmSimdShuffle.randomLaneMask())
+            }
         case .wasmSimd128IntegerUnOp(let op):
             let shape = chooseUniform(from: WasmSimd128Shape.allCases.filter { !$0.isFloat() })
-            // We can't convert between i32-producing operations (all_true, bitmask) and
+            // We can't convert between i32-producing operations (all_true, any_true, bitmask) and
             // v128-producing operations.
             let unOpKind = chooseUniform(
                 from: WasmSimd128IntegerUnOpKind.allCases.filter {

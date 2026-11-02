@@ -2048,6 +2048,9 @@ public enum WasmSimd128IntegerUnOpKind: Int, CaseIterable {
     case extadd_pairwise_i8x16_u = 1
     case extadd_pairwise_i16x8_s = -30
     case extadd_pairwise_i16x8_u = -29
+    // Shape-agnostic v128.* operations are pinned to .i8x16 (base 0x5C).
+    case not = -15  // 0x4D (v128.not)
+    case any_true = -9  // 0x53 (v128.any_true)
     case abs = 4
     case neg = 5
     case popcnt = 6
@@ -2057,6 +2060,11 @@ public enum WasmSimd128IntegerUnOpKind: Int, CaseIterable {
     case extend_high_s = 12
     case extend_low_u = 13
     case extend_high_u = 14
+
+    case trunc_sat_f32x4_s = 92
+    case trunc_sat_f32x4_u = 93
+    case trunc_sat_f64x2_s_zero = 96
+    case trunc_sat_f64x2_u_zero = 97
 
     case relaxed_trunc_f32x4_s = 101
     case relaxed_trunc_f32x4_u = 102
@@ -2070,6 +2078,8 @@ public enum WasmSimd128IntegerUnOpKind: Int, CaseIterable {
         case .extadd_pairwise_i8x16_u: return shape == .i16x8
         case .extadd_pairwise_i16x8_s: return shape == .i32x4
         case .extadd_pairwise_i16x8_u: return shape == .i32x4
+        case .not: return shape == .i8x16
+        case .any_true: return shape == .i8x16
         case .abs: return true
         case .neg: return true
         case .popcnt: return shape == .i8x16
@@ -2080,6 +2090,11 @@ public enum WasmSimd128IntegerUnOpKind: Int, CaseIterable {
         case .extend_low_u: return shape != .i8x16
         case .extend_high_u: return shape != .i8x16
 
+        case .trunc_sat_f32x4_s: return shape == .i32x4
+        case .trunc_sat_f32x4_u: return shape == .i32x4
+        case .trunc_sat_f64x2_s_zero: return shape == .i32x4
+        case .trunc_sat_f64x2_u_zero: return shape == .i32x4
+
         case .relaxed_trunc_f32x4_s: return shape == .i32x4
         case .relaxed_trunc_f32x4_u: return shape == .i32x4
         case .relaxed_trunc_f64x2_s_zero: return shape == .i32x4
@@ -2089,7 +2104,7 @@ public enum WasmSimd128IntegerUnOpKind: Int, CaseIterable {
 
     func outputType() -> ILType {
         switch self {
-        case .all_true, .bitmask:
+        case .any_true, .all_true, .bitmask:
             // Tests and bitmasks produce a boolean i32 result.
             return .wasmi32
         default:
@@ -2118,6 +2133,12 @@ public enum WasmSimd128IntegerBinOpKind: Int, CaseIterable {
     // i16x8: 0x7C + offset
     // i32x4: 0x9C + offset
     // i64x2: 0xBC + offset
+    case swizzle = -78  // 0x0E (i8x16.swizzle)
+    // Shape-agnostic v128.* operations are pinned to .i8x16 (base 0x5C).
+    case and = -14  // 0x4E (v128.and)
+    case andnot = -13  // 0x4F (v128.andnot)
+    case or = -12  // 0x50 (v128.or)
+    case xor = -11  // 0x51 (v128.xor)
     case q15mulr_sat_s = 6
     case narrow_s = 9
     case narrow_u = 10
@@ -2161,6 +2182,7 @@ public enum WasmSimd128IntegerBinOpKind: Int, CaseIterable {
     func isValidForShape(shape: WasmSimd128Shape) -> Bool {
         if shape.isFloat() { return false }
         switch self {
+        case .swizzle, .and, .andnot, .or, .xor: return shape == .i8x16
         case .q15mulr_sat_s: return shape == .i16x8
         case .narrow_s: return shape == .i8x16 || shape == .i16x8
         case .narrow_u: return shape == .i8x16 || shape == .i16x8
@@ -2212,12 +2234,15 @@ public enum WasmSimd128IntegerTernaryOpKind: Int, CaseIterable {
     // i32x4: 0x102 + offset
     // i64x2: 0x103 + offset
 
+    // Shape-agnostic v128.bitselect is pinned to .i8x16 (base 0x100).
+    case bitselect = -174  // 0x52 (v128.bitselect)
     case relaxed_laneselect = 9
     case relaxed_dot_i8x16_i7x16_add_s = 17
 
     func isValidForShape(shape: WasmSimd128Shape) -> Bool {
         if shape.isFloat() { return false }
         switch self {
+        case .bitselect: return shape == .i8x16
         case .relaxed_laneselect: return true
         case .relaxed_dot_i8x16_i7x16_add_s: return shape == .i32x4
         }
@@ -2246,9 +2271,23 @@ public enum WasmSimd128FloatUnOpKind: Int, CaseIterable {
     case abs
     case neg
     case sqrt
+    case demote_f64x2_zero
+    case convert_i32x4_s
+    case convert_i32x4_u
+    case promote_low_f32x4
+    case convert_low_i32x4_s
+    case convert_low_i32x4_u
 
     func isValidForShape(shape: WasmSimd128Shape) -> Bool {
-        return shape.isFloat()
+        if !shape.isFloat() { return false }
+        switch self {
+        case .ceil, .floor, .trunc, .nearest, .abs, .neg, .sqrt:
+            return true
+        case .demote_f64x2_zero, .convert_i32x4_s, .convert_i32x4_u:
+            return shape == .f32x4
+        case .promote_low_f32x4, .convert_low_i32x4_s, .convert_low_i32x4_u:
+            return shape == .f64x2
+        }
     }
 }
 
@@ -2568,6 +2607,27 @@ final class WasmSimdLoad: WasmOperation {
         self.staticOffset = staticOffset
         super.init(
             numInputs: 2, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
+    }
+}
+
+final class WasmSimdShuffle: WasmOperation {
+    override var opcode: Opcode { .wasmSimdShuffle(self) }
+    let value: [UInt8]
+
+    init(value: [UInt8]) {
+        assert(value.count == 16 && value.allSatisfy { $0 < 32 })
+        self.value = value
+        super.init(
+            numInputs: 2, numOutputs: 1, attributes: [.isMutable], requiredContext: [.wasmFunction])
+    }
+
+    static func randomLaneMask() -> [UInt8] {
+        let laneBytes = chooseUniform(from: [1, 2, 4, 8])
+        let maxLane = (probability(0.25) ? 16 : 32) / laneBytes
+        return (0..<(16 / laneBytes)).flatMap { _ in
+            let base = UInt8(Int.random(in: 0..<maxLane) * laneBytes)
+            return (0..<UInt8(laneBytes)).map { base + $0 }
+        }
     }
 }
 

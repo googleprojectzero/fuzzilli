@@ -6520,6 +6520,15 @@ public class ProgramBuilder {
         }
 
         @discardableResult
+        public func wasmSimdShuffle(_ lhs: Variable, _ rhs: Variable, _ value: [UInt8]) -> Variable
+        {
+            return b.emit(
+                WasmSimdShuffle(value: value),
+                withInputs: [lhs, rhs], types: [.wasmSimd128, .wasmSimd128]
+            ).output
+        }
+
+        @discardableResult
         func wasmSimdSplat(kind: WasmSimdSplat.Kind, _ input: Variable) -> Variable {
             return b.emit(WasmSimdSplat(kind), withInputs: [input], types: [kind.laneType()]).output
         }

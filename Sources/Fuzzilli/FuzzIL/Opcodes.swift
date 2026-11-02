@@ -417,4 +417,5 @@ enum Opcode {
     case wasmArrayInitData(WasmArrayInitData)
     case wasmArrayInitElem(WasmArrayInitElem)
     case wasmArrayNew(WasmArrayNew)
+    case wasmSimdShuffle(WasmSimdShuffle)
 }

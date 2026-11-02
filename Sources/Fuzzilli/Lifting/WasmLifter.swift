@@ -2236,9 +2236,11 @@ public class WasmLifter {
             return try Data([0x1c, 0x01]) + encodeType(typer.type(of: wasmInstruction.output))
         case .constSimd128(let op):
             return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(12) + Data(op.value)
+        case .wasmSimdShuffle(let op):
+            return Data([Prefix.Simd.rawValue, 0x0D]) + Data(op.value)
         case .wasmSimd128IntegerUnOp(let op):
             assert(
-                WasmSimd128IntegerUnOpKind.allCases.count == 17,
+                WasmSimd128IntegerUnOpKind.allCases.count == 23,
                 "New WasmSimd128IntegerUnOpKind added: check if the encoding is still correct!")
             let base =
                 switch op.shape {
@@ -2251,7 +2253,7 @@ public class WasmLifter {
             return Data([Prefix.Simd.rawValue]) + Leb128.unsignedEncode(base + op.unOpKind.rawValue)
         case .wasmSimd128IntegerBinOp(let op):
             assert(
-                WasmSimd128IntegerBinOpKind.allCases.count == 26,
+                WasmSimd128IntegerBinOpKind.allCases.count == 31,
                 "New WasmSimd128IntegerBinOpKind added: check if the encoding is still correct!")
             let base =
                 switch op.shape {
@@ -2265,7 +2267,7 @@ public class WasmLifter {
                 + Leb128.unsignedEncode(base + op.binOpKind.rawValue)
         case .wasmSimd128IntegerTernaryOp(let op):
             assert(
-                WasmSimd128IntegerTernaryOpKind.allCases.count == 2,
+                WasmSimd128IntegerTernaryOpKind.allCases.count == 3,
                 "New WasmSimd128IntegerTernaryOpKind added: check if the encoding is still correct!"
             )
             let base =
@@ -2281,7 +2283,7 @@ public class WasmLifter {
                 + Leb128.unsignedEncode(base + op.ternaryOpKind.rawValue)
         case .wasmSimd128FloatUnOp(let op):
             assert(
-                WasmSimd128FloatUnOpKind.allCases.count == 7,
+                WasmSimd128FloatUnOpKind.allCases.count == 13,
                 "New WasmSimd128FloatUnOpKind added: check if the encoding is still correct!")
             let encoding =
                 switch op.shape {
@@ -2294,6 +2296,12 @@ public class WasmLifter {
                     case .abs: Leb128.unsignedEncode(0xE0)
                     case .neg: Leb128.unsignedEncode(0xE1)
                     case .sqrt: Leb128.unsignedEncode(0xE3)
+                    case .demote_f64x2_zero: Leb128.unsignedEncode(0x5E)
+                    case .convert_i32x4_s: Leb128.unsignedEncode(0xFA)
+                    case .convert_i32x4_u: Leb128.unsignedEncode(0xFB)
+                    case .promote_low_f32x4, .convert_low_i32x4_s, .convert_low_i32x4_u:
+                        fatalError(
+                            "Invalid WasmSimd128FloatUnOpKind \(op.unOpKind) for shape \(op.shape)")
                     }
                 case .f64x2:
                     switch op.unOpKind {
@@ -2304,6 +2312,12 @@ public class WasmLifter {
                     case .abs: Leb128.unsignedEncode(0xEC)
                     case .neg: Leb128.unsignedEncode(0xED)
                     case .sqrt: Leb128.unsignedEncode(0xEF)
+                    case .promote_low_f32x4: Leb128.unsignedEncode(0x5F)
+                    case .convert_low_i32x4_s: Leb128.unsignedEncode(0xFE)
+                    case .convert_low_i32x4_u: Leb128.unsignedEncode(0xFF)
+                    case .demote_f64x2_zero, .convert_i32x4_s, .convert_i32x4_u:
+                        fatalError(
+                            "Invalid WasmSimd128FloatUnOpKind \(op.unOpKind) for shape \(op.shape)")
                     }
                 default: fatalError("Shape \(op.shape) not supported for WasmSimd128FloatUnOp")
                 }

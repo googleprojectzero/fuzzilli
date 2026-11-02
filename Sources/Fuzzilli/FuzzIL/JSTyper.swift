@@ -917,6 +917,7 @@ public struct JSTyper: Analyzer {
             .wasmReinterpreti64Asf64(_):
             setType(of: instr.output, to: .wasmf64)
         case .constSimd128(_),
+            .wasmSimdShuffle(_),
             .wasmSimd128Compare(_),
             .wasmSimd128IntegerBinOp(_),
             .wasmSimd128IntegerTernaryOp(_),

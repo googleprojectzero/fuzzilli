@@ -2770,6 +2770,14 @@ public let WasmCodeGenerators: [CodeGenerator] = [
     },
 
     CodeGenerator(
+        "WasmSimdShuffleGenerator", inContext: .single(.wasmFunction),
+        inputs: .required(.wasmSimd128, .wasmSimd128), produces: [.wasmSimd128]
+    ) { b, lhs, rhs in
+        let function = b.currentWasmModule.currentWasmFunction
+        function.wasmSimdShuffle(lhs, rhs, WasmSimdShuffle.randomLaneMask())
+    },
+
+    CodeGenerator(
         "WasmSimd128IntegerUnOpGenerator", inContext: .single(.wasmFunction),
         inputs: .required(.wasmSimd128), produces: []
     ) { b, input in

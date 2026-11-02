@@ -1656,6 +1656,8 @@ public class FuzzILLifter: Lifter {
 
         case .constSimd128(let op):
             w.emit("\(output()) <- ConstSimd128 \(op.value)")
+        case .wasmSimdShuffle(let op):
+            w.emit("\(output()) <- WasmSimdShuffle \(input(0)) \(input(1)) \(op.value)")
 
         case .wasmSimd128IntegerUnOp(let op):
             w.emit("\(output()) <- WasmSimd128IntegerUnOp \(op.shape) \(op.unOpKind) \(input(0))")
@@ -1695,7 +1697,9 @@ public class FuzzILLifter: Lifter {
             w.emit("\(output()) <- WasmSimdExtractLane \(op.kind) \(input(0)) lane \(op.lane)")
 
         case .wasmSimdReplaceLane(let op):
-            w.emit("\(output()) <- WasmSimdReplaceLane \(op.kind) \(input(0)) lane \(op.lane)")
+            w.emit(
+                "\(output()) <- WasmSimdReplaceLane \(op.kind) \(input(0)) \(input(1)) lane \(op.lane)"
+            )
 
         case .wasmSimdStoreLane(let op):
             w.emit(

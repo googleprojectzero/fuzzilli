@@ -383,6 +383,7 @@ public let codeGeneratorWeights = [
 
     // Simd Generators
     "ConstSimd128Generator":                    5,
+    "WasmSimdShuffleGenerator":                 5,
     "WasmSimd128IntegerUnOpGenerator":          5,
     "WasmSimd128IntegerBinOpGenerator":         5,
     "WasmSimd128IntegerTernaryOpGenerator":     2,

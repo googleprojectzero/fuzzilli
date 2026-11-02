@@ -1409,6 +1409,10 @@ message ConstSimd128 {
     repeated uint32 value = 1;
 }
 
+message WasmSimdShuffle {
+    repeated uint32 value = 1;
+}
+
 message WasmSimd128Compare {
     uint32 shape = 1;
     uint32 compareOperator = 2;

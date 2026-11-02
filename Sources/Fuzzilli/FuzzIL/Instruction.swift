@@ -1741,6 +1741,10 @@ extension Instruction: ProtobufConvertible {
                 $0.constSimd128 = Fuzzilli_Protobuf_ConstSimd128.with {
                     $0.value = op.value.map { UInt32($0) }
                 }
+            case .wasmSimdShuffle(let op):
+                $0.wasmSimdShuffle = Fuzzilli_Protobuf_WasmSimdShuffle.with {
+                    $0.value = op.value.map { UInt32($0) }
+                }
             case .wasmSimd128IntegerUnOp(let op):
                 $0.wasmSimd128IntegerUnOp = Fuzzilli_Protobuf_WasmSimd128IntegerUnOp.with {
                     $0.shape = UInt32(op.shape.rawValue)
@@ -3063,6 +3067,8 @@ extension Instruction: ProtobufConvertible {
             op = WasmSelect()
         case .constSimd128(let p):
             op = ConstSimd128(value: p.value.map { UInt8($0) })
+        case .wasmSimdShuffle(let p):
+            op = WasmSimdShuffle(value: p.value.map { UInt8($0) })
         case .wasmSimd128IntegerUnOp(let p):
             let shape = WasmSimd128Shape(rawValue: UInt8(p.shape))!
             let unOpKind = WasmSimd128IntegerUnOpKind(rawValue: Int(p.unaryOperator))!

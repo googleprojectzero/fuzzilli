@@ -2121,6 +2121,7 @@ public class JavaScriptLifter: Lifter {
                 .wasmUnreachable(_),
                 .wasmSelect(_),
                 .constSimd128(_),
+                .wasmSimdShuffle(_),
                 .wasmSimd128IntegerUnOp(_),
                 .wasmSimd128IntegerBinOp(_),
                 .wasmSimd128IntegerTernaryOp(_),

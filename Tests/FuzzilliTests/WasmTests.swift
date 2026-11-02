@@ -4576,6 +4576,390 @@ struct WasmFoundationTests {
                         }
                     }, "(3729|10641),5522,11123,9564"
                 ),
+                // Test v128.not
+                (
+                    { wasmModule in
+                        let returnType = (0..<16).map { _ in ILType.wasmi32 }
+                        wasmModule.addWasmFunction(with: [] => returnType) {
+                            function, label, args in
+                            let varA = function.constSimd128(value: [
+                                0, 255, 1, 128, 0xAA, 0x55, 0, 255, 1, 128, 0xAA, 0x55, 0, 255, 1,
+                                128,
+                            ])
+                            let result = function.wasmSimd128IntegerUnOp(
+                                varA, WasmSimd128Shape.i8x16, WasmSimd128IntegerUnOpKind.not)
+                            return (0..<16).map {
+                                function.wasmSimdExtractLane(
+                                    kind: WasmSimdExtractLane.Kind.I8x16U, result, $0)
+                            }
+                        }
+                    }, "255,0,254,127,85,170,255,0,254,127,85,170,255,0,254,127"
+                ),
+                // Test v128.any_true positive
+                (
+                    { wasmModule in
+                        let returnType = (0..<2).map { _ in ILType.wasmi32 }
+                        wasmModule.addWasmFunction(with: [] => returnType) {
+                            function, label, args in
+                            let varA = function.constSimd128(value: [
+                                0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                            ])
+                            let result = function.wasmSimd128IntegerUnOp(
+                                varA, WasmSimd128Shape.i8x16, WasmSimd128IntegerUnOpKind.any_true)
+                            return [result, result]
+                        }
+                    }, "1,1"
+                ),
+                // Test v128.any_true negative
+                (
+                    { wasmModule in
+                        let returnType = (0..<2).map { _ in ILType.wasmi32 }
+                        wasmModule.addWasmFunction(with: [] => returnType) {
+                            function, label, args in
+                            let varA = function.constSimd128(value: Array(repeating: 0, count: 16))
+                            let result = function.wasmSimd128IntegerUnOp(
+                                varA, WasmSimd128Shape.i8x16, WasmSimd128IntegerUnOpKind.any_true)
+                            return [result, result]
+                        }
+                    }, "0,0"
+                ),
+                // Test i32x4.trunc_sat_f32x4_s
+                (
+                    { wasmModule in
+                        let returnType = (0..<4).map { _ in ILType.wasmi32 }
+                        wasmModule.addWasmFunction(with: [] => returnType) {
+                            function, label, args in
+                            let varA = function.constSimd128(
+                                value: floatToByteArray([
+                                    0.0 / 0.0, 1.5, -2.5, Float.greatestFiniteMagnitude,
+                                ]))
+                            let result = function.wasmSimd128IntegerUnOp(
+                                varA, WasmSimd128Shape.i32x4,
+                                WasmSimd128IntegerUnOpKind.trunc_sat_f32x4_s)
+                            return (0..<4).map {
+                                function.wasmSimdExtractLane(
+                                    kind: WasmSimdExtractLane.Kind.I32x4, result, $0)
+                            }
+                        }
+                    }, "0,1,-2,2147483647"
+                ),
+                // Test i32x4.trunc_sat_f32x4_u
+                (
+                    { wasmModule in
+                        let returnType = (0..<4).map { _ in ILType.wasmi32 }
+                        wasmModule.addWasmFunction(with: [] => returnType) {
+                            function, label, args in
+                            let varA = function.constSimd128(
+                                value: floatToByteArray([
+                                    0.0 / 0.0, 1.5, -2.5, Float.greatestFiniteMagnitude,
+                                ]))
+                            let result = function.wasmSimd128IntegerUnOp(
+                                varA, WasmSimd128Shape.i32x4,
+                                WasmSimd128IntegerUnOpKind.trunc_sat_f32x4_u)
+                            return (0..<4).map {
+                                function.wasmSimdExtractLane(
+                                    kind: WasmSimdExtractLane.Kind.I32x4, result, $0)
+                            }
+                        }
+                    }, "0,1,0,-1"
+                ),
+                // Test i32x4.trunc_sat_f64x2_s_zero
+                (
+                    { wasmModule in
+                        let returnType = (0..<4).map { _ in ILType.wasmi32 }
+                        wasmModule.addWasmFunction(with: [] => returnType) {
+                            function, label, args in
+                            let varA = function.constSimd128(
+                                value: doubleToByteArray([
+                                    -3.5, Double.greatestFiniteMagnitude,
+                                ]))
+                            let result = function.wasmSimd128IntegerUnOp(
+                                varA, WasmSimd128Shape.i32x4,
+                                WasmSimd128IntegerUnOpKind.trunc_sat_f64x2_s_zero)
+                            return (0..<4).map {
+                                function.wasmSimdExtractLane(
+                                    kind: WasmSimdExtractLane.Kind.I32x4, result, $0)
+                            }
+                        }
+                    }, "-3,2147483647,0,0"
+                ),
+                // Test i32x4.trunc_sat_f64x2_u_zero
+                (
+                    { wasmModule in
+                        let returnType = (0..<4).map { _ in ILType.wasmi32 }
+                        wasmModule.addWasmFunction(with: [] => returnType) {
+                            function, label, args in
+                            let varA = function.constSimd128(value: doubleToByteArray([-3.5, 7.6]))
+                            let result = function.wasmSimd128IntegerUnOp(
+                                varA, WasmSimd128Shape.i32x4,
+                                WasmSimd128IntegerUnOpKind.trunc_sat_f64x2_u_zero)
+                            return (0..<4).map {
+                                function.wasmSimdExtractLane(
+                                    kind: WasmSimdExtractLane.Kind.I32x4, result, $0)
+                            }
+                        }
+                    }, "0,7,0,0"
+                ),
+                // Test i8x16.swizzle
+                (
+                    { wasmModule in
+                        let returnType = (0..<16).map { _ in ILType.wasmi32 }
+                        wasmModule.addWasmFunction(with: [] => returnType) {
+                            function, label, args in
+                            let varA = function.constSimd128(value: [
+                                10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150,
+                                160,
+                            ])
+                            let varB = function.constSimd128(value: [
+                                15, 0, 16, 255, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+                            ])
+                            let result = function.wasmSimd128IntegerBinOp(
+                                varA, varB, WasmSimd128Shape.i8x16,
+                                WasmSimd128IntegerBinOpKind.swizzle)
+                            return (0..<16).map {
+                                function.wasmSimdExtractLane(
+                                    kind: WasmSimdExtractLane.Kind.I8x16U, result, $0)
+                            }
+                        }
+                    }, "160,10,0,0,20,30,40,50,60,70,80,90,100,110,120,130"
+                ),
+                // Test v128.and
+                (
+                    { wasmModule in
+                        let returnType = (0..<16).map { _ in ILType.wasmi32 }
+                        wasmModule.addWasmFunction(with: [] => returnType) {
+                            function, label, args in
+                            let varA = function.constSimd128(
+                                value: Array(repeating: UInt8(0b11001100), count: 16))
+                            let varB = function.constSimd128(
+                                value: Array(repeating: UInt8(0b10101010), count: 16))
+                            let result = function.wasmSimd128IntegerBinOp(
+                                varA, varB, WasmSimd128Shape.i8x16,
+                                WasmSimd128IntegerBinOpKind.and)
+                            return (0..<16).map {
+                                function.wasmSimdExtractLane(
+                                    kind: WasmSimdExtractLane.Kind.I8x16U, result, $0)
+                            }
+                        }
+                    }, "136,136,136,136,136,136,136,136,136,136,136,136,136,136,136,136"
+                ),
+                // Test v128.andnot
+                (
+                    { wasmModule in
+                        let returnType = (0..<16).map { _ in ILType.wasmi32 }
+                        wasmModule.addWasmFunction(with: [] => returnType) {
+                            function, label, args in
+                            let varA = function.constSimd128(
+                                value: Array(repeating: UInt8(0b11001100), count: 16))
+                            let varB = function.constSimd128(
+                                value: Array(repeating: UInt8(0b10101010), count: 16))
+                            let result = function.wasmSimd128IntegerBinOp(
+                                varA, varB, WasmSimd128Shape.i8x16,
+                                WasmSimd128IntegerBinOpKind.andnot)
+                            return (0..<16).map {
+                                function.wasmSimdExtractLane(
+                                    kind: WasmSimdExtractLane.Kind.I8x16U, result, $0)
+                            }
+                        }
+                    }, "68,68,68,68,68,68,68,68,68,68,68,68,68,68,68,68"
+                ),
+                // Test v128.or
+                (
+                    { wasmModule in
+                        let returnType = (0..<16).map { _ in ILType.wasmi32 }
+                        wasmModule.addWasmFunction(with: [] => returnType) {
+                            function, label, args in
+                            let varA = function.constSimd128(
+                                value: Array(repeating: UInt8(0b11001100), count: 16))
+                            let varB = function.constSimd128(
+                                value: Array(repeating: UInt8(0b10101010), count: 16))
+                            let result = function.wasmSimd128IntegerBinOp(
+                                varA, varB, WasmSimd128Shape.i8x16,
+                                WasmSimd128IntegerBinOpKind.or)
+                            return (0..<16).map {
+                                function.wasmSimdExtractLane(
+                                    kind: WasmSimdExtractLane.Kind.I8x16U, result, $0)
+                            }
+                        }
+                    }, "238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238"
+                ),
+                // Test v128.xor
+                (
+                    { wasmModule in
+                        let returnType = (0..<16).map { _ in ILType.wasmi32 }
+                        wasmModule.addWasmFunction(with: [] => returnType) {
+                            function, label, args in
+                            let varA = function.constSimd128(
+                                value: Array(repeating: UInt8(0b11001100), count: 16))
+                            let varB = function.constSimd128(
+                                value: Array(repeating: UInt8(0b10101010), count: 16))
+                            let result = function.wasmSimd128IntegerBinOp(
+                                varA, varB, WasmSimd128Shape.i8x16,
+                                WasmSimd128IntegerBinOpKind.xor)
+                            return (0..<16).map {
+                                function.wasmSimdExtractLane(
+                                    kind: WasmSimdExtractLane.Kind.I8x16U, result, $0)
+                            }
+                        }
+                    }, "102,102,102,102,102,102,102,102,102,102,102,102,102,102,102,102"
+                ),
+                // Test v128.bitselect
+                (
+                    { wasmModule in
+                        let returnType = (0..<16).map { _ in ILType.wasmi32 }
+                        wasmModule.addWasmFunction(with: [] => returnType) {
+                            function, label, args in
+                            let varA = function.constSimd128(
+                                value: Array(repeating: UInt8(0xF0), count: 16))
+                            let varB = function.constSimd128(
+                                value: Array(repeating: UInt8(0x0F), count: 16))
+                            let varC = function.constSimd128(
+                                value: Array(repeating: UInt8(0xFF), count: 8)
+                                    + Array(repeating: UInt8(0x00), count: 8))
+                            let result = function.wasmSimd128IntegerTernaryOp(
+                                varA, varB, varC, WasmSimd128Shape.i8x16,
+                                WasmSimd128IntegerTernaryOpKind.bitselect)
+                            return (0..<16).map {
+                                function.wasmSimdExtractLane(
+                                    kind: WasmSimdExtractLane.Kind.I8x16U, result, $0)
+                            }
+                        }
+                    }, "240,240,240,240,240,240,240,240,15,15,15,15,15,15,15,15"
+                ),
+                // Test f32x4.demote_f64x2_zero
+                (
+                    { wasmModule in
+                        let returnType = (0..<4).map { _ in ILType.wasmf32 }
+                        wasmModule.addWasmFunction(with: [] => returnType) {
+                            function, label, args in
+                            let varA = function.constSimd128(
+                                value: doubleToByteArray([1.5, -2.25]))
+                            let result = function.wasmSimd128FloatUnOp(
+                                varA, WasmSimd128Shape.f32x4,
+                                WasmSimd128FloatUnOpKind.demote_f64x2_zero)
+                            return (0..<4).map {
+                                function.wasmSimdExtractLane(
+                                    kind: WasmSimdExtractLane.Kind.F32x4, result, $0)
+                            }
+                        }
+                    }, "1.50,-2.25,0,0"
+                ),
+                // Test f32x4.convert_i32x4_s
+                (
+                    { wasmModule in
+                        let returnType = (0..<4).map { _ in ILType.wasmf32 }
+                        wasmModule.addWasmFunction(with: [] => returnType) {
+                            function, label, args in
+                            let varA = function.constSimd128(
+                                value: uint16ArrayToByteArray([
+                                    1, 0, UInt16(bitPattern: -2), UInt16(bitPattern: -1), 0, 0, 4,
+                                    0,
+                                ]))
+                            let result = function.wasmSimd128FloatUnOp(
+                                varA, WasmSimd128Shape.f32x4,
+                                WasmSimd128FloatUnOpKind.convert_i32x4_s)
+                            return (0..<4).map {
+                                function.wasmSimdExtractLane(
+                                    kind: WasmSimdExtractLane.Kind.F32x4, result, $0)
+                            }
+                        }
+                    }, "1,-2,0,4"
+                ),
+                // Test f32x4.convert_i32x4_u
+                (
+                    { wasmModule in
+                        let returnType = (0..<4).map { _ in ILType.wasmf32 }
+                        wasmModule.addWasmFunction(with: [] => returnType) {
+                            function, label, args in
+                            let varA = function.constSimd128(
+                                value: uint16ArrayToByteArray([1, 0, 65535, 65535, 0, 0, 4, 0]))
+                            let result = function.wasmSimd128FloatUnOp(
+                                varA, WasmSimd128Shape.f32x4,
+                                WasmSimd128FloatUnOpKind.convert_i32x4_u)
+                            return (0..<4).map {
+                                function.wasmSimdExtractLane(
+                                    kind: WasmSimdExtractLane.Kind.F32x4, result, $0)
+                            }
+                        }
+                    }, "1,4294967296,0,4"
+                ),
+                // Test f64x2.promote_low_f32x4
+                (
+                    { wasmModule in
+                        let returnType = (0..<2).map { _ in ILType.wasmf64 }
+                        wasmModule.addWasmFunction(with: [] => returnType) {
+                            function, label, args in
+                            let varA = function.constSimd128(
+                                value: floatToByteArray([1.5, -2.25, 9.0, 10.0]))
+                            let result = function.wasmSimd128FloatUnOp(
+                                varA, WasmSimd128Shape.f64x2,
+                                WasmSimd128FloatUnOpKind.promote_low_f32x4)
+                            return (0..<2).map {
+                                function.wasmSimdExtractLane(
+                                    kind: WasmSimdExtractLane.Kind.F64x2, result, $0)
+                            }
+                        }
+                    }, "1.50,-2.25"
+                ),
+                // Test f64x2.convert_low_i32x4_s
+                (
+                    { wasmModule in
+                        let returnType = (0..<2).map { _ in ILType.wasmf64 }
+                        wasmModule.addWasmFunction(with: [] => returnType) {
+                            function, label, args in
+                            let varA = function.constSimd128(
+                                value: uint16ArrayToByteArray([
+                                    3, 0, UInt16(bitPattern: -5), UInt16(bitPattern: -1), 9, 0, 10,
+                                    0,
+                                ]))
+                            let result = function.wasmSimd128FloatUnOp(
+                                varA, WasmSimd128Shape.f64x2,
+                                WasmSimd128FloatUnOpKind.convert_low_i32x4_s)
+                            return (0..<2).map {
+                                function.wasmSimdExtractLane(
+                                    kind: WasmSimdExtractLane.Kind.F64x2, result, $0)
+                            }
+                        }
+                    }, "3,-5"
+                ),
+                // Test f64x2.convert_low_i32x4_u
+                (
+                    { wasmModule in
+                        let returnType = (0..<2).map { _ in ILType.wasmf64 }
+                        wasmModule.addWasmFunction(with: [] => returnType) {
+                            function, label, args in
+                            let varA = function.constSimd128(
+                                value: uint16ArrayToByteArray([3, 0, 65535, 65535, 9, 0, 10, 0]))
+                            let result = function.wasmSimd128FloatUnOp(
+                                varA, WasmSimd128Shape.f64x2,
+                                WasmSimd128FloatUnOpKind.convert_low_i32x4_u)
+                            return (0..<2).map {
+                                function.wasmSimdExtractLane(
+                                    kind: WasmSimdExtractLane.Kind.F64x2, result, $0)
+                            }
+                        }
+                    }, "3,4294967295"
+                ),
+                // Test i8x16.shuffle
+                (
+                    { wasmModule in
+                        let returnType = (0..<16).map { _ in ILType.wasmi32 }
+                        wasmModule.addWasmFunction(with: [] => returnType) {
+                            function, label, args in
+                            let varA = function.constSimd128(
+                                value: (0..<16).map { UInt8($0) })
+                            let varB = function.constSimd128(
+                                value: (100..<116).map { UInt8($0) })
+                            let result = function.wasmSimdShuffle(
+                                varA, varB,
+                                [0, 16, 1, 17, 2, 18, 3, 19, 4, 20, 5, 21, 6, 22, 7, 23])
+                            return (0..<16).map {
+                                function.wasmSimdExtractLane(
+                                    kind: WasmSimdExtractLane.Kind.I8x16U, result, $0)
+                            }
+                        }
+                    }, "0,100,1,101,2,102,3,103,4,104,5,105,6,106,7,107"
+                ),
             ]
 
             let module = b.buildWasmModule { wasmModule in
