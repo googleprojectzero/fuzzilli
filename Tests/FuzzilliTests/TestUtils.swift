@@ -148,6 +148,44 @@ struct CompilerTestcases {
     }
 }
 
+/// Creates an uninitialized mock fuzzer acting as the parent of in-process (ThreadSync) workers.
+func makeThreadParent(config: Configuration = Configuration(logLevel: .error)) -> Fuzzer {
+    let parent = makeMockFuzzer(config: config, initialize: false)
+    parent.sync {
+        parent.addModule(ThreadParent(for: parent))
+    }
+    return parent
+}
+
+/// Creates an uninitialized mock fuzzer acting as an in-process (ThreadSync) worker of the given parent.
+/// The worker registers with its parent once it is initialized.
+func makeThreadChild(
+    of parent: Fuzzer, config: Configuration = Configuration(logLevel: .error, instanceId: 1)
+) -> Fuzzer {
+    let child = makeMockFuzzer(config: config, initialize: false)
+    child.sync {
+        child.addModule(ThreadChild(for: child, parent: parent))
+    }
+    return child
+}
+
+/// Flushes pending asynchronous (ThreadSync) messages between the given fuzzer instances.
+///
+/// ThreadSync delivers a message by scheduling it asynchronously on the receiving fuzzer's queue, and
+/// handling a message can in turn send a message to another fuzzer. For example, a child registering
+/// with its parent makes the parent send a .sync message back to the child, which then sends its
+/// statistics (if it has a Statistics module) to the parent. A single `sync {}` on a fuzzer only waits
+/// for the work already scheduled on its queue, so every round of the outer loop delivers (at least)
+/// one hop of such a message chain.
+/// The number of rounds is a generous upper bound for the length of these chains (three hops at most).
+func flushThreadSyncMessages(_ fuzzers: Fuzzer...) {
+    for _ in 0..<10 {
+        for fuzzer in fuzzers {
+            fuzzer.sync {}
+        }
+    }
+}
+
 @Suite struct TestUtilsTests {
 
     // Test that running a program via the JavaScriptExecutor that produces a large output succeeds.
