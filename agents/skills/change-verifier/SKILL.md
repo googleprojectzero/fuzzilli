@@ -52,6 +52,8 @@ Invoke all three subagents in parallel in the same turn using `invoke_subagent`:
 - **`code_reviewer`** (Role: `"Code Reviewer"`) with Prompt `2.2`
 - **`spec_conformance_auditor`** (Role: `"Language Spec Auditor"`) with Prompt `2.3`
 
+After invoking all three subagents, end your turn immediately (call no more tools), so the system wakes you up when they finish. Do NOT run `swift test` or `Tools/presubmit.py` while the `code_reviewer` subagent is still running (concurrent `swift` invocations lock `.build`).
+
 In each prompt template replace `[REQUIRED_EVIDENTIARY_FORMAT]` with:
 ```text
 Required Evidentiary Format for Every Finding:
@@ -190,7 +192,7 @@ For each issue or hypothesis reported, you MUST explicitly state:
 
 ### Step 3: Lead Agent Active Falsification, Verification & Synthesis Protocol
 
-**Attention**: Start verifying findings (`Step 3.A`) as soon as the first subagent report arrives, but wait until all three subagents have completed and returned their reports before synthesizing the final report (and before running `swift test` or editing files in `Step 3.A.3`).
+**Attention**: You may perform read-only verification as each subagent report arrives; if other subagents are still running afterwards, end your turn and wait for their wakeup messages. Never kill a running subagent before 20 minutes, and never synthesize the final report until **all three** subagents have completed.
 
 Subagent findings and hypotheses are **untrusted leads**, NEVER direct outputs. Your primary responsibility as the Lead Agent is to act as an **active falsifier and empirical verifier** so that the final report achieves both high precision (zero avoidable false positives in Action Items) and high recall (zero dropped real bugs).
 
