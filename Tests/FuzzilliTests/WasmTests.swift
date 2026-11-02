@@ -6139,6 +6139,60 @@ struct WasmFoundationTests {
         testForOutput(program: jsProg, runner: runner, outputString: "42\n")
     }
 
+    @Test func testImportedTagWithWasmGCTypeParameter() throws {
+        let runner = JavaScriptExecutor()!
+        let jsProg = buildAndLiftProgram { b in
+            let outputFunc = b.createNamedVariable(forBuiltin: "output")
+
+            let structType = b.wasmDefineTypeGroup {
+                [b.wasmDefineStructType(fields: [.init(type: .wasmi32, mutability: false)])]
+            }[0]
+            let structRefType = b.type(of: structType).wasmTypeDefinition!.getReferenceTypeTo(
+                nullability: true)
+
+            let moduleDefineTag = b.buildWasmModule { wasmModule in
+                let sig = b.wasmDefineAdHocSignatureType(
+                    signature: [structRefType] => [], indexTypes: [structType])
+                let tag = wasmModule.addTag(signature: sig)
+                wasmModule.addWasmFunction(with: [] => []) { function, _, _ in
+                    let nullStruct = function.wasmRefNull(typeDef: structType)
+                    function.WasmBuildThrow(tag: tag, inputs: [nullStruct])
+                    return []
+                }
+            }
+
+            let exports = moduleDefineTag.loadExports()
+            let exportedTag = b.getProperty("wex0", of: exports)
+            let throwFct = b.getProperty("wf0", of: exports)
+
+            // Catch the imported tag in a second module using a `try_table` that branches to an
+            // `anyref` block label without directly referencing `structType` in the second module,
+            // verifying that `WasmLifter` registers the tag parameter's WasmGC type group.
+            let moduleCatchTag = b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmAnyRef()]) { function, _, _ in
+                    let caughtRef = function.wasmBuildBlockWithResults(
+                        with: [] => [.wasmAnyRef()], args: []
+                    ) { blockLabel, _ in
+                        function.wasmBuildTryTable(
+                            with: [] => [], args: [exportedTag, blockLabel], catches: [.NoRef]
+                        ) { _, _ in
+                            function.wasmJsCall(
+                                function: throwFct, withArgs: [], withWasmSignature: [] => [])
+                            return []
+                        }
+                        return [function.wasmRefNull(type: .wasmAnyRef())]
+                    }
+                    return caughtRef
+                }
+            }
+
+            let catchFct = b.getProperty("wf0", of: moduleCatchTag.loadExports())
+            b.callFunction(catchFct)
+            b.callFunction(outputFunc, withArgs: [b.loadString("caught")])
+        }
+        testForOutput(program: jsProg, runner: runner, outputString: "caught\n")
+    }
+
     // Test that defining a Wasm tag in JS with all supported abstract ref types does not fail.
     @Test func testTagAllRefTypesInJS() throws {
         let runner = JavaScriptExecutor()!

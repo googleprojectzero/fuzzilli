@@ -1561,11 +1561,14 @@ public class WasmLifter {
                 }
 
                 // Special handling for tag
-                // TODO: Can we just use .isWasmTagType?
                 if inputType.Is(.object(ofGroup: "WasmTag")) {
                     // We need the tag parameters here or we need to bail.
-                    if !inputType.isWasmTagType {
-                        throw WasmLifter.CompileError.missingTypeInformation
+                    guard let tagType = inputType.wasmTagType else {
+                        throw CompileError.missingTypeInformation
+                    }
+                    for paramType in tagType.parameters where paramType.Is(.anyIndexRef) {
+                        let typeDesc = typer.getTypeDescription(of: paramType)
+                        try registerTypeDependencies(for: typeDesc)
                     }
                 }
 
