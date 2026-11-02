@@ -143,8 +143,6 @@ class TerminalUI {
             state = "Fuzzing (with \(fuzzer.engine.name))"
         }
 
-        let timeSinceLastInterestingProgram = -lastInterestingProgramFound.timeIntervalSinceNow
-
         let maybeAvgCorpusSize =
             stats.numChildNodes > 0 ? " (global average: \(Int(stats.avgCorpusSize)))" : ""
 
@@ -152,8 +150,7 @@ class TerminalUI {
             let json = Statistics.machineReadableFuzzerStats(
                 stats,
                 of: fuzzer,
-                state: state,
-                timeSinceLastInterestingSample: timeSinceLastInterestingProgram
+                state: state
             )
         {
             print(json)
@@ -175,7 +172,7 @@ class TerminalUI {
             Uptime:                       \(formatTimeInterval(fuzzer.uptime()))
             Total Samples:                \(stats.totalSamples)
             Interesting Samples Found:    \(stats.interestingSamples)
-            Last Interesting Sample:      \(formatTimeInterval(timeSinceLastInterestingProgram))
+            Last Interesting Sample:      \(formatTimeInterval(stats.lastInterestingSample))
             Valid Samples Found:          \(stats.validSamples)
             Corpus Size:                  \(fuzzer.corpus.size)\(maybeAvgCorpusSize)
             Parent Instance Import Rate:  \(String(format: "%.2f%%", stats.parentInstanceImportRate * 100))

@@ -118,4 +118,10 @@ message Statistics {
 
         /// The number of programs from other instances that were accepted into the corpus.
         uint64 instanceImportedProgramsAccepted = 24;
+
+        /// The current number of programs in this instance's corpus.
+        uint64 corpusSize = 25;
+
+        /// The time in seconds since the last interesting sample was found.
+        double lastInterestingSample = 26;
 }

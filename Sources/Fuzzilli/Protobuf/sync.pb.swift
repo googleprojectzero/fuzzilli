@@ -220,6 +220,18 @@ public struct Fuzzilli_Protobuf_Statistics: @unchecked Sendable {
     set {_uniqueStorage()._instanceImportedProgramsAccepted = newValue}
   }
 
+  //// The current number of programs in this instance's corpus.
+  public var corpusSize: UInt64 {
+    get {_storage._corpusSize}
+    set {_uniqueStorage()._corpusSize = newValue}
+  }
+
+  //// The time in seconds since the last interesting sample was found.
+  public var lastInterestingSample: Double {
+    get {_storage._lastInterestingSample}
+    set {_uniqueStorage()._lastInterestingSample = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public struct ContributorStats: Sendable {
@@ -359,7 +371,7 @@ extension Fuzzilli_Protobuf_FuzzerState: SwiftProtobuf.Message, SwiftProtobuf._M
 
 extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Statistics"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}totalSamples\0\u{1}validSamples\0\u{1}interestingSamples\0\u{1}timedOutSamples\0\u{1}crashingSamples\0\u{1}totalExecs\0\u{1}avgCorpusSize\0\u{1}avgProgramSize\0\u{1}avgCorpusProgramSize\0\u{1}avgExecutionTime\0\u{1}execsPerSecond\0\u{1}fuzzerOverhead\0\u{1}minimizationOverhead\0\u{1}numChildNodes\0\u{1}coverage\0\u{1}correctnessRate\0\u{1}timeoutRate\0\u{1}differentialSamples\0\u{1}contributorStats\0\u{1}aspectIntersectionNilCount\0\u{1}parentInstanceImportRate\0\u{1}avgWorkerInstanceImportRate\0\u{1}instanceImportedProgramsReceived\0\u{1}instanceImportedProgramsAccepted\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}totalSamples\0\u{1}validSamples\0\u{1}interestingSamples\0\u{1}timedOutSamples\0\u{1}crashingSamples\0\u{1}totalExecs\0\u{1}avgCorpusSize\0\u{1}avgProgramSize\0\u{1}avgCorpusProgramSize\0\u{1}avgExecutionTime\0\u{1}execsPerSecond\0\u{1}fuzzerOverhead\0\u{1}minimizationOverhead\0\u{1}numChildNodes\0\u{1}coverage\0\u{1}correctnessRate\0\u{1}timeoutRate\0\u{1}differentialSamples\0\u{1}contributorStats\0\u{1}aspectIntersectionNilCount\0\u{1}parentInstanceImportRate\0\u{1}avgWorkerInstanceImportRate\0\u{1}instanceImportedProgramsReceived\0\u{1}instanceImportedProgramsAccepted\0\u{1}corpusSize\0\u{1}lastInterestingSample\0")
 
   fileprivate class _StorageClass {
     var _totalSamples: UInt64 = 0
@@ -386,6 +398,8 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
     var _avgWorkerInstanceImportRate: Double = 0
     var _instanceImportedProgramsReceived: UInt64 = 0
     var _instanceImportedProgramsAccepted: UInt64 = 0
+    var _corpusSize: UInt64 = 0
+    var _lastInterestingSample: Double = 0
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -420,6 +434,8 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
       _avgWorkerInstanceImportRate = source._avgWorkerInstanceImportRate
       _instanceImportedProgramsReceived = source._instanceImportedProgramsReceived
       _instanceImportedProgramsAccepted = source._instanceImportedProgramsAccepted
+      _corpusSize = source._corpusSize
+      _lastInterestingSample = source._lastInterestingSample
     }
   }
 
@@ -462,6 +478,8 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
         case 22: try { try decoder.decodeSingularDoubleField(value: &_storage._avgWorkerInstanceImportRate) }()
         case 23: try { try decoder.decodeSingularUInt64Field(value: &_storage._instanceImportedProgramsReceived) }()
         case 24: try { try decoder.decodeSingularUInt64Field(value: &_storage._instanceImportedProgramsAccepted) }()
+        case 25: try { try decoder.decodeSingularUInt64Field(value: &_storage._corpusSize) }()
+        case 26: try { try decoder.decodeSingularDoubleField(value: &_storage._lastInterestingSample) }()
         default: break
         }
       }
@@ -542,6 +560,12 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
       if _storage._instanceImportedProgramsAccepted != 0 {
         try visitor.visitSingularUInt64Field(value: _storage._instanceImportedProgramsAccepted, fieldNumber: 24)
       }
+      if _storage._corpusSize != 0 {
+        try visitor.visitSingularUInt64Field(value: _storage._corpusSize, fieldNumber: 25)
+      }
+      if _storage._lastInterestingSample.bitPattern != 0 {
+        try visitor.visitSingularDoubleField(value: _storage._lastInterestingSample, fieldNumber: 26)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -575,6 +599,8 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
         if _storage._avgWorkerInstanceImportRate != rhs_storage._avgWorkerInstanceImportRate {return false}
         if _storage._instanceImportedProgramsReceived != rhs_storage._instanceImportedProgramsReceived {return false}
         if _storage._instanceImportedProgramsAccepted != rhs_storage._instanceImportedProgramsAccepted {return false}
+        if _storage._corpusSize != rhs_storage._corpusSize {return false}
+        if _storage._lastInterestingSample != rhs_storage._lastInterestingSample {return false}
         return true
       }
       if !storagesAreEqual {return false}

@@ -24,7 +24,7 @@ import Foundation
 /// The main instance's module logs the totals, periodically and on shutdown. Worker modules add
 /// to its counters.
 public class ExecutionPurposeStatistics: Module {
-    struct Totals {
+    struct Totals: Encodable {
         var count: UInt64 = 0
         var time: Double = 0.0
     }
@@ -173,18 +173,14 @@ public class ExecutionPurposeStatistics: Module {
     ) -> String? {
         let totalCount = totals.values.reduce(0) { $0 + $1.count }
         let totalTime = totals.values.reduce(0.0) { $0 + $1.time }
-        var purposes = [String: MachineReadablePurposeEntry]()
-        for (purpose, entry) in totals {
-            purposes["\(purpose)"] = MachineReadablePurposeEntry(
-                count: entry.count,
-                time: entry.time.isFinite ? entry.time : 0.0
-            )
-        }
+        let purposes = Dictionary(
+            uniqueKeysWithValues: totals.map { ("\($0.key)", $0.value) }
+        )
         let payload = MachineReadableExecutionPurposePayload(
             tag: tag,
-            uptime: uptime.isFinite ? uptime : 0.0,
+            uptime: uptime,
             totalExecs: totalCount,
-            totalTime: totalTime.isFinite ? totalTime : 0.0,
+            totalTime: totalTime,
             purposes: purposes,
             mutationPicks: picks.picks > 0 ? picks.picks : nil,
             overlappingMutationPicks: picks.picks > 0 ? picks.overlapping : nil,
@@ -195,18 +191,13 @@ public class ExecutionPurposeStatistics: Module {
     }
 }
 
-private struct MachineReadablePurposeEntry: Encodable {
-    let count: UInt64
-    let time: Double
-}
-
 private struct MachineReadableExecutionPurposePayload: Encodable {
     let fuzzilliStats = "executionPurpose"
     let tag: String?
     let uptime: Double
     let totalExecs: UInt64
     let totalTime: Double
-    let purposes: [String: MachineReadablePurposeEntry]
+    let purposes: [String: ExecutionPurposeStatistics.Totals]
     let mutationPicks: UInt64?
     let overlappingMutationPicks: UInt64?
     let pickOverlapWindow: Double?

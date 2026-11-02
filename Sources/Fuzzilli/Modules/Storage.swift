@@ -221,7 +221,8 @@ public class Storage: Module {
         let evaluatorStateData = fuzzer.evaluator.exportState()
 
         do {
-            let statsData = try statsData.jsonUTF8Data()
+            let statsData = try statsData.jsonUTF8Data(
+                options: Fuzzilli_Protobuf_Statistics.jsonEncodingOptions)
             let date = formatDate()
             let statsUrl = URL(fileURLWithPath: "\(self.statisticsDir)/\(date).json")
             try statsData.write(to: statsUrl)

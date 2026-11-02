@@ -375,6 +375,9 @@ class TestAspects: ProgramAspects {
             data.totalSamples = 100
             data.validSamples = 60
             data.interestingSamples = 15
+            data.lastInterestingSample = 4.5
+            data.corpusSize = 42
+            data.avgCorpusSize = 42.0
             data.timedOutSamples = 2
             data.crashingSamples = 1
             data.totalExecs = 500
@@ -385,8 +388,7 @@ class TestAspects: ProgramAspects {
                 Statistics.machineReadableFuzzerStats(
                     data,
                     of: fuzzer,
-                    state: "Fuzzing (with MutationEngine)",
-                    timeSinceLastInterestingSample: 4.5
+                    state: "Fuzzing (with MutationEngine)"
                 )
             )
             #expect(!standaloneJSON.contains("\n"))
@@ -405,30 +407,12 @@ class TestAspects: ProgramAspects {
             #expect(metrics["validSamples"] as? Int == 60)
             #expect(metrics["interestingSamples"] as? Int == 15)
             #expect(metrics["lastInterestingSample"] as? Double == 4.5)
-            #expect(metrics["overallCorrectnessRate"] as? Double == 0.6)
-            #expect(metrics["overallTimeoutRate"] as? Double == 0.02)
+            #expect(metrics["corpusSize"] as? Int == 42)
+            #expect(metrics["avgCorpusSize"] as? Double == 42.0)
             #expect(metrics["coverage"] as? Double == 0.125)
-            #expect(metrics["fuzzerOverhead"] as? Double == 0.0)
+            #expect(metrics["fuzzerOverhead"] as? String == "NaN")
             #expect(metrics["totalExecs"] as? Int == 500)
-            #expect(metrics["avgCorpusSize"] == nil)
             #expect(metrics["differentialSamples"] == nil)
-
-            // With child nodes connected, avgCorpusSize is included.
-            data.numChildNodes = 3
-            data.avgCorpusSize = 42.5
-            let distributedJSON = try #require(
-                Statistics.machineReadableFuzzerStats(
-                    data,
-                    of: fuzzer,
-                    state: "Fuzzing (with MutationEngine)",
-                    timeSinceLastInterestingSample: 1.0
-                )
-            )
-            let distributedMetrics = try #require(
-                (JSONSerialization.jsonObject(with: Data(distributedJSON.utf8)) as? [String: Any])?[
-                    "stats"] as? [String: Any]
-            )
-            #expect(distributedMetrics["avgCorpusSize"] as? Double == 42.5)
 
             // Verify per-mutator JSON lines (one independent line per mutator).
             let mutatorLines = Statistics.machineReadableMutatorStats(data, of: fuzzer)
@@ -457,13 +441,11 @@ class TestAspects: ProgramAspects {
             #expect(firstMutator["interestingSamples"] as? Int == 1)
             #expect(firstMutator["failures"] as? Int == 1)
             #expect(firstMutator["totalInstructionsProduced"] as? Int == 8)
-            #expect(firstMutator["correctnessRate"] as? Double == 1.0)
 
-            // Mutators with 0 samples omit undefined rates instead of emitting NaN.
+            // Unused mutators have empty proto3 default-omitted stats dictionaries.
             if let unusedMutator = fuzzer.mutators.first(where: { $0.name != mutator.name }) {
                 let unusedEntry = try #require(parsedByMutator[unusedMutator.name])
-                #expect(unusedEntry["totalSamples"] as? Int == 0)
-                #expect(unusedEntry["correctnessRate"] == nil)
+                #expect(unusedEntry.isEmpty)
             }
         }
     }
