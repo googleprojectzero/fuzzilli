@@ -74,7 +74,6 @@ struct InstructionSimplifier: Reducer {
     func simplifySingleInstructions(with helper: MinimizationHelper) {
         // Miscellaneous simplifications. This will:
         //   - convert SomeOpWithSpread into SomeOp since spread operations are less "mutation friendly" (somewhat low value, high chance of producing invalid code)
-        //   - convert Constructs into Calls
         //   - convert strict functions into non-strict functions
         // Since we only change operations in a forward fashion and never change instructions "in front of us" this iterator should stay valid.
         for instr in helper.code {
@@ -102,11 +101,6 @@ struct InstructionSimplifier: Reducer {
                     methodName: op.methodName, numArguments: op.numArguments,
                     isGuarded: op.isGuarded, isReceiverOptional: op.isReceiverOptional,
                     isCallOptional: op.isCallOptional)
-
-            case .construct(let op):
-                // Prefer simple function calls over constructor calls if there's no difference
-                newOp = CallFunction(
-                    numArguments: op.numArguments, isGuarded: op.isGuarded, isCallOptional: false)
 
             default:
                 break
