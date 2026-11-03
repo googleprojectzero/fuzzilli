@@ -358,11 +358,108 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         return intersectedCovEdgeSet
     }
 
+    /// The header of a coverage state as serialized by exportState().
+    ///
+    /// The serialized state consists of this header followed by the virgin bits and the crash bits,
+    /// both of which are `bitmapSize` bytes long.
+    struct SerializedStateHeader: Equatable {
+        /// The size of the serialized header: num_edges, bitmap_size and found_edges, 4 bytes each.
+        static let size = 12
+
+        var numEdges: UInt32
+        var bitmapSize: UInt32
+        var foundEdges: UInt32
+
+        /// The total size of a serialized state with this header.
+        var stateSize: Int {
+            return Self.size + 2 * Int(bitmapSize)
+        }
+
+        init(numEdges: UInt32, bitmapSize: UInt32, foundEdges: UInt32) {
+            self.numEdges = numEdges
+            self.bitmapSize = bitmapSize
+            self.foundEdges = foundEdges
+        }
+
+        /// Parses the header of the given serialized state, or returns nil if the state is too small.
+        init?(of state: Data) {
+            guard state.count >= Self.size else { return nil }
+            func field(at index: Int) -> UInt32 {
+                return state.withUnsafeBytes {
+                    $0.loadUnaligned(fromByteOffset: index * 4, as: UInt32.self)
+                }
+            }
+            self.init(numEdges: field(at: 0), bitmapSize: field(at: 1), foundEdges: field(at: 2))
+        }
+
+        func serialized() -> Data {
+            var data = Data(capacity: Self.size)
+            for var field in [numEdges, bitmapSize, foundEdges] {
+                withUnsafeBytes(of: &field) { data.append(contentsOf: $0) }
+            }
+            return data
+        }
+    }
+
+    /// Merges multiple exported coverage states into a single unified coverage state (taking the union of covered edges).
+    ///
+    /// All states must have been exported by instances using the same build of the target, i.e. they must have
+    /// the same number of edges and bitmap size. Otherwise, this is a fatal error.
+    public static func mergeCoverageStates(_ states: [Data]) -> Data {
+        guard let first = states.first else { return Data() }
+        guard let firstHeader = SerializedStateHeader(of: first) else {
+            fatalError("Invalid coverage state size: \(first.count) bytes")
+        }
+
+        for state in states {
+            guard let header = SerializedStateHeader(of: state),
+                header.numEdges == firstHeader.numEdges,
+                header.bitmapSize == firstHeader.bitmapSize,
+                state.count == firstHeader.stateSize
+            else {
+                fatalError(
+                    "Mismatched coverage state of \(state.count) bytes (expected \(firstHeader.stateSize) bytes with \(firstHeader.numEdges) edges)"
+                )
+            }
+        }
+
+        let headerSize = SerializedStateHeader.size
+        let bitmapByteCount = Int(firstHeader.bitmapSize)
+        var mergedVirginBits = [UInt8](repeating: 0xFF, count: bitmapByteCount)
+        var mergedCrashBits = [UInt8](repeating: 0xFF, count: bitmapByteCount)
+        for state in states {
+            state.withUnsafeBytes { (rawPtr: UnsafeRawBufferPointer) in
+                for i in 0..<bitmapByteCount {
+                    mergedVirginBits[i] &= rawPtr[headerSize + i]
+                    mergedCrashBits[i] &= rawPtr[headerSize + bitmapByteCount + i]
+                }
+            }
+        }
+
+        var foundEdges: UInt32 = 0
+        for byte in mergedVirginBits {
+            foundEdges += UInt32(8 - byte.nonzeroBitCount)
+        }
+        // In libcoverage, edges are 1-indexed and the 0th dummy edge is permanently cleared
+        // (set to 0 in virgin_bits). Exclude it here so foundEdges reflects valid edges.
+        if foundEdges > 0 {
+            foundEdges -= 1
+        }
+
+        var result = SerializedStateHeader(
+            numEdges: firstHeader.numEdges, bitmapSize: firstHeader.bitmapSize,
+            foundEdges: foundEdges
+        ).serialized()
+        result.append(contentsOf: mergedVirginBits)
+        result.append(contentsOf: mergedCrashBits)
+        return result
+    }
+
     public func exportState() -> Data {
-        var state = Data()
-        state.append(Data(bytes: &context.num_edges, count: 4))
-        state.append(Data(bytes: &context.bitmap_size, count: 4))
-        state.append(Data(bytes: &context.found_edges, count: 4))
+        var state = SerializedStateHeader(
+            numEdges: context.num_edges, bitmapSize: context.bitmap_size,
+            foundEdges: context.found_edges
+        ).serialized()
         state.append(context.virgin_bits, count: Int(context.bitmap_size))
         state.append(context.crash_bits, count: Int(context.bitmap_size))
         return state
@@ -370,32 +467,33 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
 
     public func importState(_ state: Data) throws {
         assert(isInitialized)
-        let headerSize = 12  // 3 x 4 bytes: num_edges, bitmap_size, found_edges. See exportState() above
 
-        guard state.count == headerSize + Int(context.bitmap_size) * 2 else {
+        guard state.count == SerializedStateHeader.size + Int(context.bitmap_size) * 2,
+            let header = SerializedStateHeader(of: state)
+        else {
             throw FuzzilliError.evaluatorStateImportError(
                 "Cannot import coverage state as it has an unexpected size. Ensure all instances use the same build of the target"
             )
         }
 
-        let numEdges = state.withUnsafeBytes { $0.load(fromByteOffset: 0, as: UInt32.self) }
-        let bitmapSize = state.withUnsafeBytes { $0.load(fromByteOffset: 4, as: UInt32.self) }
-        let foundEdges = state.withUnsafeBytes { $0.load(fromByteOffset: 8, as: UInt32.self) }
-
-        guard bitmapSize == context.bitmap_size && numEdges == context.num_edges else {
+        guard header.bitmapSize == context.bitmap_size, header.numEdges == context.num_edges
+        else {
             throw FuzzilliError.evaluatorStateImportError(
                 "Cannot import coverage state due to different bitmap sizes. Ensure all instances use the same build of the target"
             )
         }
 
-        context.found_edges = foundEdges
+        context.found_edges = header.foundEdges
 
-        var start = state.startIndex + headerSize
-        state.copyBytes(to: context.virgin_bits, from: start..<start + Int(bitmapSize))
-        start += Int(bitmapSize)
-        state.copyBytes(to: context.crash_bits, from: start..<start + Int(bitmapSize))
+        let bitmapSize = Int(header.bitmapSize)
+        var start = state.startIndex + SerializedStateHeader.size
+        state.copyBytes(to: context.virgin_bits, from: start..<start + bitmapSize)
+        start += bitmapSize
+        state.copyBytes(to: context.crash_bits, from: start..<start + bitmapSize)
 
-        logger.info("Imported existing coverage state with \(foundEdges) edges already discovered")
+        logger.info(
+            "Imported existing coverage state with \(header.foundEdges) edges already discovered"
+        )
     }
 
     public func resetState() {
