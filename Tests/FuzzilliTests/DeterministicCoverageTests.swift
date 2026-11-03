@@ -236,4 +236,54 @@ import Testing
         )
         #expect(stateData == expectedState)
     }
+
+    @Test func testInstanceImportDeterminismChecks() {
+        let runner = CoverageWritingRunner()
+        let evaluator = makeEvaluator(runner)
+        defer { evaluator.shutdown() }
+        let fuzzer = makeMockFuzzer(runner: runner, evaluator: evaluator)
+
+        fuzzer.sync {
+            let program = makeProgram(for: fuzzer, size: 1)
+            var determinismCheckRuns = 0
+            fuzzer.registerEventListener(for: fuzzer.events.PreExecute) { (_, purpose) in
+                if purpose == .checkForDeterministicBehavior {
+                    determinismCheckRuns += 1
+                }
+            }
+
+            // 1. Clean deterministic import from parent converges after 1 intersection attempt.
+            runner.edgeRuns = [[10], [10]]
+            #expect(fuzzer.importProgram(program, origin: .parent) == .imported)
+            #expect(determinismCheckRuns == 1)
+            #expect(fuzzer.corpus.size == 1)
+
+            // 2. Flaky-only import from parent fails after 1 intersection attempt and restores
+            //    the flaky edge (20) in virgin_bits.
+            determinismCheckRuns = 0
+            runner.edgeRuns = [[20], []]
+            #expect(!fuzzer.importProgram(program, origin: .parent).wasImported)
+            #expect(determinismCheckRuns == 1)
+            #expect(fuzzer.corpus.size == 1)
+            // Edge 20 must still be virgin after the failed import.
+            runner.edgeRuns = [[20]]
+            let virginCheck = evaluator.evaluate(fuzzer.execute(program, purpose: .fuzzing))
+            #expect((virginCheck as? CovEdgeSet)?.getNewEdges() == [20])
+            // Reset edge 20 again via a nil intersection so it does not affect step 3.
+            runner.edgeRuns = [[]]
+            #expect(evaluator.computeAspectIntersection(of: program, with: virginCheck!) == nil)
+
+            // 3. Mixed deterministic (30) + flaky (31) import from a child drops edge 31 on
+            //    attempt 1, converges on edge 30 on attempt 2, and leaves edge 31 virgin.
+            determinismCheckRuns = 0
+            runner.edgeRuns = [[30, 31], [30], [30]]
+            #expect(fuzzer.importProgram(program, origin: .child(id: UUID())) == .imported)
+            #expect(determinismCheckRuns == 2)
+            #expect(fuzzer.corpus.size == 2)
+            // Edge 30 is now marked discovered, while flaky edge 31 remains virgin.
+            runner.edgeRuns = [[30, 31]]
+            let remainingVirgin = evaluator.evaluate(fuzzer.execute(program, purpose: .fuzzing))
+            #expect((remainingVirgin as? CovEdgeSet)?.getNewEdges() == [31])
+        }
+    }
 }

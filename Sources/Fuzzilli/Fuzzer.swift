@@ -873,7 +873,9 @@ public class Fuzzer {
         // Determine which (if any) aspects of the program are triggered deterministically.
         // For that, the sample is executed a few more times and the intersection of the interesting aspects of each execution is computed.
         // Once that intersection is stable, the remaining aspects are considered to be triggered deterministically.
-        let minAttempts = 5
+        // Programs imported from another fuzzer instance have already been checked for determinism and minimized by the
+        // sender, so a single intersection run suffices once their newly triggered local aspects converge.
+        let minAttempts = origin.isFromOtherInstance() ? 1 : 5
         let maxAttempts = 50
         var didConverge = false
         var attempt = 0
