@@ -790,6 +790,7 @@ public class JavaScriptEnvironment: ComponentBase {
         assert(builtinMethods.contains("toString"))
 
         checkConstructorAvailability()
+        removeProducersThatCannotBeProduced()
 
         // Log detailed information about the environment here so users are aware of it and can modify things if they like.
         logger.info("Initialized static JS environment model")
@@ -807,6 +808,73 @@ public class JavaScriptEnvironment: ComponentBase {
         logger.info(
             "Have \(customIdentifiers.count) custom identifier names: \(customIdentifiers.sorted())"
         )
+    }
+
+    /// Removes the producing methods and properties of object groups whose
+    /// instances cannot be produced. Types are removed if:
+    ///     1. They themselves cannot be produced
+    ///     2. Their producing type(s) cannot be produced
+    ///
+    /// This eliminates cycles in type generation that, although stopped by the
+    /// generation budget, nevertheless waste fuzzing time. For instance, if
+    /// `A` is only produced as a property of `B`, which has no producer, then
+    /// `B` will be generated from its properties, among which is `A`.
+    private func removeProducersThatCannotBeProduced() {
+        var producibleGroups = Set<String>()
+        /// Inserts the group of `type`, and its parents, into `producibleGroups`.
+        /// Returns whether the group was inserted, i.e. it is an object group that
+        /// was not already known to be producible.
+        @discardableResult
+        func insertProducibleGroup(of type: ILType) -> Bool {
+            guard var name = type.group, groups[name] != nil else { return false }
+            let inserted = producibleGroups.insert(name).inserted
+            while let parent = groups[name]?.parent {
+                producibleGroups.insert(parent)
+                name = parent
+            }
+            return inserted
+        }
+
+        // A group whose instances are produced by a method or a property of a
+        // group that can be produced can be produced as well. Global builtins
+        // have an empty group name.
+        func canBeProduced(owner: String) -> Bool {
+            owner.isEmpty || producibleGroups.contains(owner)
+        }
+
+        for type in builtinTypes.values {
+            insertProducibleGroup(of: type.signature?.outputType ?? type)
+        }
+        for generator in fuzzer.codeGenerators {
+            generator.produces.forEach { insertProducibleGroup(of: $0.type) }
+        }
+        for group in groups.values where group.constructorPath != nil {
+            insertProducibleGroup(of: group.instanceType)
+        }
+        producibleGroups.formUnion(producingGenerators.keys)
+
+        let producers =
+            producingMethods.map { ($0.key, $0.value.map(\.group)) }
+            + producingProperties.map { ($0.key, $0.value.map(\.group)) }
+        var changed = true
+        while changed {
+            changed = false
+            for (type, owners) in producers {
+                if !owners.contains(where: canBeProduced) {
+                    continue
+                }
+                if insertProducibleGroup(of: type) {
+                    changed = true
+                }
+            }
+        }
+
+        producingMethods = producingMethods.mapValues {
+            $0.filter { canBeProduced(owner: $0.group) }
+        }
+        producingProperties = producingProperties.mapValues {
+            $0.filter { canBeProduced(owner: $0.group) }
+        }
     }
 
     func checkConstructorAvailability() {

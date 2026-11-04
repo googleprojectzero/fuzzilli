@@ -23,6 +23,46 @@ import Testing
         _ = JavaScriptEnvironment(additionalBuiltins: [:], additionalObjectGroups: [])
     }
 
+    @Test func testProducersOfGroupsThatCannotBeProducedAreRemoved() {
+        // `Reply` cannot be produced: it is neither a builtin nor produced by a
+        // method or a property. `Result` and `Success` are only produced through
+        // it, and `Token` is also produced by a constructor.
+        let reply = ILType.object(ofGroup: "Reply", withProperties: ["result"])
+        let result = ILType.object(ofGroup: "Result", withProperties: ["success"])
+        let success = ILType.object(ofGroup: "Success", withProperties: ["token"])
+        let token = ILType.object(ofGroup: "Token")
+        let environment = JavaScriptEnvironment(
+            additionalBuiltins: ["Token": .constructor([] => token)],
+            additionalObjectGroups: [
+                ObjectGroup(
+                    name: "Reply", instanceType: reply, properties: ["result": result],
+                    methods: [:]),
+                ObjectGroup(
+                    name: "Result", instanceType: result, properties: ["success": success],
+                    methods: [:]),
+                ObjectGroup(
+                    name: "Success", instanceType: success, properties: ["token": token],
+                    methods: [:]),
+                ObjectGroup(name: "Token", instanceType: token, properties: [:], methods: [:]),
+            ])
+        let fuzzer = makeMockFuzzer(environment: environment)
+
+        #expect(fuzzer.environment.getProducingProperties(ofType: result).isEmpty)
+        #expect(fuzzer.environment.getProducingProperties(ofType: success).isEmpty)
+        let tokenProducers = fuzzer.environment.getProducingProperties(ofType: token)
+        #expect(tokenProducers.contains { $0.group == "" && $0.property == "Token" })
+        #expect(!tokenProducers.contains { $0.group == "Success" })
+
+        // Check that various JavaScriptEnvironment builtins can still be produced.
+        #expect(!fuzzer.environment.getProducingMethods(ofType: .jsTemporalInstant).isEmpty)
+        #expect(!fuzzer.environment.getProducingProperties(ofType: .jsTemporalInstant).isEmpty)
+        #expect(!fuzzer.environment.getProducingProperties(ofType: .jsWebAssemblyInstance).isEmpty)
+        #expect(!fuzzer.environment.getProducingMethods(ofType: .jsDate).isEmpty)
+        #expect(!fuzzer.environment.getProducingProperties(ofType: .jsDate).isEmpty)
+        #expect(!fuzzer.environment.getProducingMethods(ofType: .jsArrayBuffer).isEmpty)
+        #expect(!fuzzer.environment.getProducingProperties(ofType: .jsArrayBuffer).isEmpty)
+    }
+
     /// Test all the builtin objects that are reachable from the global this.
     /// (This does not include anything that needs a constructor to be called.)
     @Test(
