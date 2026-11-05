@@ -456,6 +456,15 @@ public class Fuzzer {
         logger.info("Shutting down due to \(reason)")
         dispatchEvent(events.Shutdown, data: reason)
 
+        corpusGenerationEngine.shutdown()
+        minimizer.shutdown()
+        corpus.shutdown()
+        environment.shutdown()
+        evaluator.shutdown()
+        engine.shutdown()
+        referenceRunner?.shutdown()
+        runner.shutdown()
+
         dispatchEvent(events.ShutdownComplete, data: reason)
     }
 

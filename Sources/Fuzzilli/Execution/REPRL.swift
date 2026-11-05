@@ -76,10 +76,12 @@ public class REPRL: ComponentBase, ScriptRunner {
 
         freeCArray(argv, numElems: processArguments.count)
         freeCArray(envp, numElems: env.count)
+    }
 
-        fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { _ in
-            reprl_destroy_context(self.reprlContext)
-        }
+    override public func shutdown() {
+        guard reprlContext != nil else { return }
+        reprl_destroy_context(reprlContext)
+        reprlContext = nil
     }
 
     public func setEnvironmentVariable(_ key: String, to value: String) {

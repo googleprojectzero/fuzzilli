@@ -22,7 +22,7 @@ import Testing
 @Suite struct DeterministicCoverageTests {
     /// Writes the edges of each run into the coverage shared memory, like an instrumented engine.
     final class CoverageWritingRunner: ScriptRunner {
-        var processArguments: [String] = []
+        var processArguments: [String] = ["runner"]
         var env: [(String, String)] = []
         /// The evaluator's shared memory. Must be set before the first run.
         var sharedMemory: UnsafeMutableRawPointer? = nil
@@ -204,5 +204,36 @@ import Testing
             }
             #expect(corpus.edgeCount(for: 9) == 0)
         }
+    }
+
+    @Test func testStorageExportsEvaluatorStateOnShutdown() throws {
+        let storageDir = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "fuzzilli_storage_test_\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: storageDir) }
+
+        let runner = CoverageWritingRunner()
+        let evaluator = makeEvaluator(runner)
+        let fuzzer = makeMockFuzzer(runner: runner, evaluator: evaluator, initialize: false)
+
+        var expectedState = Data()
+        fuzzer.sync {
+            fuzzer.addModule(Statistics())
+            fuzzer.addModule(
+                Storage(for: fuzzer, storageDir: storageDir.path, statisticsExportInterval: 60))
+            fuzzer.initialize()
+            runner.edgeRuns = [[1, 2, 4]]
+            _ = evaluator.evaluate(
+                fuzzer.execute(makeProgram(for: fuzzer, size: 1), purpose: .fuzzing))
+            expectedState = evaluator.exportState()
+            fuzzer.shutdown(reason: .finished)
+        }
+
+        let statsFiles = try FileManager.default.contentsOfDirectory(
+            atPath: storageDir.appendingPathComponent("stats").path)
+        let stateFile = try #require(statsFiles.first { $0.hasSuffix("_evaluator_state.bin") })
+        let stateData = try Data(
+            contentsOf: storageDir.appendingPathComponent("stats").appendingPathComponent(stateFile)
+        )
+        #expect(stateData == expectedState)
     }
 }

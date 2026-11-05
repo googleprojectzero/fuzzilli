@@ -134,7 +134,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
 
     }
 
-    public func shutdown() {
+    override public func shutdown() {
         guard !isShutDown else { return }
         libcoverage.cov_shutdown(&context)
         isShutDown = true
@@ -255,11 +255,6 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
         fuzzer.registerEventListener(for: fuzzer.events.PreExecute) { [weak self] execution in
             guard let self = self else { return }
             libcoverage.cov_clear_bitmap(&self.context)
-        }
-
-        // Unlink the shared memory regions on shutdown
-        fuzzer.registerEventListener(for: fuzzer.events.Shutdown) { [weak self] _ in
-            self?.shutdown()
         }
 
         let _ = fuzzer.execute(Program(isBundle: false), purpose: .startup)
@@ -456,6 +451,7 @@ public class ProgramCoverageEvaluator: ComponentBase, ProgramEvaluator {
     }
 
     public func exportState() -> Data {
+        precondition(isInitialized && !isShutDown)
         var state = SerializedStateHeader(
             numEdges: context.num_edges, bitmapSize: context.bitmap_size,
             foundEdges: context.found_edges
