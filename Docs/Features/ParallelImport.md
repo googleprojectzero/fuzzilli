@@ -2,7 +2,13 @@
 
 ## TL;DR
 
-This feature parallelizes Fuzzilli's corpus import phase across local multi-threaded worker instances (`--jobs=N`). Instead of importing sequentially on the main thread while worker threads wait or fuzz on an empty corpus, all local worker threads will immediately start up and concurrently consume from a shared, in-memory, thread-safe import queue. Once the import queue is depleted, the workers send their local corpora and coverage to the parent node via `ThreadSync`, which merges them and broadcasts the unified state back, transitioning all instances into active fuzzing simultaneously.
+This feature parallelizes Fuzzilli's corpus import phase across multiple threads within one Fuzzilli process (`--jobs=N`). Instead of importing sequentially on the main instance while worker threads wait or fuzz on an empty corpus, several threads concurrently consume programs from a shared, in-memory, thread-safe import queue. Once the queue is depleted, their corpora and coverage are merged into the main instance, and all instances continue fuzzing from the merged state.
+
+Two designs are evaluated as equal alternatives (see [Design Alternatives](#design-alternatives)):
+- **Design A: Coordinated import on the fuzzer instances.** The main instance and its regular `ThreadSync` workers import in new fuzzer states and synchronize through a barrier in the distributed fuzzing protocol, which merges their states and broadcasts the result back.
+- **Design B: Short-lived import workers (Fuzzer-based runners).** A separate helper spawns temporary, symmetric fuzzer instances without any modules, which import and whose states are merged into the idle main instance. Only then do the regular workers start, and they receive the merged state through the existing synchronization.
+
+It's not yet decided which design will be used. Both implementations may be developed side by side on top of the shared preparatory changes to compare them (see the [CL Roadmap](#step-by-step-implementation-plan-cl-roadmap)).
 
 *(Note: Network-distributed fuzzing via `NetworkSync` is explicitly out of scope; multi-machine cluster setups will continue to use standard sequential/delayed worker synchronization).*
 
@@ -13,8 +19,8 @@ This feature parallelizes Fuzzilli's corpus import phase across local multi-thre
 A foundational architectural requirement for this feature is that **no changes should impact existing production configurations or execution paths by default**.
 
 - **Preserve Default Behavior:** By default, Fuzzilli must continue to perform single-threaded sequential imports with delayed worker startup exactly as it does today.
-- **Strict Scope (ThreadSync Only):** Parallel import is strictly scoped to local in-process worker threads sharing process memory via `ThreadSync`. Network-distributed fuzzing (`NetworkSync`) is explicitly out of scope and remains untouched.
-- **Strict Feature-Flagging:** All parallelized import routines, barrier synchronization protocols, trace buffering, and coverage drop-out mechanisms must be strictly gated behind configuration flags (e.g., `--parallelImport`, `--randomEdgeReset`).
+- **Strict Scope (In-Process Only):** Parallel import is strictly scoped to instances within one Fuzzilli process sharing process memory: the regular `ThreadSync` workers in Design A, and temporary in-process import workers in Design B. Network-distributed fuzzing (`NetworkSync`) is explicitly out of scope and remains untouched.
+- **Strict Feature-Flagging:** All parallelized import routines, their coordination logic (the barrier protocol in Design A, the import helper in Design B), trace buffering, and coverage drop-out mechanisms must be strictly gated behind configuration flags (e.g., `--parallelImport`, `--randomEdgeReset`).
 - **No-Impact Refactoring:** Any modifications to shared base classes, core engines, or serialization layers must be clean refactorings that introduce zero behavioral changes or performance degradation for non-parallel modes.
 - **Off-Production Testing:** The new parallel mode and its settings will be thoroughly tested and validated on separate, isolated machines prior to any production rollouts.
 
@@ -38,39 +44,57 @@ While the main thread is importing:
 
 ---
 
-## Proposed Feature: Coordinated Parallel Import
+## Proposed Feature: Parallel Import
 
-We propose a fully parallelized import mode. All fuzzer instances (parent and workers) start up immediately without delay and concurrently import programs from a shared import queue. When the queue is empty, the threads synchronize, merge their state, and transition to fuzzing together.
+We propose a fully parallelized import mode, in which several threads concurrently import programs from a shared import queue. When the queue is empty, their states are merged and all instances continue fuzzing from the merged state.
 
-### Sequence Diagram (PlantUML)
+## Design Alternatives
 
+Both designs share the following building blocks, most of which have already landed (see the [CL Roadmap](#step-by-step-implementation-plan-cl-roadmap)):
+- The shared `ThreadSafeImportQueue`, which also aggregates the import statistics of all instances consuming from it (see [1. Thread-Safe Import Queue](#1-thread-safe-import-queue)).
+- `ProgramCoverageEvaluator.mergeCoverageStates()`, which computes the union of exported coverage bitmaps.
+- Merging the corpora: a concatenation deduplicated by program ID for `BasicCorpus`, and the [Rarity Merge Algorithm](#the-rarity-merge-algorithm-selected-option-2) for `RarityCorpus` (CL 3).
+- Persistence: the parent dispatches `InterestingProgramFound` for all merged programs, so `Storage` writes them to disk before `old_corpus` is deleted on `--resume` (see item 7 in [section 4](#4-design-a-resolved-concurrency-edge-cases-and-error-scenarios)).
+- The `--parallelImport` flag (off by default) and the same checks for unsupported configurations: only `--corpus=basic` until CL 3, and no network instance types.
+
+They differ in *who* imports and *how* the results are synchronized.
+
+### Design A: Coordinated Import on the Fuzzer Instances
+
+All fuzzer instances (parent and workers) start up immediately without delay and concurrently import programs from a shared import queue. When the queue is empty, the threads synchronize through a barrier in the distributed fuzzing protocol (`ThreadSync`), merge their state, and transition to fuzzing together.
+
+#### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant M as main
+    participant P as Programs (shared queue)
+    participant W1 as worker 1
+    participant W2 as worker 2
+
+    M->>P: initialize
+    M->>W1: start import (async)
+    M->>W2: start import (async)
+    par Parallel import
+        M->>P: pull
+    and
+        W1->>P: pull
+    and
+        W2->>P: pull
+    end
+    W1->>M: serialized state
+    W2->>M: serialized state
+    Note over M: merge states
+    M->>W1: merged state
+    M->>W2: merged state
+    M->>W1: start fuzzing (async)
+    M->>W2: start fuzzing (async)
 ```
-@startuml
-scale 4
-queue Programs as P
-participant main as M
-participant worker1 as W1
-participant worker2 as W2
 
-M -> P : initialize
-M -> W1 : start import async
-M -> W2 : start import async
-M -> P : pull async
-W1 -> P : pull async
-W2 -> P : pull async
-W1 -> M : serialized data
-W2 -> M : serialized data
-M -> W1 : serialized merged data
-M -> W2 : serialized merged data
-M -> W1 : start fuzzing async
-M -> W2 : start fuzzing async
-@enduml
-```
-
-### Process Lifecycle and Coordination
+#### Process Lifecycle and Coordination
 
 1. **Initialization:**
-   - The main thread populates a thread-safe, synchronized queue (`SynchronizedQueue<Program>`) with the shuffled corpus.
+   - The main thread populates a thread-safe, synchronized queue (`ThreadSafeImportQueue`) with the shuffled corpus.
    - Worker threads/instances are launched immediately without delay.
 
 2. **Parallel Import Phase:**
@@ -89,6 +113,79 @@ M -> W2 : start fuzzing async
 5. **Transition to Fuzzing:**
    - All worker threads apply the received unified state, updating their local corpus and coverage evaluators.
    - All instances simultaneously transition to the `.fuzzing` state.
+
+### Design B: Short-Lived Import Workers (Fuzzer-Based Runners)
+
+The parallel import is moved out of the regular fuzzer instances. After the main instance has been set up and has run its startup tests, a separate helper (`ParallelCorpusImporter`) spawns N temporary, symmetric *import workers*. Each import worker is a regular `Fuzzer` instance without any modules (no `ThreadChild`, `Statistics` or `Storage`). It acts as a "runner" that bundles an executor (the REPRL script runner), a program evaluator (coverage shared memory) and a corpus, together with everything else importing a program requires. The import workers import in the existing `.corpusImport` state from the shared queue. Once all of them are done, the helper merges their states into the main instance and shuts them down. Only then does the main instance start fuzzing and the regular workers start up; they receive the merged state through the existing `.sync` message.
+
+**Why Fuzzer-based runners instead of a new runner abstraction:** Importing a program needs most of what a `Fuzzer` is: execution (lifter, script runner, `PreExecute`/`PostExecute` events), determinism checks that re-execute the program, minimization (which builds programs and calls back into the fuzzer), fixup via `ProgramBuilder` and the `FixupMutator` (both bound to a `Fuzzer`), and logging, typing and lifting, which find their fuzzer through the current dispatch queue (`Fuzzer.current`). In addition, every component holds a back-reference to its `Fuzzer` (`ComponentBase`). Extracting a separate runner type would therefore be a large refactoring of the core fuzzing paths with little benefit for this feature. A slimmer runner could still replace the `Fuzzer` instances behind the helper's interface later.
+
+#### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant M as main
+    participant H as importer
+    participant I as import workers
+    participant P as Programs (shared queue)
+    participant W as workers
+
+    M->>M: initialize, run startup tests
+    M->>P: initialize
+    M->>H: start parallel import
+    H->>I: create, initialize, schedule import
+    loop Until the queue is depleted
+        I->>P: pull
+    end
+    I->>H: import complete
+    H->>I: export state, shut down
+    H->>M: merged state
+    M->>M: adopt merged state, start fuzzing
+    M->>W: start workers
+    W->>M: connect
+    M->>W: sync (merged state)
+```
+
+#### Process Lifecycle and Coordination
+
+1. **Setup and Startup Tests:**
+   - The main instance is created and initialized, and runs its startup tests as today. This is the first V8 execution and resolves the actual timeout for `--timeout=lower,upper`. The existing `--resume` handling (moving `corpus/` to `old_corpus/` and loading the programs) is unchanged.
+   - The main instance schedules the corpus import on the shared queue (state `.corpusImport`), but is **not started**, so it doesn't consume programs itself and stays idle. This way, the existing import progress in `TerminalUI` and the final import summary work unchanged.
+
+2. **Parallel Import Phase:**
+   - The helper creates N import workers (N = `--jobs`, with the instance ids 1 to N) with the worker configuration, i.e. with the resolved timeout and without startup tests, like the regular workers. It schedules the shared queue on each of them (without reporting the import statistics, which the main instance does for the whole import), initializes and starts them.
+   - The import workers import in the existing `.corpusImport` state. No new fuzzer states are needed.
+   - An import worker that is created after the other import workers already depleted the queue can't join the import and is shut down right away.
+
+3. **Completion:**
+   - When an import worker depletes the queue, it dispatches `CorpusImportComplete` on itself. In response, it exports its state and shuts down right away, so that it doesn't start fuzzing.
+   - The helper waits for all import workers with a `DispatchGroup`. Since it creates all of them up front, there are no registration races and no late joiners.
+
+4. **Merging:**
+   - The helper merges the exported states: the union of the coverage bitmaps (`mergeCoverageStates`) and the concatenation of the corpora, deduplicated by program ID.
+
+5. **Adoption and Transition to Fuzzing:**
+   - On the main instance's queue, the main instance adopts the merged state through `Fuzzer.finishCorpusImport(adopting:)`: it imports the state, dispatches `InterestingProgramFound` for all programs of its new corpus, and runs the regular completion path of a corpus import. That is, it prints the summary (from the shared queue's statistics), dispatches `CorpusImportComplete`, and transitions from `.corpusImport` to `.fuzzing`, exactly like a sequential import. Then it starts fuzzing.
+
+6. **Regular Workers:**
+   - The regular workers are started right afterwards, without `--workerDelay`, as their corpus is complete at that point. They connect while the main instance is in `.fuzzing` and receive the merged state through the standard `.sync` message.
+
+### Comparison and Decision Status
+
+| | Design A: coordinated import on the fuzzer instances | Design B: short-lived import workers |
+|---|---|---|
+| Who imports | The main instance and the regular workers | N temporary import workers (the main instance stays idle) |
+| New fuzzer states | `.parallelImport`, `.parallelImportSync` | None |
+| Changes to `Sync.swift` / `ThreadSync.swift` | New message types, barrier, merge, late joiners, barrier monitor, `onChildConnected` exception, synchronous registration | None (the refactoring B2 only moves the state export and import into `Fuzzer`) |
+| Coordination | Barrier over the workers registered with the parent | `DispatchGroup` over the import workers, which the helper creates up front |
+| Edge cases ([section 4](#4-design-a-resolved-concurrency-edge-cases-and-error-scenarios)) | Items 2–4, 9, 11, 12, 14 and 16 needed dedicated fixes | Mostly don't arise |
+| Engine processes | N workers import and then fuzz with the same processes | N import engines are torn down, then N regular worker engines are spawned (a few seconds of extra startup); the main instance's engine idles during the import |
+| How workers get the merged state | Dedicated merged-state message | Existing `.sync` message |
+| Rarity merging (CL 3) | Needs an extra exchange in the barrier protocol (or central capping) | Plain function calls in the helper (see [section 2](#applicability-to-design-a-and-design-b)) |
+| Diversity (CL 4) | Planning at the barrier; per-worker payloads in the merged-state message | Planning in the helper; assignments handed to the workers when they are created (see [section 3](#applicability-to-design-a-and-design-b-1)) |
+| Modularity | Spread across `Fuzzer`, `Sync`, `ThreadSync` and `main` | One helper file (`ParallelCorpusImporter`), a small `Fuzzer` API, and orchestration in `main` |
+
+**Decision:** Open. The plan is to implement CL 2A and CL 2B side by side on top of the shared preparatory changes, and to compare them by code complexity and footprint in core files, robustness, import throughput, startup latency and memory usage.
 
 ---
 
@@ -121,6 +218,8 @@ public class ThreadSafeImportQueue {
     }
 }
 ```
+
+In addition to the programs, the queue thread-safely aggregates the import outcome statistics (processed, imported, failed, timed-out, fixup counts, convergence patterns) of all instances consuming from it, see `ThreadSafeImportQueue.Statistics`. `CorpusImportJob` exposes these shared statistics, so all jobs on the same queue report cluster-wide totals.
 
 ### 2. Merging a Rarity Corpus
 
@@ -245,6 +344,14 @@ To give operators and developers visibility into corpus health and heap qualific
 - Expose an optional CLI/diagnostic flag (e.g., `--logImportRarityStats`) or print a summary in `TerminalUI` upon import completion:
   `"Rarity corpus imported: 40,000 total seeds (14,200 active in heap, 25,800 zero-energy [WAI])"`
 
+#### Applicability to Design A and Design B
+
+Both designs can implement Option 2 and the Rarity Merge Algorithm unchanged. They differ in how the two-phase exchange (local seen counts, then unified counts, then capped seeds) is carried out:
+- **Design A:** The importing instances are long-lived `ThreadSync` nodes. The exchange needs either an additional round trip in the barrier protocol (new message types to send the local `edgeSeenCount` arrays to the parent and to broadcast `edgeSeenCount_U` back before the partial corpora are sent), or the workers send their uncapped $K$-candidate buffers in the existing single round and the parent caps centrally. The merged rarity state is then distributed with the merged-state message, so the merge in `Sync.swift` must become corpus-aware (it currently re-encodes plain program lists).
+- **Design B:** All import workers live in the same process and are owned by the helper, so the exchange becomes plain function calls on the workers' queues: the helper reads each worker's `edgeSeenCount`, computes `edgeSeenCount_U`, lets each worker cap its candidate buffers (or caps centrally from the workers' buffers), and merges the capped seeds into the parent's `RarityCorpus`. No protocol changes are needed. The regular workers receive the merged rarity state (programs, rare edges, seed ages and `edgeSeenCount`) through the existing fast state synchronization of `RarityCorpus`.
+- **Flag protection:** In Design B, trace buffering only needs to be enabled on the import workers (e.g. through their configuration), so the parent and the regular workers keep the immediate capping exactly as today. In Design A, it must be enabled on all instances while importing and switched off after the barrier.
+- Seed age serialization and the import telemetry (CL 5) don't depend on the design.
+
 ---
 
 ### 3. Optional Extension: Sample Diversity (Coverage & Seed Drop-out)
@@ -319,41 +426,239 @@ In standard fuzzing, diversity arises naturally because asynchronous workers dis
 - **Rarity Corpus (Default):** Use **Option C**. Only reset edges with `edgeSeenCount_U == 1` and evict their associated seeds, guaranteeing immunity for common edges and maximizing diversity.
 - **Non-Rarity Corpora (Basic / Markov):** Use **Option D** (or a combination of **Option B** and **Option A**). Option D natively couples seed eviction with edge reset during the tail import phase without requiring ongoing edge frequency bookkeeping.
 
+#### Applicability to Design A and Design B
+
+All four options work in both designs. Each of them has three parts: collecting data during the import, planning the drop-out centrally, and applying it on the fuzzing workers.
+
+| Part | Design A | Design B |
+|---|---|---|
+| Data collection (provenance, per-worker bitmaps, tail-phase candidates) | On the importing fuzzer instances | On the import workers (same code, as they are `Fuzzer` instances) |
+| Central planning (classification, cluster safety minimum, per-worker assignment) | In the parent at the barrier | In the helper after the import, before the regular workers start |
+| Application on the fuzzing workers | After adopting the merged state. Per-worker assignments need per-worker payloads in the merged-state message, which is currently a broadcast. | After the standard initial `.sync`. Since the regular workers are only created after the import, `main.swift` can hand each worker its assignment when creating it (e.g. through a one-shot `Synchronized` listener), without protocol changes. |
+
+Notes on the individual options:
+- **Option C** only needs `edgeSeenCount_U` and the per-seed rare edges, which every worker has after synchronizing with the parent. Each fuzzing worker can therefore apply it locally. In Design B, this works independently of how the corpus was imported (even after a sequential import).
+- **Option B:** In Design B, $C(E)$ counts import workers (i.e. shards of the queue) instead of fuzzing workers. The classification is equivalent (an edge found by a single shard is rare), but the fuzzing worker that later drops an edge isn't the one that imported it. That's fine, since Option B doesn't bind programs to edges anyway.
+- **Option D:** The candidate isolation happens on the importing instances in both designs. The cluster safety minimum is planned against the number of regular workers, which is known up front (`--jobs` − 1).
+- **Option A:** The provenance is tracked on the importing instances in both designs and aggregated centrally.
+- In both designs, the parent remains the canonical archive with the complete corpus and coverage.
+
+---
+
+### 4. Design A: Resolved Concurrency Edge Cases and Error Scenarios
+
+During development and stress-testing of the Design A coordination flow (CL 2A), several critical concurrency edge cases and race conditions were identified and resolved.
+
+**Scope:** Items 5, 6, 7 and 13, as well as the atomic dequeue in item 1, don't depend on the design and apply to Design B as well. Items 8 and 10 have landed as preparatory changes for both designs. Most of the other items (2–4, 9, 11, 12, 14 and 16) are specific to Design A's in-place coordination and don't arise in Design B, where the helper creates all import workers up front and the regular workers use the existing synchronization. In Design B, the progress logging of item 15 and a liveness check like item 14 move to the helper (see [section 5](#5-design-b-short-lived-import-workers)).
+
+
+1. **Check-Then-Act (TOCTOU) Race on Queue Depletion:**
+   - *Failure Mode:* `CorpusImportJob.isFinished` and `CorpusImportJob.nextProgram()` previously ran in separate synchronized transactions. On a small queue, worker A could observe `isFinished == false` on the second-to-last item, but before its next iteration ran, worker B popped the final item. Worker A then asserted `!isFinished` and crashed with a `fatalError` when popping from the now-depleted queue.
+   - *Resolution:* Made `nextProgram()` return an optional `Program?` atomically, unwrapped via `guard let program = currentCorpusImportJob.nextProgram() else { ... }`. When the queue is depleted in parallel mode, `fuzzOne()` transitions to `.parallelImportSync` and dispatches `ParallelImportDepleted` (without printing the import summary, see item 8). In sequential mode it prints the summary, dispatches `CorpusImportComplete` and transitions to `.fuzzing` as before.
+
+2. **Dispatch Queue Precondition Violations during Worker Scheduling:**
+   - *Failure Mode:* `Fuzzer.scheduleCorpusImport` asserts `dispatchPrecondition(condition: .onQueue(queue))`. Calling it directly on Thread 0 (the main thread) in the worker creation loop tripped `_dispatch_assert_queue_fail`.
+   - *Resolution:* Workers join via `worker.scheduleCorpusImport(from: fuzzer)` inside `worker.sync { ... }`, so it executes on the worker's own serial dispatch queue before initialization. It fetches the parent's active queue and import mode under `parent.sync` (`Fuzzer.activeImportJob`) and is a no-op if the parent has no active import.
+
+3. **Premature Barrier Release from Staggered Parent/Worker Startup:**
+   - *Failure Mode:* The parent begins importing in `fuzzer.start()`, *before* the worker creation loop in `main.swift` runs. Starting worker instances (spawning multiple target engine processes) takes time. On a small corpus, the parent could consume all programs and reach `.parallelImportSync` before workers had registered with `ThreadParent` (`children.count == 0`), causing the parent to merge and transition to `.fuzzing` before workers were even created.
+   - *Resolution:* The barrier is defined over the children that are *registered* with the parent, and the protocol is made safe for any interleaving of parent progress and worker creation:
+     - In parallel import mode, each worker joins the import and is initialized immediately in the worker creation loop (no `--workerDelay`), and its `ThreadChild` registers *synchronously* via `parent.sync`. A registered worker that joined the import is therefore always accounted for by the barrier.
+     - A worker created after the parent has left the import phase (`activeImportJob == nil`) does not join; it starts in `.waiting` and receives a standard `.sync` message from `onChildConnected`.
+     - A worker that joins while the import is still in progress, but registers only after the barrier completed (the parent can complete the barrier between the two steps), is handled as a late joiner, see item 12.
+
+4. **Depleted-Queue Early Return Causing Worker Deadlock:**
+   - *Failure Mode:* `Fuzzer.scheduleCorpusImport` previously had `guard !importQueue.isEmpty else { return }`. When the parent consumed all items from a tiny corpus before worker $N$ called `scheduleCorpusImport`, worker $N$ returned early, remaining in `.uninitialized`. Upon `worker.initialize()`, an uninitialized child node defaulted to `.waiting` (waiting for a parent sync message), never entered `.parallelImport`, and never sent its barrier state, permanently deadlocking the parent at `.parallelImportSync`.
+   - *Resolution:* Relaxed the guard to `guard !importQueue.isEmpty || config.isParallelImportEnabled else { return }`. Even when a queue is already depleted, parallel workers enter `.parallelImport`, pop `nil` in their first `fuzzOne()` iteration, and cleanly submit their empty state to the barrier.
+
+5. **Silent Error Swallowing vs. Strict Validation in State Merging:**
+   - *Failure Mode:* `mergeCoverageStates` previously threw errors that were caught and silently swallowed via `try?` at the callsite, returning empty `Data()` on corrupt or mismatched bitmap sizes. Similarly, decoding and encoding of the fuzzer states and corpora during the merge used `try?`, so a corrupt worker state was silently dropped (losing its imported programs) and an encoding failure produced an empty corpus that then replaced the parent's corpus.
+   - *Resolution:* Refactored `ProgramCoverageEvaluator.mergeCoverageStates` to be non-throwing and raise `fatalError` directly if non-empty coverage states have invalid headers or mismatched bitmap sizes, while gracefully filtering out empty mock evaluators. In `DistributedFuzzingParentNode`, every state is decoded exactly once, and any failure to decode a state or its corpus, or to encode the merged corpus/state, is fatal.
+
+6. **Dummy Zeroth-Edge Overcounting in Merged Coverage:**
+   - *Failure Mode:* Fuzzilli 1-indexes edges and permanently clears bit 0 in `virgin_bits` (setting it to 0). A naive population count of 0-bits in the merged bitmap would overcount `found_edges` by 1.
+   - *Resolution:* Decremented `foundEdges` by 1 (when `foundEdges > 0`) in `mergeCoverageStates` and documented the 1-based edge indexing contract.
+
+7. **Worker Corpus Programs Not Saved to Disk (Disk Loss on `--resume`):**
+   - *Failure Mode:* The `Storage` module only runs on the parent instance, and child nodes suppress forwarding programs with origin `.corpusImport` upstream. At the barrier, `corpus.importState()` loaded the worker-imported programs directly into in-memory storage without dispatching `InterestingProgramFound`. As a result, worker programs were never written to disk, and when the parent subsequently deleted `/old_corpus` on `--resume`, all worker-imported programs were permanently lost.
+   - *Resolution:* At the barrier merge, the parent identifies all newly merged programs originating from workers and dispatches `InterestingProgramFound` for each of them (filtering against parent program IDs to prevent duplicates). `Storage` automatically writes them to disk, `Statistics` reflects accurate cluster-wide import totals, and individual message streaming to children is suppressed during parallel import.
+
+8. **Fragmented Console Summary for Corpus Import Completion:**
+   - *Failure Mode:* Each instance previously tracked import metrics locally and printed `Corpus import finished:` upon depleting its own slice of the shared queue. The parent printed only its partial execution fraction (e.g. `125/1000 programs executed successfully`), while worker output was silenced under `.warning` log level, leading users to believe the corpus was only partially imported.
+   - *Resolution:* Consolidated outcome tracking thread-safely into `ThreadSafeImportQueue`. In parallel import mode, individual instances defer logging upon queue depletion; instead, the parent queries the shared queue's aggregated statistics at the synchronization barrier and logs the true cluster-wide execution and fixup totals.
+
+9. **Initial Telemetry Blackout and Skewed `Worker Instance Import Rate`:**
+   - *Failure Mode:* Unlike serial mode (which sends `.sync` and dispatches `events.Synchronized`), parallel workers adopted the merged state via `.parallelImportMergedState` without firing `events.Synchronized`. Workers therefore did not transmit their initial telemetry until their 1-minute timer fired, causing a multi-node stats blackout, and failed to seed `instanceImportedProgramsReceived`, skewing the worker import rate.
+   - *Resolution:* Workers dispatch `events.Synchronized` immediately after adopting `.parallelImportMergedState`. This triggers immediate transmission of worker statistics to the parent and correctly seeds import counters.
+
+10. **Skewed `avgCorpusSize` Global Average:**
+    - *Failure Mode:* In `Statistics.swift`, `self.corpusSize` was only updated when an `InterestingProgramFound` event fired. Because bulk state synchronization directly populated `corpus` storage without dispatching individual events, each worker's `Statistics` module retained only its pre-merge slice size, reporting an artificially depressed global average corpus size.
+    - *Resolution:* `Statistics.swift` no longer caches the corpus size but reads `fuzzer.corpus.size` when computing the statistics, so all node reports reflect the true merged corpus size. *(This is purely observational and also corrects the same staleness for workers synchronized via the standard `.sync` message in sequential mode, an off-by-one since `InterestingProgramFound` is dispatched before the program is added to the corpus, and staleness after corpus evictions.)*
+
+11. **Default-Mode Regression: Workers Never Synchronized:**
+    - *Failure Mode:* An earlier iteration initialized and registered all workers immediately in every mode, and restricted `onChildConnected` to only send a `.sync` message when the parent was in `.fuzzing`. In the default sequential mode, workers then connected while the parent was still in `.corpusImport` or `.corpusGeneration`. Since nothing re-sends a `.sync` when the root parent transitions to `.fuzzing`, workers stayed in `.waiting` and terminated after 15 minutes ("Did not receive a corpus from our parent node within 15 minutes"). The same applied to `NetworkParent`, which shares `DistributedFuzzingParentNode`.
+    - *Resolution:* All startup changes are gated behind `--parallelImport`. Without it, workers are initialized after `--workerDelay` and `ThreadChild` registers asynchronously, exactly as before. `onChildConnected` keeps the original condition (`state != .waiting`) and only additionally skips the `.sync` message while a parallel import is in progress (`.parallelImport`/`.parallelImportSync`), as those children receive the merged state at the barrier instead.
+
+12. **Barrier Re-entrancy and Late Joiners:**
+    - *Failure Mode:* The barrier condition only compared the number of collected states with the number of children, and the collected states were never cleared. Any subsequent trigger (a child disconnect, or a late `.parallelImportSync` message) re-ran the full merge after fuzzing had started: the parent's corpus was replaced (losing programs found since the barrier), worker programs were re-dispatched as `InterestingProgramFound` (duplicate files on disk), and all workers re-adopted the merged state and re-dispatched `Synchronized` (double-counted statistics). A late joiner (see item 3) would otherwise wait in `.parallelImportSync` forever.
+    - *Resolution:*
+      - `checkParallelImportBarrier()` only completes while the parent is in `.parallelImportSync`, requires a state from the parent itself and from *every* registered child, and clears all collected states after the merge.
+      - A `.parallelImportSync` message received after the barrier completed (late joiner) is answered with a `.parallelImportMergedState` message containing the parent's current state. Since the barrier only completes after the shared queue was depleted, a late joiner cannot have imported any programs.
+      - Children only adopt a `.parallelImportMergedState` message while they are in `.parallelImportSync`.
+
+13. **Unsupported Configurations:**
+    - *Failure Mode:* The merge decodes and re-encodes the corpus as a plain protobuf program list. `RarityCorpus` exports a property-list state (programs plus rarity metadata), so its programs were silently dropped and the merged state was then rejected by `RarityCorpus.importState` (fatal at the barrier). `MarkovCorpus` does not support fast state synchronization at all. With network synchronization, network children are tracked as children of the parent node but never participate in the import, deadlocking the barrier.
+    - *Resolution:* `main.swift` rejects `--parallelImport` unless `--corpus=basic` is used (rarity support is planned for CL 3) and rejects it for network instance types (out of scope, see Non-Goals).
+
+14. **Silent Hang at the Barrier:**
+    - *Failure Mode:* Unlike `.waiting` (which terminates after 15 minutes without a corpus), `.parallelImportSync` had no timeout. A stuck or crashed-but-not-disconnected worker hung the whole session at the barrier without any log output.
+    - *Resolution:* When the parent reaches the barrier, it logs once per minute how many workers it is still waiting for, and terminates with a fatal error if the barrier hasn't completed after 30 minutes. Since the shared queue is already depleted at this point, workers only need to finish their last in-flight program, so this is a generous bound. Workers don't need their own timeout: they run in the same process as the parent, which terminates the whole process.
+
+15. **Irregular Corpus Import Progress Logging:**
+    - *Failure Mode:* Progress was logged when the processed-programs counter was an exact multiple of 500. With the counter shared across all instances via `ThreadSafeImportQueue`, it advances by more than one between two iterations of a single instance. Even when reading the global count atomically with the dequeued program (`ThreadSafeImportQueue.nextWithProcessedCount()`), the exact multiples are mostly dequeued by workers, which don't log at info level, so the parent (the only instance logging at info level) skipped most milestones.
+    - *Resolution:* `CorpusImportJob.nextProgram()` returns the atomic global count from `nextWithProcessedCount()`, and each instance remembers the last logged multiple of 500 and logs whenever a new one was crossed. In sequential mode this logs at exactly the same counter values as before.
+
+16. **Redundant Re-import Without Workers:**
+    - *Failure Mode:* With no connected workers (e.g. `--jobs=1 --parallelImport`), the parent "merged" only its own state and re-imported it via `synchronizeState`, which needlessly re-decoded the corpus and reset corpus metadata (e.g. sample ages).
+    - *Resolution:* Without workers, the barrier skips merging and synchronization entirely; the parent only prints the import summary and resumes fuzzing.
+
+### 5. Design B: Short-Lived Import Workers
+
+#### Components
+- **`ParallelCorpusImporter`** (`Sources/Fuzzilli/Util/ParallelCorpusImporter.swift`): `ParallelCorpusImporter(parent:numWorkers:makeWorker:)` creates the import workers through an injected factory (the profile-specific `makeFuzzer` and the worker configuration live in `main.swift`). `start(completion:)` runs the import, merges the states, lets the parent adopt the merged state, forwards events and shuts the import workers down; `completion` is invoked on the parent's queue afterwards. All coordination logic of the parallel import lives here.
+- **`Fuzzer` API:**
+  - `finishCorpusImport(adopting:)` completes the current corpus import with an external state: it imports the merged corpus and coverage, dispatches `InterestingProgramFound` for the programs of the resulting corpus, and runs the regular completion path of a corpus import (summary from the shared queue's statistics, `CorpusImportComplete`, transition from `.corpusImport` to `.fuzzing`).
+  - `currentImportMode` returns the mode of the active corpus import (next to the existing `currentImportQueue`), so the import workers import in the same mode.
+  - `scheduleCorpusImport(_:importMode:reportsStatistics:)`: the import workers pass `reportsStatistics: false`, so that only the main instance prints the summary (and a possible warning about a high failure rate) for the whole import.
+- **`main.swift`:** if `--parallelImport` is set and a corpus import is scheduled (with `--resume` or `--importCorpus`), runs the helper between the main instance's startup tests and `fuzzer.start()`. The completion handler starts the main instance and then the regular workers without delay. The import workers are created by `makeImportWorker(instanceId:)` and, like the regular workers, are part of the shutdown group, so that the process only exits once they have shut down. Without the flag, or without a scheduled import, the startup sequence is unchanged.
+
+#### Startup Tests and Ordering
+Today, only the main instance runs startup tests (`fuzzer.initialize()`, then `runStartupTests`, then `start`); in-process workers never run them. The startup tests do two things:
+1. **Sanity checks** of the target and its flags (programs execute at all, thrown exceptions are detected, the profile's crash and no-crash tests behave as expected, bundles and output work, standalone flags check). These only depend on the binary and its arguments, which all instances share, so running them once is enough.
+2. **Timeout calibration** for `--timeout=lower,upper`: the main instance measures execution times, picks the actual timeout, and the workers are created afterwards with the resolved value.
+
+The timeout must therefore be resolved before the first import execution: timed-out programs are dropped, so all import workers should use the same value. Hence the order is: set up the main instance and run its startup tests, then create the import workers with the resolved timeout and without startup tests (exactly like the regular workers today), run the import, adopt the merged state and start the main instance, and finally start the regular workers. The main instance's engine process idles during the import (one extra process, negligible CPU usage).
+
+An alternative would be to initialize the main instance only after the import and to run the startup tests on the first import worker before the others start. That saves the idle engine process, but requires more restructuring of `main.swift`, including passing the resolved timeout into the main instance's configuration afterwards.
+
+#### Responsibilities of the Helper
+- **Event forwarding:** The import workers have no `Storage` and no `ThreadChild`. Like the regular workers, they forward crashes to the parent, which re-executes them through `importCrash()` (so `Storage` stores them), and their log messages, which are dispatched as the parent's `Log` event. Like for the regular workers, differentials aren't forwarded. The import workers use the worker log level.
+- **Progress:** The main instance isn't started during the import, so the periodic progress log in `fuzzOne()` doesn't run. Instead, the helper logs the progress from the shared queue every minute, using a timer on the main instance. `TerminalUI` shows the import progress unchanged, since the main instance is in `.corpusImport` with a job on the shared queue.
+- **Shutdown:** If the main instance shuts down during the import (e.g. when the import is aborted), the helper shuts down all import workers.
+- **Teardown:** Each import worker is shut down right after exporting its state. The REPRL script runner terminates its engine process on `Shutdown`. Whether the `Fuzzer` instances are fully deallocated afterwards still needs to be measured; a one-time leak of N instances at startup would be acceptable.
+- **Merging:** Any failure to decode a state or to encode the merged state is fatal (see item 5 in [section 4](#4-design-a-resolved-concurrency-edge-cases-and-error-scenarios)).
+- **Not implemented yet:** A liveness check like item 14 in [section 4](#4-design-a-resolved-concurrency-edge-cases-and-error-scenarios) (periodically logging how many import workers are still running and terminating after a generous timeout) could be added as a follow-up.
+
+#### What Design B Doesn't Need
+- No new fuzzer states.
+- No changes to the distributed fuzzing protocol in `Sync.swift` and `ThreadSync.swift` (except the optional refactoring B2).
+- No synchronous worker registration, no `onChildConnected` exception, and no late-joiner handling.
+
+#### Trade-offs
+- The N import engine processes are torn down and N regular worker engine processes are spawned afterwards, which adds a few seconds of startup time.
+- The regular workers only start after the import. As their corpus is complete at that point, they start immediately instead of waiting for `--workerDelay`.
+- The statistics of the import workers (e.g. execution counts) aren't aggregated by the `Statistics` module yet; the import summary comes from the shared queue.
+- Like in Design A, programs imported in parallel on different import workers can cover the same edges, so the merged corpus can be somewhat larger than after a sequential import.
+
 ---
 
 ## Step-by-Step Implementation Plan (CL Roadmap)
 
 To guarantee complete production safety and satisfy our meta-goals, all changes must either be zero-impact refactorings or logical changes gated behind configuration flags. **To ensure continuous verification, each CL must implement its own targeted unit tests side-by-side with its production code**, leaving only final, extensive end-to-end integration and off-machine verification for the last CL.
 
-The feature is split into 6 incremental, easy-to-review Changelists (CLs):
+The plan consists of a shared foundation, followed by one implementation CL per design (CL 2A and CL 2B), which may be developed side by side for comparison. After the decision, the follow-up CLs 3–6 are implemented for the chosen design.
 
-### CL 1: Core Shared/Synchronized Import Queue
+Status: ✅ landed, 🔍 in review, 📝 planned.
+
+```mermaid
+flowchart TD
+    CL1["CL 1: Shared import queue ✅"] --> P["Preparatory CLs P1–P7 ✅ / 🔍"]
+    P --> DOC["Design doc with both designs 🔍"]
+    DOC --> A["CL 2A: Design A 🔍"]
+    DOC --> BR["B1–B4: Design B refactorings 🔍"]
+    BR --> B["CL 2B: Design B 🔍"]
+    A --> X{"Decision"}
+    B --> X
+    X --> CL3["CL 3: Rarity merging 📝"]
+    X --> CL4["CL 4: Sample diversity 📝"]
+    CL3 --> CL5["CL 5: Rarity telemetry 📝"]
+    CL3 --> CL6["CL 6: E2E tests and verification 📝"]
+    CL4 --> CL6
+    CL5 --> CL6
+```
+
+### CL 1: Core Shared/Synchronized Import Queue ✅
 - **Files:** `Sources/Fuzzilli/Fuzzer.swift`, `Sources/Fuzzilli/Util/ThreadSafeImportQueue.swift` (New file), `Tests/FuzzilliTests/ThreadSafeImportQueueTests.swift` (New file)
 - **Changes:**
   - Implement the thread-safe `ThreadSafeImportQueue` class.
   - **Production Safety (Refactoring Only):** Integrate the queue into `Fuzzer.swift` and `CorpusImportJob`.
   - **Flag Protection:** Ensure that if parallel import is disabled (default), the sequential import behaves exactly as it did before. The queue can either be bypassed completely or act as a single-threaded queue with identical sequencing and zero performance overhead.
   - **Side-by-Side Testing:** Add comprehensive unit tests in `ThreadSafeImportQueueTests.swift` to verify concurrent dequeueing safety, FIFO ordering, progress reporting correctness, empty queue handling, and integration with `CorpusImportJob` and `Fuzzer`.
+- **Landed as:** "Add a test-import queue" (`4b7294ec`).
 
-### CL 2: Coordinated Parallel Import Flow & State Transitions
-- **Files:** `Sources/Fuzzilli/Fuzzer.swift`, `Sources/Fuzzilli/Modules/Sync.swift`, `Sources/Fuzzilli/Modules/ThreadSync.swift`, `Sources/FuzzilliCli/main.swift`, `Sources/FuzzilliCli/TerminalUI.swift`, `Sources/Fuzzilli/Protobuf/fuzzilli.proto`, `Tests/FuzzilliTests/ParallelImportStateTests.swift` (New file)
+### Shared Preparatory CLs
+
+These stand-alone changes are needed by both designs and land ahead of the implementation CLs:
+
+| # | Change | Status |
+|---|---|---|
+| P1 | Fix import statistics and periodic progress logging (`9f96b2f9`) | ✅ |
+| P2 | Gate periodic corpus import progress logging on the atomic global count (`0bf34992`) | ✅ |
+| P3 | Compute the statistics corpus size on demand instead of caching it (`9c7edc2a`, landed as "Update the statistics corpus size on synchronization"; see item 10 in [section 4](#4-design-a-resolved-concurrency-edge-cases-and-error-scenarios)) | ✅ |
+| P4 | Track the corpus import statistics in the shared import queue, so all jobs sharing a queue report cluster-wide totals (`a24e36f4`) | ✅ |
+| P5 | Tests for the initial synchronization of `ThreadSync` workers, with shared `ThreadSync` test helpers (`d1038f4b`) | ✅ |
+| P6 | Extract the worker initialization in `main.swift` into `initializeWorker()` (`a35bc185`) | ✅ |
+| P7 | Add `ProgramCoverageEvaluator.mergeCoverageStates()` and `SerializedStateHeader` (single definition of the serialized coverage state's header), with `ProgramCoverageEvaluatorTests.swift` | 🔍 |
+
+This design document update (treating both designs as alternatives) also lands ahead of the implementation CLs, so that CL 2A and CL 2B can be reviewed side by side on top of it.
+
+### Design A
+
+#### CL 2A: Coordinated Parallel Import Flow & State Transitions
+- **Files:** `Sources/Fuzzilli/Fuzzer.swift`, `Sources/Fuzzilli/Configuration.swift`, `Sources/Fuzzilli/Base/Events.swift`, `Sources/Fuzzilli/Modules/Sync.swift`, `Sources/Fuzzilli/Modules/ThreadSync.swift`, `Sources/FuzzilliCli/main.swift`, `Sources/FuzzilliCli/TerminalUI.swift`, `Tests/FuzzilliTests/ParallelImportStateTests.swift` (New file)
 - **Changes:**
   - Introduce new `.parallelImport` and `.parallelImportSync` fuzzer states if necessary, or adapt the existing state machine.
   - **UI Telemetry:** Update `TerminalUI.swift`'s exhaustive `switch fuzzer.state` (in `printStats`) to support `.parallelImport` and display live shared queue import progress.
-  - **Flag Protection:** Update worker startup in `main.swift` so that if `--parallelImport` is disabled, the randomized/configured `--workerDelay` is applied exactly as before. If `--parallelImport` is enabled, launch workers immediately without delay.
-  - **Sync Protocol & Protobuf:** Add new coordination opcodes to `MessageType` in `Sync.swift` (e.g., `.parallelImportSync`, `.parallelImportMergedState`) and define corresponding protobuf envelopes in `fuzzilli.proto`.
+  - **CLI Flag:** Introduce the `--parallelImport` flag (off by default) together with the `isParallelImportEnabled` configuration option. Reject unsupported combinations (non-basic corpora, network instance types).
+  - **Flag Protection:** Update worker startup in `main.swift` so that if `--parallelImport` is disabled, the randomized/configured `--workerDelay` is applied exactly as before (including delayed worker initialization and asynchronous `ThreadChild` registration). If `--parallelImport` is enabled, launch workers immediately without delay.
+  - **Sync Protocol:** Add new coordination opcodes to `MessageType` in `Sync.swift` (`.parallelImportSync`, `.parallelImportMergedState`). Both reuse the existing serialized `Fuzzilli_Protobuf_FuzzerState` as payload, so no new protobuf envelopes are needed.
   - **Flag-gated Barrier:** Implement the completion barrier and sync message handling via `ThreadSync` (confirming `NetworkSync` remains unaffected). When the import queue is depleted, workers stop, serialize their local state, and send a coordination message. This coordination flow must be inactive/disabled under the default sequential mode.
-  - **Flag-gated Merge & Resume:** The parent merges the states and broadcasts them back only when in parallel import mode.
-  - **Side-by-Side Testing:** Write state-transition unit tests verifying the transition from `.parallelImport` to `.fuzzing` on depletion, and checking that the barrier correctly awaits all worker threads before proceeding.
+  - **Flag-gated Merge & Resume:** The parent merges the states (union of coverage bitmaps via `ProgramCoverageEvaluator.mergeCoverageStates`, concatenation of corpora deduplicated by program ID, with the parent's programs first) and broadcasts them back only when in parallel import mode.
+  - **Side-by-Side Testing:** Write state-transition unit tests verifying the transition from `.parallelImport` to `.fuzzing` on depletion, checking that the barrier correctly awaits all worker threads before proceeding, completes only once (including late joiners), and that the parent keeps its own state when there are no workers. The default sequential worker synchronization is covered by `ThreadSyncTests.swift`.
+
+### Design B
+
+#### Preparatory Refactorings B1–B4 🔍
+Zero-impact refactorings that make the Design B implementation small. Each can land on its own:
+- **B1:** Extract the construction of the worker `Configuration` in `main.swift` into `makeWorkerConfig(instanceId:)`, so that the import workers can be created the same way as the regular workers.
+- **B2:** Move the fuzzer state export and import from `DistributedFuzzingNode` into `Fuzzer` (`exportState()`, `importState(_:)` and `supportsFastStateSynchronization`); `Sync.swift` delegates to them. This gives `Sync.swift` and the helper a single implementation (Design A's merge could use it as well). Tested in `FuzzerStateTests.swift`.
+- **B3:** Extract the completion of a corpus import from `Fuzzer.fuzzOne()` (summary, `CorpusImportComplete`, transition to `.fuzzing`) into a `finishCorpusImport()` method, so it can be reused when an import is completed with an external state.
+- **B4:** Separate the setup of the main instance from `fuzzer.start()` in `main.swift`, and move creating and starting the workers into `startWorkers()`, so that the parallel import can run between the startup tests and the start.
+
+#### CL 2B: Short-Lived Import Workers 🔍
+- **Files:** `Sources/Fuzzilli/Util/ParallelCorpusImporter.swift` (New file), `Sources/Fuzzilli/Fuzzer.swift`, `Sources/FuzzilliCli/main.swift`, `Tests/FuzzilliTests/ParallelCorpusImporterTests.swift` (New file)
+- **Changes:**
+  - **CLI Flag:** Introduce the `--parallelImport` flag (off by default), and reject unsupported combinations (non-basic corpora, network instance types), like in CL 2A. Only `main.swift` needs the flag, so there's no configuration option for it.
+  - **Import Helper:** Implement `ParallelCorpusImporter` (see [section 5](#5-design-b-short-lived-import-workers)): create N import workers through an injected factory, schedule the shared queue on them, wait for all of them, merge their states (using `mergeCoverageStates` and the strict error handling of item 5), let the parent adopt the merged state, forward crashes and log messages to the parent, log the progress, and shut the import workers down.
+  - **Fuzzer API:** `finishCorpusImport(adopting:)` to complete the parent's corpus import with the merged state (importing corpus and coverage, dispatching `InterestingProgramFound` for persistence as in item 7, and running the regular completion path from B3), `currentImportMode`, and the `reportsStatistics` parameter of `scheduleCorpusImport(_:importMode:reportsStatistics:)`.
+  - **Flag Protection:** In `main.swift`, run the helper between the main instance's startup tests and `fuzzer.start()` only if `--parallelImport` is enabled and a corpus import is scheduled, and start the regular workers without delay afterwards. Otherwise, the startup sequence is exactly as before.
+  - **Side-by-Side Testing:** Unit tests in `ParallelCorpusImporterTests.swift` with mock fuzzers verify that N import workers import from a shared queue and that the idle parent adopts their merged state (transitioning to `.fuzzing` and dispatching `InterestingProgramFound` for all programs), that import workers that can't join the import anymore are shut down, that crashes found during the import reach the parent, and that merging deduplicates programs. The synchronization of the regular workers with the main instance is covered by `ThreadSyncTests.swift`.
+  - **Not yet verified:** an end-to-end run with a real target engine (part of the comparison with CL 2A, and of CL 6).
+
+### Decision Point
+Compare CL 2A and CL 2B by code complexity and footprint in core files, robustness, import throughput, startup latency and memory usage. Only one of them lands. The follow-up CLs below apply to both designs; their design-specific parts are noted.
 
 ### CL 3: Rarity Corpus Merging Support & Age Serialization
 - **Files:** `Sources/Fuzzilli/Corpus/RarityCorpus.swift`, `Sources/Fuzzilli/Protobuf/fuzzilli.proto`, `Tests/FuzzilliTests/RarityCorpusMergeTests.swift` (New file)
 - **Changes:**
   - **Protobuf Backward Compatibility:** Add optional age serialization to `fuzzilli.proto`. Ensure deserialization degrades gracefully (with default age values) when reading older corpus files from disk where the age field is absent.
-  - **Flag Protection:** In `RarityCorpus.swift`, the in-memory trace-buffering mechanism (Option 2 with $K = 1024$) and worker-side capping must only activate if `--parallelImport` is enabled.
+  - **Flag Protection:** In `RarityCorpus.swift`, the in-memory trace-buffering mechanism (Option 2 with $K = 1024$) and worker-side capping must only activate if `--parallelImport` is enabled (in Design B, only on the import workers).
   - If `--parallelImport` is disabled (the default production configuration), the rarity corpus must execute `addInternal` with immediate capping to 128 rare edges exactly as it does today.
   - Implement the `RarityCorpus` union/merge method on the parent following the defined Rarity Merge Algorithm.
   - **Side-by-Side Testing:** Write targeted unit tests in `RarityCorpusMergeTests.swift` testing the Rarity Merge Algorithm using mock worker corpora. Verify interleaving logic, re-indexing, rare edge filtering using `edgeSeenCount_U`, and correct heap priority rebuilding. Verify backwards compatibility when loading state without seed age data.
+  - **Design-Specific Parts** (see [section 2](#applicability-to-design-a-and-design-b)):
+    - *Design A:* Extend the barrier protocol by the seen-count exchange (or send the uncapped candidate buffers and cap centrally), and make the merge in `Sync.swift` corpus-aware.
+    - *Design B:* Implement the seen-count exchange and capping as function calls on the import workers in `ParallelCorpusImporter`, and merge the capped seeds into the parent's `RarityCorpus`. The regular workers receive the merged rarity state through the existing fast state synchronization.
 
 ### CL 4 (Optional Extension): Sample Diversity via Safe Edge/Seed Drop-out
 - **Files:** `Sources/Fuzzilli/Configuration.swift`, `Sources/Fuzzilli/Evaluation/ProgramCoverageEvaluator.swift`, `Sources/Fuzzilli/Corpus/RarityCorpus.swift`, `Sources/FuzzilliCli/main.swift`, `Tests/FuzzilliTests/CoverageDropoutTests.swift` (New file)
@@ -364,6 +669,9 @@ The feature is split into 6 incremental, easy-to-review Changelists (CLs):
     - In `RarityCorpus.swift`, implement Option C (coupled seed eviction and rare-edge reset using `edgeSeenCount_U` and `cov_clear_edge_data()`).
     - For non-rarity corpora, implement Option D / Option B frequency filtering and Option A early program immunity to mask out common edges from reset.
   - **Side-by-Side Testing:** Add unit tests in `CoverageDropoutTests.swift` validating that common/bootstrap edges are strictly protected against drop-out (preventing the over-minimization trap), and that seed eviction cleanly rebuilds the energy heap in `RarityCorpus` without corrupting other evaluator state.
+  - **Design-Specific Parts** (see [section 3](#applicability-to-design-a-and-design-b-1)):
+    - *Design A:* Plan the drop-out at the barrier and send per-worker assignments with the merged-state message.
+    - *Design B:* Collect the data on the import workers, plan the drop-out in `ParallelCorpusImporter`, and hand each regular worker its assignment when it's created in `main.swift`, to be applied after its initial `.sync`.
 
 ### CL 5 (Optional Extension): Rarity Import Qualification Telemetry & Statistics
 - **Files:** `Sources/Fuzzilli/Corpus/RarityCorpus.swift`, `Sources/FuzzilliCli/TerminalUI.swift`, `Sources/FuzzilliCli/main.swift`, `Tests/FuzzilliTests/RarityCorpusMergeTests.swift`
@@ -376,8 +684,8 @@ The feature is split into 6 incremental, easy-to-review Changelists (CLs):
 ### CL 6: End-to-End Tests, CLI Integration & Off-Machine Verification
 - **Files:** `Tests/FuzzilliTests/ParallelImportTests.swift` (New file), `Sources/FuzzilliCli/main.swift`
 - **Changes:**
-  - Expose CLI arguments (e.g., `--parallelImport`, `--randomEdgeReset`).
+  - Expose remaining CLI arguments (e.g., `--randomEdgeReset`; `--parallelImport` is already introduced in CL 2A / CL 2B).
   - **Flag Protection:** Keep all flags **off by default** so standard production runs remain 100% unaffected.
-  - **Side-by-Side Testing:** Write extensive end-to-end integration tests spawning actual worker threads and performing the complete parallel import and merging flow on realistic program sets. Confirm that the default mode functions exactly as before with delayed workers.
+  - **Side-by-Side Testing:** Write extensive end-to-end integration tests spawning actual worker threads and performing the complete parallel import and merging flow on realistic program sets, for the chosen design (or for both, if the decision is made based on these tests). Confirm that the default mode functions exactly as before with delayed workers.
   - **Optional Depletion Tracking Tests:** Optionally test explicit queue depletion hooks/callbacks or coordinator tracking if required beyond the standard `nil` dequeue termination check.
   - Perform verification runs on separate, isolated machines to check performance without impacting the live production environment.
