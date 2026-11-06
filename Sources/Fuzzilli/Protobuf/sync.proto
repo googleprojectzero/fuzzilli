@@ -124,4 +124,10 @@ message Statistics {
 
         /// The time in seconds since the last interesting sample was found.
         double lastInterestingSample = 26;
+
+        /// The number of candidate samples evaluated for deterministic interesting aspects.
+        uint64 maybeInterestingSamples = 27;
+
+        /// The fraction of candidate samples whose aspect intersection was nil.
+        double aspectIntersectionNilRate = 28;
 }

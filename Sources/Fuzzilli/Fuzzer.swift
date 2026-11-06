@@ -860,6 +860,7 @@ public class Fuzzer {
         _ program: Program, havingAspects aspects: ProgramAspects, origin: ProgramOrigin,
         withExectime exectime: TimeInterval
     ) -> Bool {
+        dispatchEvent(events.MaybeInterestingProgramFound)
         var aspects = aspects
         var pattern = ""
         slowestDeterminismRun = exectime

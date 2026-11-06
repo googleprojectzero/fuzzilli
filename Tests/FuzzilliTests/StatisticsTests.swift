@@ -198,11 +198,12 @@ class TestAspects: ProgramAspects {
     }
 
     @Test func testAspectIntersectionNilTracking() {
-        class NilIntersectionEvaluator: MockEvaluator {
+        class ConfigurableIntersectionEvaluator: MockEvaluator {
+            var shouldReturnNil = true
             override func computeAspectIntersection(
                 of program: Program, with aspects: ProgramAspects
             ) -> ProgramAspects? {
-                return nil
+                return shouldReturnNil ? nil : aspects
             }
         }
 
@@ -210,7 +211,7 @@ class TestAspects: ProgramAspects {
             logLevel: .error,
             enableInspection: true
         )
-        let evaluator = NilIntersectionEvaluator()
+        let evaluator = ConfigurableIntersectionEvaluator()
         let fuzzer = makeMockFuzzer(config: liveTestConfig, evaluator: evaluator)
 
         fuzzer.sync {
@@ -225,16 +226,49 @@ class TestAspects: ProgramAspects {
                 corpus: [prog], mode: .interestingOnly(shouldMinimize: false))
             fuzzer.setCorpusImportJobForTesting(job)
 
-            #expect(stats.compute().aspectIntersectionNilCount == 0)
+            var computed = stats.compute()
+            #expect(computed.maybeInterestingSamples == 0)
+            #expect(computed.aspectIntersectionNilCount == 0)
+            #expect(computed.aspectIntersectionNilRate == 0.0)
 
             let initialAspects = TestAspects(outcome: .succeeded, count: 5)
-            let result = fuzzer.processMaybeInteresting(
+            let result1 = fuzzer.processMaybeInteresting(
                 prog, havingAspects: initialAspects,
                 origin: .corpusImport(mode: .interestingOnly(shouldMinimize: false)),
                 withExectime: 0)
 
-            #expect(result == false)
-            #expect(stats.compute().aspectIntersectionNilCount == 1)
+            #expect(result1 == false)
+            computed = stats.compute()
+            #expect(computed.maybeInterestingSamples == 1)
+            #expect(computed.aspectIntersectionNilCount == 1)
+            #expect(computed.aspectIntersectionNilRate == 1.0)
+
+            evaluator.shouldReturnNil = false
+            let result2 = fuzzer.processMaybeInteresting(
+                prog, havingAspects: initialAspects,
+                origin: .corpusImport(mode: .interestingOnly(shouldMinimize: false)),
+                withExectime: 0)
+
+            #expect(result2 == true)
+            computed = stats.compute()
+            #expect(computed.maybeInterestingSamples == 2)
+            #expect(computed.aspectIntersectionNilCount == 1)
+            #expect(computed.aspectIntersectionNilRate == 0.5)
+
+            // Verify multi-node aggregation across worker nodes.
+            let childUUID = UUID()
+            fuzzer.dispatchEvent(fuzzer.events.ChildNodeConnected, data: childUUID)
+            let childStats = Fuzzilli_Protobuf_Statistics.with {
+                $0.maybeInterestingSamples = 8
+                $0.aspectIntersectionNilCount = 2
+                $0.aspectIntersectionNilRate = 0.25
+            }
+            stats.importData(childStats, from: childUUID)
+
+            computed = stats.compute()
+            #expect(computed.maybeInterestingSamples == 10)
+            #expect(computed.aspectIntersectionNilCount == 3)
+            #expect(abs(computed.aspectIntersectionNilRate - 0.3) < 1e-9)
         }
     }
 
@@ -380,6 +414,9 @@ class TestAspects: ProgramAspects {
             data.avgCorpusSize = 42.0
             data.timedOutSamples = 2
             data.crashingSamples = 1
+            data.maybeInterestingSamples = 20
+            data.aspectIntersectionNilCount = 5
+            data.aspectIntersectionNilRate = 0.25
             data.totalExecs = 500
             data.coverage = 0.125
             data.fuzzerOverhead = .nan  // Non-finite values must not fail JSON encoding
@@ -410,6 +447,9 @@ class TestAspects: ProgramAspects {
             #expect(metrics["corpusSize"] as? Int == 42)
             #expect(metrics["avgCorpusSize"] as? Double == 42.0)
             #expect(metrics["coverage"] as? Double == 0.125)
+            #expect(metrics["maybeInterestingSamples"] as? Int == 20)
+            #expect(metrics["aspectIntersectionNilCount"] as? Int == 5)
+            #expect(metrics["aspectIntersectionNilRate"] as? Double == 0.25)
             #expect(metrics["fuzzerOverhead"] as? String == "NaN")
             #expect(metrics["totalExecs"] as? Int == 500)
             #expect(metrics["differentialSamples"] == nil)

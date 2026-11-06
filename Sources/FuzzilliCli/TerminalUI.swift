@@ -182,6 +182,7 @@ class TerminalUI {
             Crashes Found:                \(stats.crashingSamples)\(differentialsLine)
             Timeouts Hit:                 \(stats.timedOutSamples)
             Aspect Intersection Nil:      \(stats.aspectIntersectionNilCount)
+            Aspect Intersection Nil Rate: \(String(format: "%.2f%%", stats.aspectIntersectionNilRate * 100))
             Coverage:                     \(String(format: "%.2f%%", stats.coverage * 100))
             Avg. program size:            \(String(format: "%.2f", stats.avgProgramSize))
             Avg. corpus program size:     \(String(format: "%.2f", stats.avgCorpusProgramSize))

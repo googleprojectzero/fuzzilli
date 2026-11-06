@@ -153,6 +153,7 @@ public class Statistics: Module {
             data.timedOutSamples += node.timedOutSamples
             data.totalExecs += node.totalExecs
             data.aspectIntersectionNilCount += node.aspectIntersectionNilCount
+            data.maybeInterestingSamples += node.maybeInterestingSamples
 
             for stats in node.contributorStats {
                 if var existing = contributorStatsByName[stats.name] {
@@ -221,6 +222,11 @@ public class Statistics: Module {
                     / Double(instanceImportedTotalWorkerReceived) : 1.0
         }
 
+        data.aspectIntersectionNilRate =
+            data.maybeInterestingSamples > 0
+            ? Double(data.aspectIntersectionNilCount) / Double(data.maybeInterestingSamples)
+            : 0.0
+
         return data
     }
 
@@ -282,6 +288,9 @@ public class Statistics: Module {
         fuzzer.registerEventListener(for: fuzzer.events.ProgramGenerated) { program in
             self.ownData.totalSamples += 1
             self.programSizeAvg.add(program.size)
+        }
+        fuzzer.registerEventListener(for: fuzzer.events.MaybeInterestingProgramFound) { _ in
+            self.ownData.maybeInterestingSamples += 1
         }
         fuzzer.registerEventListener(for: fuzzer.events.AspectIntersectionNil) { _ in
             self.ownData.aspectIntersectionNilCount += 1
