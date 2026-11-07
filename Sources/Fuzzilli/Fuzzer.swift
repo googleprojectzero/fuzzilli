@@ -1185,9 +1185,7 @@ public class Fuzzer {
 
         case .corpusImport:
             guard let (program, totalProcessed) = currentCorpusImportJob.nextProgram() else {
-                printFinalCorpusImportStats()
-                dispatchEvent(events.CorpusImportComplete)
-                changeState(to: .fuzzing)
+                finishCorpusImport()
                 break
             }
 
@@ -1233,6 +1231,16 @@ public class Fuzzer {
         fuzzGroup.notify(queue: queue) {
             self.fuzzOne()
         }
+    }
+
+    /// Completes the current corpus import: prints the final import statistics, dispatches the
+    /// CorpusImportComplete event and transitions to the .fuzzing state.
+    private func finishCorpusImport() {
+        dispatchPrecondition(condition: .onQueue(queue))
+        assert(state == .corpusImport)
+        printFinalCorpusImportStats()
+        dispatchEvent(events.CorpusImportComplete)
+        changeState(to: .fuzzing)
     }
 
     private func printFinalCorpusImportStats() {
