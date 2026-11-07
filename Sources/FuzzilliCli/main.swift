@@ -1003,10 +1003,11 @@ func initializeWorker(_ worker: Fuzzer) {
     worker.initialize()
 }
 
-for i in 1..<numJobs {
-    // Add thread worker instances if requested
-    // Worker instances use a slightly different configuration, mostly just a lower log level.
-    let workerConfig = Configuration(
+/// Returns the configuration of the worker instance with the given id.
+/// Worker instances use a slightly different configuration, mostly just a lower log level.
+/// Must only be called after the startup tests of the main instance, which can determine the timeout.
+func makeWorkerConfig(instanceId: Int) -> Configuration {
+    return Configuration(
         arguments: CommandLine.arguments,
         timeout: timeout.maxTimeout(),
         fixedMinimizationTimeout: fixedMinimizationTimeout,
@@ -1022,13 +1023,16 @@ for i in 1..<numJobs {
         storagePath: storagePath,
         corpusGenerationIterations: corpusGenerationIterations,
         forDifferentialFuzzing: forDifferentialFuzzing,
-        instanceId: i,
+        instanceId: instanceId,
         dumplingEnabled: profile.isDifferential,
         enableCustomDescriptors: enableCustomDescriptors,
         trackConvergencePatterns: trackConvergencePatterns,
         machineReadableStats: false)
+}
 
-    let worker = makeFuzzer(with: workerConfig)
+for i in 1..<numJobs {
+    // Add thread worker instances if requested
+    let worker = makeFuzzer(with: makeWorkerConfig(instanceId: i))
     workers.append(worker)
 
     // Add each worker to the shutdownGroup. When they shutdown, they leave the group making it easy
