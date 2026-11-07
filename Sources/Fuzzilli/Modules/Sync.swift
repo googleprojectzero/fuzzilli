@@ -121,75 +121,19 @@ public class DistributedFuzzingNode {
         self.corpusSynchronizationMode = corpusSynchronizationMode
     }
 
-    /// Exports the internal state of this fuzzer.
-    ///
-    /// The state returned by this function can be passed to the synchronizeState method to restore
-    /// the state. This can be used to synchronize different fuzzer instances and makes it
-    /// possible to resume a previous fuzzing run at a later time.
-    /// Note that for this to work, the instances need to be configured identically, i.e. use
-    /// the same components (in particular, corpus) and the same build of the target engine.
+    /// Exports the internal state of this fuzzer, see Fuzzer.exportState().
     public func exportState() -> Data {
-        assert(fuzzer.state != .waiting)
-
         do {
-            if supportsFastStateSynchronization {
-                let state = try Fuzzilli_Protobuf_FuzzerState.with {
-                    $0.corpus = try fuzzer.corpus.exportState()
-                    $0.evaluatorState = fuzzer.evaluator.exportState()
-                    $0.isWasmEnabled = fuzzer.config.isWasmEnabled
-                    $0.areBundlesEnabled = fuzzer.config.generateBundle
-                }
-                return try state.serializedData()
-            } else {
-                // Just export all samples in the current corpus
-                return try encodeProtobufCorpus(fuzzer.corpus.allPrograms())
-            }
+            return try fuzzer.exportState()
         } catch {
             logger.error("Failed to export fuzzer state: \(error)")
             return Data()
         }
     }
 
-    /// Set the state of this fuzzer instance to the given state.
-    ///
-    /// The given state must've previously been exported by exportState() above. Further, the exporting
-    /// and importing instances need to be configured identically, see above.
+    /// Set the state of this fuzzer instance to the given state, see Fuzzer.importState().
     func synchronizeState(to data: Data) throws {
-        if supportsFastStateSynchronization {
-            let state = try Fuzzilli_Protobuf_FuzzerState(serializedBytes: data)
-
-            if state.isWasmEnabled != fuzzer.config.isWasmEnabled {
-                // If the wasm enablement is different, we can't safely import the corpus.
-                let parentState = fuzzer.config.isWasmEnabled ? "enabled" : "disabled"
-                let selfState = state.isWasmEnabled ? "enabled" : "disabled"
-                throw FuzzilliError.corpusImportError(
-                    "Inconsistent state between distributed nodes: The parent has wasm \(parentState) while the current fuzzer has wasm \(selfState)!"
-                )
-            }
-
-            if state.areBundlesEnabled != fuzzer.config.generateBundle {
-                // Ditto for bundles.
-                let parentState = fuzzer.config.generateBundle ? "enabled" : "disabled"
-                let selfState = state.areBundlesEnabled ? "enabled" : "disabled"
-                throw FuzzilliError.corpusImportError(
-                    "Inconsistent state between distributed nodes: The parent has bundles \(parentState) while the current fuzzer has wasm \(selfState)!"
-                )
-            }
-
-            try fuzzer.corpus.importState(state.corpus)
-            try fuzzer.evaluator.importState(state.evaluatorState)
-        } else {
-            let corpus = try decodeProtobufCorpus(data)
-            fuzzer.scheduleCorpusImport(corpus, importMode: .interestingOnly(shouldMinimize: false))
-        }
-    }
-
-    /// Whether the internal state of this fuzzer instance can be serialized and restored elsewhere, e.g. on a child instance.
-    private var supportsFastStateSynchronization: Bool {
-        // We might eventually need to check that the other relevant components
-        // (in particular the evaluator) support this as well, but currenty all
-        // of them do.
-        return fuzzer.corpus.supportsFastStateSynchronization
+        try fuzzer.importState(data)
     }
 }
 

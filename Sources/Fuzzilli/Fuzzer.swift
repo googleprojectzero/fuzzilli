@@ -818,6 +818,76 @@ public class Fuzzer {
         return currentCorpusImportJob.progress()
     }
 
+    /// Whether the internal state of this fuzzer can be exported and restored elsewhere (e.g. on
+    /// another instance) without having to re-execute the programs in its corpus.
+    public var supportsFastStateSynchronization: Bool {
+        // We might eventually need to check that the other relevant components
+        // (in particular the evaluator) support this as well, but currenty all
+        // of them do.
+        return corpus.supportsFastStateSynchronization
+    }
+
+    /// Exports the internal state of this fuzzer.
+    ///
+    /// The state returned by this function can be passed to the importState method to restore
+    /// the state. This can be used to synchronize different fuzzer instances and makes it
+    /// possible to resume a previous fuzzing run at a later time.
+    /// Note that for this to work, the instances need to be configured identically, i.e. use
+    /// the same components (in particular, corpus) and the same build of the target engine.
+    public func exportState() throws -> Data {
+        dispatchPrecondition(condition: .onQueue(queue))
+        assert(state != .waiting)
+
+        if supportsFastStateSynchronization {
+            let state = try Fuzzilli_Protobuf_FuzzerState.with {
+                $0.corpus = try corpus.exportState()
+                $0.evaluatorState = evaluator.exportState()
+                $0.isWasmEnabled = config.isWasmEnabled
+                $0.areBundlesEnabled = config.generateBundle
+            }
+            return try state.serializedData()
+        } else {
+            // Just export all samples in the current corpus
+            return try encodeProtobufCorpus(corpus.allPrograms())
+        }
+    }
+
+    /// Set the state of this fuzzer instance to the given state.
+    ///
+    /// The given state must've previously been exported by exportState() above. Further, the exporting
+    /// and importing instances need to be configured identically, see above.
+    public func importState(_ data: Data) throws {
+        dispatchPrecondition(condition: .onQueue(queue))
+
+        if supportsFastStateSynchronization {
+            let state = try Fuzzilli_Protobuf_FuzzerState(serializedBytes: data)
+
+            if state.isWasmEnabled != config.isWasmEnabled {
+                // If the wasm enablement is different, we can't safely import the corpus.
+                let parentState = config.isWasmEnabled ? "enabled" : "disabled"
+                let selfState = state.isWasmEnabled ? "enabled" : "disabled"
+                throw FuzzilliError.corpusImportError(
+                    "Inconsistent state between distributed nodes: The parent has wasm \(parentState) while the current fuzzer has wasm \(selfState)!"
+                )
+            }
+
+            if state.areBundlesEnabled != config.generateBundle {
+                // Ditto for bundles.
+                let parentState = config.generateBundle ? "enabled" : "disabled"
+                let selfState = state.areBundlesEnabled ? "enabled" : "disabled"
+                throw FuzzilliError.corpusImportError(
+                    "Inconsistent state between distributed nodes: The parent has bundles \(parentState) while the current fuzzer has wasm \(selfState)!"
+                )
+            }
+
+            try corpus.importState(state.corpus)
+            try evaluator.importState(state.evaluatorState)
+        } else {
+            let corpus = try decodeProtobufCorpus(data)
+            scheduleCorpusImport(corpus, importMode: .interestingOnly(shouldMinimize: false))
+        }
+    }
+
     /// Executes a program.
     ///
     /// This will first lift the given FuzzIL program to the target language, then use the configured script runner to execute it.
