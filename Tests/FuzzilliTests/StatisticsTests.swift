@@ -121,6 +121,53 @@ class TestAspects: ProgramAspects {
         }
     }
 
+    @Test func testNodesWithoutStatisticsAreExcludedFromAverages() {
+        let fuzzer = makeMockFuzzer(config: Configuration(logLevel: .error))
+
+        fuzzer.sync {
+            let stats = Statistics()
+            stats.initialize(with: fuzzer)
+            for i in 0..<10 {
+                let b = fuzzer.makeBuilder()
+                b.loadInt(Int64(i))
+                fuzzer.corpus.add(b.finalize(), ProgramAspects(outcome: .succeeded))
+            }
+            let corpusSize = Double(fuzzer.corpus.size)
+
+            // Two child nodes connect, but only one of them has sent its statistics so far.
+            let reportingChild = UUID()
+            let pendingChild = UUID()
+            fuzzer.dispatchEvent(fuzzer.events.ChildNodeConnected, data: reportingChild)
+            fuzzer.dispatchEvent(fuzzer.events.ChildNodeConnected, data: pendingChild)
+            stats.importData(
+                Fuzzilli_Protobuf_Statistics.with {
+                    $0.avgCorpusSize = corpusSize
+                    $0.totalExecs = 42
+                }, from: reportingChild)
+
+            // The pending child doesn't distort the averages.
+            var data = stats.compute()
+            #expect(data.numChildNodes == 1)
+            #expect(data.avgCorpusSize == corpusSize)
+            #expect(data.totalExecs == 42)
+
+            // Once it has sent its statistics, it is taken into account.
+            stats.importData(
+                Fuzzilli_Protobuf_Statistics.with { $0.avgCorpusSize = 0 }, from: pendingChild)
+            data = stats.compute()
+            #expect(data.numChildNodes == 2)
+            #expect(data.avgCorpusSize == corpusSize * 2 / 3)
+
+            // A pending child that disconnects again is simply dropped.
+            let disconnectingChild = UUID()
+            fuzzer.dispatchEvent(fuzzer.events.ChildNodeConnected, data: disconnectingChild)
+            fuzzer.dispatchEvent(fuzzer.events.ChildNodeDisconnected, data: disconnectingChild)
+            data = stats.compute()
+            #expect(data.numChildNodes == 2)
+            #expect(data.avgCorpusSize == corpusSize * 2 / 3)
+        }
+    }
+
     @Test func testCorpusImportUninterestingCounter() {
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
         let fuzzer = makeMockFuzzer(config: liveTestConfig)

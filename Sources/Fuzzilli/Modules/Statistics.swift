@@ -63,6 +63,10 @@ public class Statistics: Module {
     /// The IDs of nodes that are currently inactive.
     private var inactiveNodes = Set<UUID>()
 
+    /// The IDs of connected nodes that haven't sent any statistics yet. They are excluded from the
+    /// global statistics until they do, as their (empty) data would otherwise distort the averages.
+    private var pendingNodes = Set<UUID>()
+
     /// Number of programs received from other instances (including initial synchronization).
     private var instanceImportedProgramsReceived: UInt64 = 0
 
@@ -138,6 +142,8 @@ public class Statistics: Module {
 
         // Compute global statistics data
         var data = ownData
+        // Nodes that haven't sent any statistics yet aren't represented in the global statistics.
+        data.numChildNodes -= UInt64(pendingNodes.count)
 
         var contributorStatsByName = Dictionary(
             uniqueKeysWithValues: ownData.contributorStats.map { ($0.name, $0) }
@@ -175,7 +181,7 @@ public class Statistics: Module {
                 }
             }
 
-            if !inactiveNodes.contains(id) {
+            if !inactiveNodes.contains(id) && !pendingNodes.contains(id) {
                 // Add fields that only have meaning for active nodes
 
                 // For computing averages, we first multiply each average value with the number of nodes over which
@@ -312,10 +318,12 @@ public class Statistics: Module {
             self.ownData.numChildNodes += 1
             self.nodes[id] = Fuzzilli_Protobuf_Statistics()
             self.inactiveNodes.remove(id)
+            self.pendingNodes.insert(id)
         }
         fuzzer.registerEventListener(for: fuzzer.events.ChildNodeDisconnected) { id in
             self.ownData.numChildNodes -= 1
             self.inactiveNodes.insert(id)
+            self.pendingNodes.remove(id)
         }
         fuzzer.timers.scheduleTask(every: 30 * Seconds) {
             let now = Date()
@@ -414,6 +422,7 @@ public class Statistics: Module {
     /// Import statistics data from a child node.
     public func importData(_ stats: Fuzzilli_Protobuf_Statistics, from child: UUID) {
         nodes[child] = stats
+        pendingNodes.remove(child)
     }
 
     public static func machineReadableFuzzerStats(
