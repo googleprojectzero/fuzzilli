@@ -987,9 +987,6 @@ fuzzer.sync {
     // Initialize the fuzzer, and run startup tests
     fuzzer.initialize()
     timeout = fuzzer.runStartupTests(with: timeout)
-
-    // Start the main fuzzing job.
-    fuzzer.start(runUntil: exitCondition)
 }
 
 /// Adds the worker modules, registers the worker with the main instance and initializes it.
@@ -1030,42 +1027,51 @@ func makeWorkerConfig(instanceId: Int) -> Configuration {
         machineReadableStats: false)
 }
 
-for i in 1..<numJobs {
-    // Add thread worker instances if requested
-    let worker = makeFuzzer(with: makeWorkerConfig(instanceId: i))
-    workers.append(worker)
+/// Creates the worker instances and starts them after a delay.
+func startWorkers() {
+    for i in 1..<numJobs {
+        // Add thread worker instances if requested
+        let worker = makeFuzzer(with: makeWorkerConfig(instanceId: i))
+        workers.append(worker)
 
-    // Add each worker to the shutdownGroup. When they shutdown, they leave the group making it easy
-    // for the main process to wait for the "final" process-wide shutdown until all workers have
-    // shut down gracefully.
-    shutdownGroup.enter()
-    worker.sync {
-        worker.registerEventListener(for: worker.events.ShutdownComplete) { _ in
-            shutdownGroup.leave()
+        // Add each worker to the shutdownGroup. When they shutdown, they leave the group making it easy
+        // for the main process to wait for the "final" process-wide shutdown until all workers have
+        // shut down gracefully.
+        shutdownGroup.enter()
+        worker.sync {
+            worker.registerEventListener(for: worker.events.ShutdownComplete) { _ in
+                shutdownGroup.leave()
+            }
         }
-    }
 
-    // Wait some time between starting workers to reduce the load on the main instance.
-    // If we start the workers right away, they will all very quickly find new coverage
-    // and send lots of (probably redundant) programs to the main instance.
-    let minDelay: Double
-    let maxDelay: Double
-    if let delay = workerDelay {
-        minDelay = Double(delay) * Seconds
-        maxDelay = Double(delay) * Seconds
-    } else {
-        minDelay = 1 * Minutes
-        maxDelay = 10 * Minutes
-    }
-    let delay = Double.random(in: minDelay...maxDelay)
-    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-        worker.async {
-            guard !worker.isStopped else { return }
-            initializeWorker(worker)
-            worker.start()
+        // Wait some time between starting workers to reduce the load on the main instance.
+        // If we start the workers right away, they will all very quickly find new coverage
+        // and send lots of (probably redundant) programs to the main instance.
+        let minDelay: Double
+        let maxDelay: Double
+        if let delay = workerDelay {
+            minDelay = Double(delay) * Seconds
+            maxDelay = Double(delay) * Seconds
+        } else {
+            minDelay = 1 * Minutes
+            maxDelay = 10 * Minutes
+        }
+        let delay = Double.random(in: minDelay...maxDelay)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            worker.async {
+                guard !worker.isStopped else { return }
+                initializeWorker(worker)
+                worker.start()
+            }
         }
     }
 }
+
+// Start the main fuzzing job and the workers.
+fuzzer.sync {
+    fuzzer.start(runUntil: exitCondition)
+}
+startWorkers()
 
 // Start dispatching tasks on the main queue.
 RunLoop.main.run()
