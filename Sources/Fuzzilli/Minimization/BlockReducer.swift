@@ -196,7 +196,7 @@ struct BlockReducer: Reducer {
             }
         }
         fieldDefinitionInstructions.append(helper.code[definition.tail])
-        if bodyInstruction.isEmpty {
+        if !bodyInstruction.contains(where: { !$0.isNop }) {
             // No need to attempt any reordering. This early bail-out is required to ensure minimization terminates.
             // Otherwise, this reordering would be retried every time, and count as a successful modification of the code.
             return
@@ -211,7 +211,11 @@ struct BlockReducer: Reducer {
 
         // Code reordering can change the numbering of variables, so they need to be renumbered.
         // The resulting code may also not be valid since we're moving code out of a method definition.
-        helper.tryReplacements(replacements, renumberVariables: true, expectCodeToBeValid: false)
+        if helper.tryReplacements(replacements, renumberVariables: true, expectCodeToBeValid: false)
+        {
+            helper.tryNopping(
+                Array(definition.head..<(definition.head + fieldDefinitionInstructions.count)))
+        }
     }
 
     private func reduceFunctionInClassDefinition(_ function: Block, with helper: MinimizationHelper)
