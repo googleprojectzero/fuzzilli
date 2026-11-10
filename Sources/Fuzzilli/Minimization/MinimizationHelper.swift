@@ -53,6 +53,9 @@ class MinimizationHelper {
     /// Coverage of the last committed reduction. Nil if no reduction was committed (yet).
     private(set) var lastCommittedCoverage: CoverageBitmap? = nil
 
+    /// Tracks non-nop instruction index sets whose removal already failed on the current `code`.
+    private var failedNopSets = Set<Set<Int>>()
+
     init(
         for aspects: ProgramAspects, forCode code: Code, of fuzzer: Fuzzer,
         runningOnFuzzerQueue: Bool, parentExecTime: TimeInterval? = nil,
@@ -80,11 +83,13 @@ class MinimizationHelper {
         assert(!self.finalized)
         newCode.assertIsStaticallyValid()
         self.code = newCode
+        self.failedNopSets.removeAll()
     }
 
     func removeNops() {
         assert(!self.finalized)
         code.removeNops()
+        failedNopSets.removeAll()
     }
 
     /// Returns the final reduced code.
@@ -162,6 +167,7 @@ class MinimizationHelper {
             self.code = newCode
             parentExecTime = slowestRun
             didReduce = true
+            failedNopSets.removeAll()
             return true
         } else {
             failedReductions += 1
@@ -200,16 +206,6 @@ class MinimizationHelper {
 
         return testAndCommit(
             newCode, expectCodeToBeValid: expectCodeToBeValid, numExecutions: numExecutions)
-    }
-
-    /// Remove the instruction at the given index if it does not negatively influence the programs previous behaviour.
-    @discardableResult
-    func tryNopping(
-        instructionAt index: Int, numExecutions: Int = defaultNumExecutions
-    ) -> Bool {
-        return tryReplacing(
-            instructionAt: index, with: nop(for: code[index]), expectCodeToBeValid: false,
-            numExecutions: numExecutions)
     }
 
     /// Attempt multiple replacements at once.
@@ -261,17 +257,42 @@ class MinimizationHelper {
             expectCodeToBeValid: expectCodeToBeValid, numExecutions: numExecutions)
     }
 
+    /// Records that nopping `indices` together has already failed on the current `code`.
+    func markNopFailed(_ indices: [Int]) {
+        let nonNopIndices = Set(indices.filter { !code[$0].isNop })
+        if !nonNopIndices.isEmpty {
+            failedNopSets.insert(nonNopIndices)
+        }
+    }
+
+    /// Returns true if any output defined by `indices` is used by a non-nop instruction outside `indices`.
+    private func hasExternalOutputUses(of indices: Set<Int>) -> Bool {
+        var definedVars = VariableSet()
+        for idx in indices {
+            definedVars.formUnion(code[idx].allOutputs)
+        }
+        guard !definedVars.isEmpty, let minIdx = indices.min() else { return false }
+        return ((minIdx + 1)..<code.count).contains { j in
+            !code[j].isNop && !indices.contains(j) && !definedVars.isDisjoint(with: code[j].inputs)
+        }
+    }
+
     /// Attempt the removal of multiple instructions at once.
+    /// Returns false if nothing was changed, including when all candidates are already nops or the set was previously rejected.
     @discardableResult
     func tryNopping(
         _ indices: [Int], expectCodeToBeValid: Bool = false
     ) -> Bool {
-        var replacements = [(Int, Instruction)]()
-        for index in indices {
-            replacements.append((index, nop(for: code[index])))
+        let nonNopIndices = Set(indices.filter { !code[$0].isNop })
+        guard !nonNopIndices.isEmpty, failedNopSets.insert(nonNopIndices).inserted else {
+            return false
+        }
+        if !expectCodeToBeValid && hasExternalOutputUses(of: nonNopIndices) {
+            return false
         }
         return tryReplacements(
-            replacements, expectCodeToBeValid: expectCodeToBeValid)
+            nonNopIndices.map { ($0, nop(for: code[$0])) },
+            expectCodeToBeValid: expectCodeToBeValid)
     }
 
     /// Create a Nop instruction for replacing the given instruction with.

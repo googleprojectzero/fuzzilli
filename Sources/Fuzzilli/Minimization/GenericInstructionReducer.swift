@@ -20,7 +20,7 @@ struct GenericInstructionReducer: Reducer {
                 continue
             }
 
-            helper.tryNopping(instructionAt: instr.index)
+            helper.tryNopping([instr.index])
         }
     }
 }

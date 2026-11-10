@@ -120,10 +120,10 @@ import Testing
             #expect(helper.lastCommittedCoverage == nil)
 
             runner.edgeRuns = [[1, 2, 7]]
-            #expect(helper.tryNopping(instructionAt: 0))
+            #expect(helper.tryNopping([0]))
             // Edge 2 is missing, so this reduction is not committed.
             runner.edgeRuns = [[1, 8]]
-            #expect(!helper.tryNopping(instructionAt: 1))
+            #expect(!helper.tryNopping([1]))
 
             let edges = helper.lastCommittedCoverage.map {
                 evaluator.getAllDeterministicEdges(in: $0)
