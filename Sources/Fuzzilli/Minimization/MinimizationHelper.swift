@@ -218,6 +218,9 @@ class MinimizationHelper {
         _ replacements: [(Int, Instruction)], renumberVariables: Bool = false,
         expectCodeToBeValid: Bool = true, numExecutions: Int = defaultNumExecutions
     ) -> Bool {
+        assert(
+            Set(replacements.map { $0.0 }).count == replacements.count,
+            "duplicate replacement indices")
         var newCode = self.code
 
         for (index, newInstr) in replacements {

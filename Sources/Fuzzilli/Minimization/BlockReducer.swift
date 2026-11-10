@@ -105,10 +105,6 @@ struct BlockReducer: Reducer {
                     return
                 }
 
-            case .wasmBeginCatchAll,
-                .wasmBeginCatch:
-                // These instructions are handled in the reduceWasmTryCatch.
-                break
             case .wasmBeginTry:
                 reduceWasmTryCatch(group, with: helper)
 
@@ -424,49 +420,23 @@ struct BlockReducer: Reducer {
     private func reduceWasmTryCatch(_ group: BlockGroup, with helper: MinimizationHelper) {
         assert(helper.code[group.head].op is WasmBeginTry)
 
-        var candidates = group.instructionIndices
-
-        if helper.tryNopping(candidates) {
+        if helper.tryNopping(group.instructionIndices) {
             // (1)
             // We successfully removed the whole try-catch statement.
             return
         }
 
-        // Add the head and tail of the block. These are the
-        // WasmBeginTry/WasmEndTry instructions.
-        candidates = [group.head, group.tail]
-
-        var blocks: [Block] = []
-
-        // Start iterating over the try catch statements.
-        var instructionIdx = group.head + 1
-        while instructionIdx < group.tail {
-            if helper.code[instructionIdx].op is WasmBeginCatch
-                || helper.code[instructionIdx].op is WasmBeginCatchAll
-            {
-                let block = helper.code.block(startingAt: instructionIdx)
-                blocks.append(block)
-                candidates.append(block.head)
-                candidates.append(block.tail)
-                instructionIdx = block.tail
-            } else {
-                instructionIdx += 1
-            }
-        }
-
-        if helper.tryNopping(candidates) {
+        if helper.tryNopping(group.blockInstructionIndices) {
             // (2)
             // We successfully removed the try catch while keeping the
             // content inside.
             return
         }
 
-        for block in blocks {
+        for block in group.blocks.dropFirst() {
             // (3) Try to remove the catches here.
-            // Skip the last instruction as it is both the .endBlock as well as the .startBlock for
-            // the next catch (or the overall end of the try).
-            let allInstructions = block.allInstructions
-            helper.tryNopping(Array(allInstructions[0..<allInstructions.endIndex - 1]))
+            // Exclude block.tail, which is also the head of the next catch (or WasmEndTry).
+            helper.tryNopping(Array(block.head..<block.tail))
         }
     }
 
