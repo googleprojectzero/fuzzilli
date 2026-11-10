@@ -4420,4 +4420,29 @@ struct MinimizerTests {
             )
         }
     }
+
+    @Test func testMinimizationPostProcessorExecutions() {
+        let fuzzer = makeMockFuzzer()
+
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            b.loadInt(42)
+            let noChangeHelper = MinimizationHelper(
+                for: ProgramAspects(outcome: .succeeded), forCode: b.finalize().code, of: fuzzer,
+                runningOnFuzzerQueue: true)
+            #expect(!MinimizationPostProcessor().process(with: noChangeHelper))
+            #expect(noChangeHelper.totalReductions == 0)
+
+            b.loadInt(42)
+            b.buildPlainFunction(with: .parameters(n: 0)) { _ in }
+            b.createArray(with: [])
+            let helper = MinimizationHelper(
+                for: ProgramAspects(outcome: .succeeded), forCode: b.finalize().code, of: fuzzer,
+                runningOnFuzzerQueue: true)
+            #expect(MinimizationPostProcessor().process(with: helper))
+            // Expect one execution per candidate change (adding a return statement and populating
+            // the empty array), without an extra execution for inserting placeholder Nops.
+            #expect(helper.totalReductions == 2)
+        }
+    }
 }

@@ -75,6 +75,13 @@ class MinimizationHelper {
         }
     }
 
+    /// Updates the current code without executing the target.
+    func setCode(_ newCode: Code) {
+        assert(!self.finalized)
+        newCode.assertIsStaticallyValid()
+        self.code = newCode
+    }
+
     func removeNops() {
         assert(!self.finalized)
         code.removeNops()

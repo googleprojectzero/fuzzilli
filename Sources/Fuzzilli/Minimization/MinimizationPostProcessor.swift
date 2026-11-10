@@ -129,9 +129,11 @@ struct MinimizationPostProcessor {
             assert(codeWithNops.count >= helper.code.count)
         }
 
-        if !helper.testAndCommit(codeWithNops) {
+        guard !changes.isEmpty else {
             return false
         }
+
+        helper.setCode(codeWithNops)
 
         // Step 2: Try to apply each change from step 1 on its own and verify that the change doesn't alter the program's behaviour.
         for change in changes {
