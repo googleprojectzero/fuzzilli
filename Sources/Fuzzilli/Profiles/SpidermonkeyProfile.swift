@@ -28,7 +28,7 @@ private let GcGenerator = CodeGenerator("GcGenerator") { b in
 }
 
 let spidermonkeyProfile = Profile(
-    processArgs: { randomize in
+    processArgs: { randomize, isWasmEnabled in
         var args = [
             "--baseline-warmup-threshold=10",
             "--ion-warmup-threshold=100",

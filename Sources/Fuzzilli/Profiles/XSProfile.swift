@@ -314,7 +314,7 @@ let jsModuleSourceConstructor = ObjectGroup(
 )
 
 let xsProfile = Profile(
-    processArgs: { randomize in
+    processArgs: { randomize, isWasmEnabled in
         ["-f"]
     },
 

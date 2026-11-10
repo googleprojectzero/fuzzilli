@@ -562,7 +562,7 @@ func loadCorpus(from dirPath: String) -> [Program] {
 // argument randomization is enabled. This way, their corpora are "compatible" and crashes that require
 // (a subset of) the randomly chosen flags can be reproduced on the main instance.
 let jsShellArguments =
-    profile.processArgs(argumentRandomization)
+    profile.processArgs(argumentRandomization, enableWasm)
     + additionalArguments.split(separator: ",").map(String.init)
 logger.info("Using the following arguments for the target engine: \(jsShellArguments)")
 

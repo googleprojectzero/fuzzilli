@@ -13,7 +13,7 @@
 // limitations under the License.
 
 let v8DumplingProfile = Profile(
-    processArgs: { randomize in
+    processArgs: { randomize, isWasmEnabled in
         var args = [
             "--expose-gc",
             "--expose-externalize-string",

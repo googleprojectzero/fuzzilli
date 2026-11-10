@@ -13,7 +13,7 @@
 // limitations under the License.
 
 let serenityProfile = Profile(
-    processArgs: { randomize in return [""] },
+    processArgs: { randomize, isWasmEnabled in return [""] },
     processArgsReference: nil,
     processEnv: [
         "UBSAN_OPTIONS": "handle_segv=0 handle_abrt=0",

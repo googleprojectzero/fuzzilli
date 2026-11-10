@@ -13,8 +13,8 @@
 // limitations under the License.
 
 public let v8Profile = Profile(
-    processArgs: { randomize in
-        v8ProcessArgs(randomize: randomize, forSandbox: false)
+    processArgs: { randomize, isWasmEnabled in
+        v8ProcessArgs(randomize: randomize, isWasmEnabled: isWasmEnabled, forSandbox: false)
     },
 
     processArgsReference: nil,

@@ -24,7 +24,7 @@ private let ForceQV4JITGenerator = CodeGenerator(
 }
 
 let qtjsProfile = Profile(
-    processArgs: { randomize in
+    processArgs: { randomize, isWasmEnabled in
         ["-reprl"]
     },
 

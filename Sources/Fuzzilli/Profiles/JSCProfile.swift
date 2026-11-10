@@ -39,7 +39,7 @@ private let GcGenerator = CodeGenerator("GcGenerator") { b in
 }
 
 let jscProfile = Profile(
-    processArgs: { randomize in
+    processArgs: { randomize, isWasmEnabled in
         var args = [
             "--validateOptions=true",
             // No need to call functions thousands of times before they are JIT compiled

@@ -1344,7 +1344,7 @@ public let TurbofanTierUpNotEagerInlinedCallFuzzer = turbofanTierUpCallFuzzer(
 // Configure V8 invocation arguments. `forSandbox` is used by the V8SandboxProfile. As the sandbox
 // fuzzer does not crash on regular assertions, most validation flags do not make sense in that
 // configuraiton.
-public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
+public func v8ProcessArgs(randomize: Bool, isWasmEnabled: Bool, forSandbox: Bool) -> [String] {
     var args = [
         "--expose-gc",
         "--expose-externalize-string",
@@ -1514,6 +1514,15 @@ public func v8ProcessArgs(randomize: Bool, forSandbox: Bool) -> [String] {
         if probability(0.1) {
             args.append("--maglev-disable-builtin-reducers")
         }
+    }
+
+    // Optimized code coverage is only produced by Maglev and Turbolev (not by TurboFan).
+    let maglevEnabled = !args.contains("--no-maglev")
+    let turbolevEnabled = args.contains("--turbolev") && !args.contains("--no-turbofan")
+    if !forSandbox && (maglevEnabled || turbolevEnabled)
+        && probability(isWasmEnabled ? 0.1 : 0.2)
+    {
+        args.append("--fuzzilli-enable-optimized-code-coverage")
     }
 
     if probability(0.1) {

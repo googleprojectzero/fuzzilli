@@ -22,7 +22,7 @@ private let HoleLeakGenerator = CodeGenerator(
 }
 
 let v8HoleFuzzingProfile = Profile(
-    processArgs: { randomize in
+    processArgs: { randomize, isWasmEnabled in
         var args = [
             "--expose-gc",
             "--expose-externalize-string",

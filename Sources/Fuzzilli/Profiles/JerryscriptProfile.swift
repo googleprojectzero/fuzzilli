@@ -13,7 +13,7 @@
 // limitations under the License.
 
 let jerryscriptProfile = Profile(
-    processArgs: { randomize in
+    processArgs: { randomize, isWasmEnabled in
         ["--reprl-fuzzilli"]
     },
 

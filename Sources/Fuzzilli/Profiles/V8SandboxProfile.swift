@@ -153,8 +153,8 @@ let BytecodeFuzzer = ProgramTemplate("BytecodeFuzzer") { b in
 }
 
 let v8SandboxProfile = Profile(
-    processArgs: { randomize in
-        v8ProcessArgs(randomize: randomize, forSandbox: true)
+    processArgs: { randomize, isWasmEnabled in
+        v8ProcessArgs(randomize: randomize, isWasmEnabled: isWasmEnabled, forSandbox: true)
     },
 
     processArgsReference: nil,

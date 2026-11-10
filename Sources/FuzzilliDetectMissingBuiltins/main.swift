@@ -56,7 +56,7 @@ guard let profileName = args["--profile"], let profile = profiles[profileName] e
     )
 }
 
-let jsshellArguments = args.has("--no-args") ? [] : profile.processArgs(false)
+let jsshellArguments = args.has("--no-args") ? [] : profile.processArgs(false, false)
 let runner = JavaScriptExecutor(withExecutablePath: args[0], arguments: jsshellArguments, env: [])
 let jsProg = """
     (function() {

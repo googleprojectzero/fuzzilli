@@ -13,7 +13,7 @@
 // limitations under the License.
 
 public struct Profile {
-    public let processArgs: (_ randomize: Bool) -> [String]
+    public let processArgs: (_ randomize: Bool, _ isWasmEnabled: Bool) -> [String]
     // if not nil, then this is profile for differential fuzzing
     public let processArgsReference: [String]?
     public let processEnv: [String: String]

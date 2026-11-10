@@ -13,7 +13,7 @@
 // limitations under the License.
 
 let njsProfile = Profile(
-    processArgs: { randomize in
+    processArgs: { randomize, isWasmEnabled in
         ["fuzz"]
     },
 
