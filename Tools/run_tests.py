@@ -34,16 +34,25 @@ def run_tests_and_parse():
         print(f"Running command: {' '.join(cmd)}\n", flush=True)
 
         try:
-            subprocess.run(cmd)
+            result = subprocess.run(cmd)
         except KeyboardInterrupt:
             print("\nTest run interrupted by user.")
             return 130
 
+        if not os.path.exists(temp_path):
+            print(f"\nError: Event stream file was not created (swift test exited with code {result.returncode}).")
+            return 1
+
         tests_metadata = {}
         actual_failures = set()
-        run_tests = set()
+        started_tests = set()
+        ended_tests = set()
+        run_ended = False
 
-        for line in open(temp_path, "r").read().strip().split("\n"):
+        for line in open(temp_path, "r"):
+            line = line.strip()
+            if not line:
+                continue
             data = json.loads(line)
             kind = data.get("kind")
             payload = data.get("payload", {})
@@ -56,8 +65,12 @@ def run_tests_and_parse():
                 event_kind = payload.get("kind")
                 test_id = payload.get("testID")
 
-                if event_kind in ("testStarted", "testEnded") and test_id:
-                    run_tests.add(test_id)
+                if event_kind == "testStarted" and test_id:
+                    started_tests.add(test_id)
+                elif event_kind == "testEnded" and test_id:
+                    ended_tests.add(test_id)
+                elif event_kind == "runEnded":
+                    run_ended = True
                 if event_kind == "issueRecorded":
                     issue = payload.get("issue", {})
                     if issue.get("isFailure", False) and test_id:
@@ -75,23 +88,29 @@ def run_tests_and_parse():
         return 1
 
     # Map test IDs to their simple names.
-    run_names = {tests_metadata[tid] for tid in run_tests if tid in tests_metadata}
+    run_names = {tests_metadata[tid] for tid in started_tests if tid in tests_metadata}
     actual_failing_names = {tests_metadata[tid] for tid in actual_failures if tid in tests_metadata}
+    crashed_names = {tests_metadata[tid] for tid in (started_tests - ended_tests) if tid in tests_metadata}
 
     # Calculate and print results.
     unexpected_failures = actual_failing_names - expected_failures
     # Only include tests that were actually run, so that `--filter=SomeSubSet` doesn't fail because
     # of tests being skipped that are expected to fail.
     expected_failures = expected_failures & run_names
-    unexpected_passes = expected_failures - actual_failing_names
+    unexpected_passes = expected_failures - actual_failing_names - crashed_names
 
-    if not unexpected_failures and not unexpected_passes:
+    aborted = not run_ended or (result.returncode != 0 and not actual_failing_names)
+
+    if not unexpected_failures and not unexpected_passes and not crashed_names and not aborted:
         print(f"\nAll run tests matched expectations ({len(expected_failures)} expected failure(s))")
         return 0
 
-    for (title, unexpected) in ("Failures", unexpected_failures), ("Passes", unexpected_passes):
+    for (title, unexpected) in ("Crashes", crashed_names), ("Failures", unexpected_failures), ("Passes", unexpected_passes):
         if unexpected:
             print(f"\nUnexpected {title}:\n{'\n'.join(map(lambda name: f'  • {name}', sorted(unexpected)))}")
+
+    if aborted:
+        print(f"\nError: Test runner exited abnormally with code {result.returncode}.")
 
     return 1
 
