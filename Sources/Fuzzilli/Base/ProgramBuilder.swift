@@ -2391,6 +2391,7 @@ public class ProgramBuilder {
 
         assert(!valueGenerators.isEmpty)
         let previousNumberOfVisibleVariables = numberOfVisibleVariables
+        let previousNumberOfVisibleJsVariables = numberOfVisibleJsVariables
         var totalNumberOfGeneratedInstructions = 0
 
         // ValueGenerators can be recursive.
@@ -2402,9 +2403,10 @@ public class ProgramBuilder {
         let currentBudget = 2 * n
 
         // ValueGenerators in .javascript include WasmTypeGroupWithAllTypesGenerator, which only
-        // produces .wasmTypeDef() variables. Keep generating until at least one JS variable exists.
+        // produces .wasmTypeDef() variables. Keep generating until at least n JS variables exist.
         while numberOfVisibleVariables - previousNumberOfVisibleVariables < n
-            || (context.contains(.javascript) && !hasVisibleJsVariables)
+            || (context.contains(.javascript)
+                && numberOfVisibleJsVariables - previousNumberOfVisibleJsVariables < n)
         {
 
             let generator = valueGenerators.randomElement()!
@@ -2446,7 +2448,7 @@ public class ProgramBuilder {
 
         trace("Start of prefix code")
         buildValues(numValuesToBuild)
-        assert(numberOfVisibleVariables >= numValuesToBuild)
+        assert(numberOfVisibleJsVariables >= numValuesToBuild)
         trace("End of prefix code. \(numberOfVisibleVariables) variables are now visible")
     }
 

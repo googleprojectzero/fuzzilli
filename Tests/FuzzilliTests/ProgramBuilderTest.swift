@@ -139,7 +139,26 @@ struct ProgramBuilderTests {
 
             b.buildPrefix()
 
-            #expect(b.numberOfVisibleVariables >= 5)
+            #expect(b.numberOfVisibleJsVariables >= 10)
+            _ = b.finalize()
+
+            // Even if WasmTypeGroupWithAllTypesGenerator is selected frequently during prefix
+            // building, buildPrefix must still produce the requested number of JS variables.
+            let wasmTypeGroupGen = fuzzer.codeGenerators.first {
+                $0.name == "WasmTypeGroupWithAllTypesGenerator"
+            }!
+            let intGen = fuzzer.codeGenerators.first {
+                $0.name == "IntegerGenerator"
+            }!
+            let typeDefGenerators = fuzzer.codeGenerators.filter {
+                $0.requiredContext.contains(.wasmTypeGroup)
+            }
+            fuzzer.setCodeGenerators(
+                WeightedList<CodeGenerator>(
+                    [(wasmTypeGroupGen, 10), (intGen, 1)] + typeDefGenerators.map { ($0, 1) }
+                ))
+            b.buildPrefix(n: 5)
+            #expect(b.numberOfVisibleJsVariables >= 5)
         }
     }
 
