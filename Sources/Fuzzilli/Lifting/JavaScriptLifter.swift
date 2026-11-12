@@ -194,6 +194,14 @@ public class JavaScriptLifter: Lifter {
             w.emitComment(header)
         }
 
+        let hasPrefixScript =
+            !prefix.isEmpty || needToSupportExploration || needToSupportProbing
+            || needToSupportFixup || needToSupportWasmProxy
+        if program.code.isBundle && hasPrefixScript {
+            // Put the profile prefix and the prefixCodes below into a separate bundle script at the start.
+            w.emitBundleScriptStart()
+        }
+
         w.emitBlock(prefix)
 
         if needToSupportExploration {
@@ -1681,7 +1689,7 @@ public class JavaScriptLifter: Lifter {
                 w.emit("}")
 
             case .beginBundleScript:
-                w.emitRaw("// JS_BUNDLE_SCRIPT")
+                w.emitBundleScriptStart()
 
             case .endBundleScript:
                 break
@@ -2195,6 +2203,11 @@ public class JavaScriptLifter: Lifter {
         }
 
         w.emitPendingExpressions()
+
+        if program.code.isBundle && (needToSupportProbing || !suffix.isEmpty) {
+            // Put the probing suffixCode and the profile suffix into a separate bundle script at the end.
+            w.emitBundleScriptStart()
+        }
 
         if needToSupportProbing {
             w.emitBlock(JavaScriptProbeLifting.suffixCode)
@@ -2921,6 +2934,10 @@ public class JavaScriptLifter: Lifter {
         mutating func emitRaw(_ line: String) {
             emitPendingExpressions()
             writer.emit(line)
+        }
+
+        mutating func emitBundleScriptStart() {
+            emitRaw("// JS_BUNDLE_SCRIPT")
         }
 
         /// Emit a (potentially multi-line) comment.

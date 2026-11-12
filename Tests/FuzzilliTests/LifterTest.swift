@@ -5826,6 +5826,104 @@ struct LifterTests {
         }
     }
 
+    // Returns the given prefix code the way the lifter emits it (e.g. without empty lines and
+    // comments). The otherwise empty writer is only used to process the prefix code; the tests
+    // below replace it in the lifted output with a placeholder.
+    private func liftedPrefixCode(_ code: String) -> String {
+        var writer = ScriptWriter(stripComments: true)
+        writer.emitBlock(code)
+        return writer.code
+    }
+
+    // The wasm proxy prefix is the smallest lifter boilerplate; like the runtime-assisted mutator
+    // prefixes, it must be put into a separate bundle script.
+    @Test func testBundleLiftingWithLifterBoilerplate() {
+        let config = Configuration(logLevel: .error, generateBundle: true)
+        let fuzzer = makeMockFuzzer(config: config)
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            b.buildBundleModuleEntryPoint {
+                b.rawWasmModule(bytes: [0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00])
+            }
+
+            let program = b.finalize()
+            let prefixCode = liftedPrefixCode(JavaScriptLifter.wasmProxyPrefix)
+            let actual = fuzzer.lifter.lift(program).replacingOccurrences(
+                of: prefixCode, with: "WASM_PROXY_PREFIX\n")
+
+            let expected = """
+                // JS_BUNDLE_SCRIPT
+                WASM_PROXY_PREFIX
+                // JS_BUNDLE_MODULE_ENTRYPOINT
+                const v0 = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array([
+                    0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00,
+                ]), { builtins: ['js-string'] }), fuzzing_imports);
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testBundleLiftingWithProbe() {
+        let config = Configuration(logLevel: .error, generateBundle: true)
+        let fuzzer = makeMockFuzzer(config: config)
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            b.buildBundleModuleEntryPoint {
+                let v = b.loadInt(42)
+                b.probe(v, id: "v0")
+            }
+
+            let program = b.finalize()
+            let prefixCode = liftedPrefixCode(JavaScriptProbeLifting.prefixCode)
+            let actual = fuzzer.lifter.lift(program).replacingOccurrences(
+                of: prefixCode, with: "PROBE_PREFIX\n")
+
+            let expected = """
+                // JS_BUNDLE_SCRIPT
+                PROBE_PREFIX
+                // JS_BUNDLE_MODULE_ENTRYPOINT
+                Probe.probe("v0", 42);
+                // JS_BUNDLE_SCRIPT
+                Probe.reportResults();
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
+    @Test func testBundleLiftingWithNonEmptyPrefixes() {
+        let config = Configuration(logLevel: .error, generateBundle: true)
+        let fuzzer = makeMockFuzzer(config: config)
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            b.buildBundleModuleEntryPoint {
+                let Object = b.createNamedVariable(forBuiltin: "Object")
+                b.construct(Object)
+            }
+
+            let program = b.finalize()
+            let lifter = JavaScriptLifter(
+                prefix: "function prefixHelper() {}", suffix: "prefixHelper();",
+                ecmaVersion: .es6, environment: fuzzer.environment)
+            let actual = lifter.lift(program)
+
+            let expected = """
+                // JS_BUNDLE_SCRIPT
+                function prefixHelper() {}
+                // JS_BUNDLE_MODULE_ENTRYPOINT
+                new Object();
+                // JS_BUNDLE_SCRIPT
+                prefixHelper();
+
+                """
+
+            #expect(actual == expected)
+        }
+    }
+
     @Test func testForAwaitOfLoopLifting() {
         let fuzzer = makeMockFuzzer(
             config: Configuration(logLevel: .error),
