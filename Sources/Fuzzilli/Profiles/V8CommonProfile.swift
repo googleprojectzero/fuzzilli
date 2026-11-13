@@ -1539,8 +1539,8 @@ public func v8ProcessArgs(randomize: Bool, isWasmEnabled: Bool, forSandbox: Bool
     }
 
     if !args.contains("--no-maglev") {
-        if probability(0.5) {
-            args.append("--maglev-untagged-phis")
+        if probability(0.1) {
+            args.append("--no-maglev-untagged-phis")
         }
         if probability(0.1) {
             args.append("--no-maglev-loop-peeling")
@@ -1556,9 +1556,15 @@ public func v8ProcessArgs(randomize: Bool, isWasmEnabled: Bool, forSandbox: Bool
         }
         if probability(0.2) {
             args.append("--maglev-non-eager-inlining")
+            if probability(0.35) {
+                args.append("--max-maglev-eager-inlined-bytecode-size=0")
+            }
             if probability(0.4) {  // TODO: @tacet decrease this probability to max 0.2
                 args.append("--max-maglev-inlined-bytecode-size-small=0")
             }
+        }
+        if !args.contains("--no-turbofan") && probability(0.1) {
+            args.append("--always-osr-from-maglev")
         }
     }
 
@@ -1572,6 +1578,35 @@ public func v8ProcessArgs(randomize: Bool, isWasmEnabled: Bool, forSandbox: Bool
         }
         if probability(0.1) {
             args.append("--maglev-disable-builtin-reducers")
+        }
+        if probability(0.1) {
+            args.append("--no-turbolev-untagged-phis")
+        }
+        if probability(0.1) {
+            args.append("--no-turbolev-truncated-int32-phis")
+        }
+        if probability(0.1) {
+            args.append("--no-turbolev-non-eager-inlining")
+        }
+        if probability(0.1) {
+            args.append("--no-turbolev-non-eager-loop-peeling")
+        }
+        if probability(0.1) {
+            args.append("--no-turbolev-eager-loop-peeling-osr")
+        }
+        if probability(0.1) {
+            let maxInlinedSize = Int.random(in: 0...920)
+            args.append("--max-inlined-bytecode-size=\(maxInlinedSize)")
+            args.append(
+                "--max-inlined-bytecode-size-cumulative=\(maxInlinedSize + Int.random(in: 0...920))"
+            )
+        }
+        if !args.contains("--max-inlined-bytecode-size-small=0") && probability(0.1) {
+            args.append("--max-inlined-bytecode-size-small=\(Int.random(in: 0...54))")
+        }
+        if probability(0.1) {
+            args.append(
+                "--max-inlined-bytecode-size-small-with-heapnum-in-out=\(Int.random(in: 0...150))")
         }
     }
 
@@ -1673,6 +1708,12 @@ public func v8ProcessArgs(randomize: Bool, isWasmEnabled: Bool, forSandbox: Bool
             // TODO(tacet): update the Turbolev conditions to !args.contains("--no-turbolev") after Turbolev trial
             args.append("--maglev-assert-types")
         }
+        if args.contains("--turbolev") && probability(0.2) {
+            args.append("--maglev-range-verification")
+        }
+        if probability(0.2) {
+            args.append("--verify-turboshaft")
+        }
         if probability(0.2) {
             args.append("--turboshaft-verify-load-elimination")
         }
@@ -1704,9 +1745,28 @@ public func v8ProcessArgs(randomize: Bool, isWasmEnabled: Bool, forSandbox: Bool
     }
     if probability(0.1) {
         args.append("--stress-ic")
+    } else if probability(0.1) {
+        args.append("--no-use-ic")
+    }
+    if probability(0.1) {
+        args.append("--invocation-count-for-feedback-allocation=\(Int.random(in: 0...8))")
+    }
+    if probability(0.1) {
+        args.append("--no-additive-safe-int-feedback")
     }
     if probability(0.1) {
         args.append("--optimize-on-next-call-optimizes-to-maglev")
+    }
+    if !args.contains("--no-turbofan") && probability(0.2) {
+        args.append("--optimize-maglev-optimizes-to-turbofan")
+    }
+    if !args.contains("--no-turbofan") && !args.contains("--assert-types") {
+        if probability(0.25) {
+            args.append("--stress-concurrent-inlining")
+            if probability(0.2) {
+                args.append("--stress-concurrent-inlining-attach-code")
+            }
+        }
     }
 
     //
@@ -1803,7 +1863,8 @@ public func v8ProcessArgs(randomize: Bool, isWasmEnabled: Bool, forSandbox: Bool
         args.append(
             chooseUniform(from: [
                 "--no-enable-sse3", "--no-enable-ssse3", "--no-enable-sse4-1", "--no-enable-sse4-2",
-                "--no-enable-avx", "--no-enable-avx2",
+                "--no-enable-avx", "--no-enable-avx2", "--no-enable-sahf", "--no-enable-fma3",
+                "--no-enable-bmi1", "--no-enable-bmi2", "--no-enable-lzcnt", "--no-enable-popcnt",
             ]))
 
         chooseBooleanFlag("turboshaft-loop-unrolling")
