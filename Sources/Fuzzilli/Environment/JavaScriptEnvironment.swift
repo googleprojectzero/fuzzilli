@@ -548,6 +548,7 @@ public class JavaScriptEnvironment: ComponentBase {
         registerEnumeration(ObjectGroup.jsTemporalDirectionParam)
         registerEnumeration(ObjectGroup.jsIntlRelativeTimeFormatUnitEnum)
         registerEnumeration(ObjectGroup.jsIntlSupportedValuesEnum)
+        registerEnumeration(ObjectGroup.jsIteratorWindowsUndersizedEnum)
         registerEnumeration(OptionsBag.jsTemporalUnitEnum)
         registerEnumeration(OptionsBag.jsTemporalRoundingModeEnum)
         registerEnumeration(OptionsBag.jsTemporalShowCalendarEnum)
@@ -1457,7 +1458,8 @@ extension ILType {
             ofGroup: "Iterator", withProperties: ["value", "done"],
             withMethods: [
                 "next", "return", "throw", "map", "filter", "take", "drop", "flatMap", "reduce",
-                "toArray", "forEach", "some", "every", "find", "join", "includes",
+                "toArray", "forEach", "some", "every", "find", "join", "includes", "chunks",
+                "windows",
             ])
 
     /// Type of the JavaScript Iterator constructor builtin.
@@ -2375,6 +2377,10 @@ extension ObjectGroup {
         methods: [:]
     )
 
+    static let jsIteratorWindowsUndersizedEnum = ILType.enumeration(
+        ofName: "IteratorWindowsUndersized",
+        withValues: ["only-full", "allow-partial"])
+
     public static let jsIterator = ObjectGroup(
         name: "Iterator",
         instanceType: .jsIterator,
@@ -2399,6 +2405,8 @@ extension ObjectGroup {
             "find": [.function()] => .jsAnything,
             "join": [.opt(.string)] => .jsString,
             "includes": [.jsAnything, .opt(.integer)] => .boolean,
+            "chunks": [.integer] => .jsIterator,
+            "windows": [.integer, .opt(jsIteratorWindowsUndersizedEnum)] => .jsIterator,
         ]
     )
 

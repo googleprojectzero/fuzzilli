@@ -2248,6 +2248,43 @@ public let CodeGenerators: [CodeGenerator] = [
         b.callMethod("zipKeyed", on: iteratorConstructor, withArgs: arguments)
     },
 
+    CodeGenerator("IteratorChunkingGenerator", inputs: .one) { b, val in
+        // Pick (size, count) to cover V8's fast path (size == 1), double-capacity buffer
+        // shift/reallocation (size <= 10, count <= 40), circular buffer wrap-around
+        // (size == 1025, count == 1030), and undersized/clamped sizes (count < size).
+        let size: Int64 = chooseUniform(from: [1, Int64.random(in: 2...10), 1025, 0xffff_ffff])
+        let count =
+            size == 1025
+            ? chooseUniform(from: [0, 42, 1030])
+            : Int.random(in: 0...40)
+
+        let genFn = b.buildGeneratorFunction(with: .parameters(n: 0)) { _ in
+            let yieldSmi = Bool.random()
+            b.buildRepeatLoop(n: count) { i in
+                b.yield(yieldSmi ? i : val)
+            }
+        }
+        let iteratorConstructor = b.createNamedVariable(forBuiltin: "Iterator")
+        let iter = b.callMethod("from", on: iteratorConstructor, withArgs: [b.callFunction(genFn)])
+
+        let sizeVar = b.loadInt(size)
+        let helper =
+            Bool.random()
+            ? b.callMethod("chunks", on: iter, withArgs: [sizeVar])
+            : b.callMethod(
+                "windows", on: iter,
+                withArgs: Bool.random()
+                    ? [sizeVar]
+                    : [sizeVar, b.loadEnum(ObjectGroup.jsIteratorWindowsUndersizedEnum)])
+
+        if probability(0.8) {
+            b.callMethod("toArray", on: helper)
+        } else {
+            b.callMethod("next", on: helper)
+            b.callMethod("return", on: helper)
+        }
+    },
+
     CodeGenerator(
         "InstanceOfGenerator", inputs: .preferred(.jsAnything, .constructor())
     ) { b, val, cls in
