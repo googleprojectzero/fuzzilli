@@ -567,7 +567,6 @@ let v8SandboxProfile = Profile(
         (WasmStructGenerator, 5),
         (WasmArrayGenerator, 5),
         (SharedObjectGenerator, 5),
-        (PretenureAllocationSiteGenerator, 5),
         (HoleNanGenerator, 5),
         (UndefinedNanGenerator, 5),
         (StringShapeGenerator, 5),

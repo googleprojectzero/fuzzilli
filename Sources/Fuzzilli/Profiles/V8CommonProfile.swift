@@ -346,21 +346,6 @@ public let SharedObjectGenerator = CodeGenerator("SharedObjectGenerator", inputs
     b.eval("%ShareObject(%@)", with: [v], hasOutput: true)
 }
 
-public let PretenureAllocationSiteGenerator = CodeGenerator(
-    "PretenureAllocationSiteGenerator", inputs: .required(.object())
-) { b, obj in
-    b.eval("%PretenureAllocationSite(%@)", with: [obj])
-    // %PretenureAllocationSite only queues the allocation site for pretenuring;
-    // the actual pretenuring transition happens when feedback is processed
-    // during a minor GC.
-    if probability(0.8) {
-        let gc = b.createNamedVariable(forBuiltin: "gc")
-        let type = b.loadString("minor")
-        let options = b.createObject(with: ["type": type])
-        b.callFunction(gc, withArgs: [options])
-    }
-}
-
 public let ArrayBufferDetachGenerator = CodeGenerator(
     "ArrayBufferDetachGenerator", inputs: .required(.jsArrayBuffer)
 ) { b, buffer in
@@ -1451,7 +1436,7 @@ public func v8ProcessArgs(randomize: Bool, isWasmEnabled: Bool, forSandbox: Bool
         args.append("--no-flush-bytecode")
     }
 
-    if probability(0.1) {
+    if !args.contains("--maglev-as-top-tier") && probability(0.1) {
         args.append("--no-maglev")
     }
 
@@ -1533,9 +1518,7 @@ public func v8ProcessArgs(randomize: Bool, isWasmEnabled: Bool, forSandbox: Bool
 
     // Enable the shared heap.
     if probability(0.25) {
-        // Either use the shared-string-table (needed for JS shared structs) or only allow
-        // shared strings (needed for shared Wasm objects).
-        args.append(Bool.random() ? "--shared-string-table" : "--shared-strings")
+        args.append("--shared-strings")
     }
 
     if !args.contains("--no-maglev") {
@@ -1568,7 +1551,7 @@ public func v8ProcessArgs(randomize: Bool, isWasmEnabled: Bool, forSandbox: Bool
         }
     }
 
-    if probability(0.7) {
+    if !args.contains("--no-turbofan") && probability(0.7) {
         args.append("--turbolev")
         if probability(0.82) {
             args.append("--turbolev-future")
@@ -1612,15 +1595,11 @@ public func v8ProcessArgs(randomize: Bool, isWasmEnabled: Bool, forSandbox: Bool
 
     // Optimized code coverage is only produced by Maglev and Turbolev (not by TurboFan).
     let maglevEnabled = !args.contains("--no-maglev")
-    let turbolevEnabled = args.contains("--turbolev") && !args.contains("--no-turbofan")
+    let turbolevEnabled = args.contains("--turbolev")
     if !forSandbox && (maglevEnabled || turbolevEnabled)
         && probability(isWasmEnabled ? 0.1 : 0.2)
     {
         args.append("--fuzzilli-enable-optimized-code-coverage")
-    }
-
-    if probability(0.1) {
-        args.append("--harmony-struct")
     }
 
     if probability(0.1) {
@@ -1821,8 +1800,6 @@ public func v8ProcessArgs(randomize: Bool, isWasmEnabled: Bool, forSandbox: Bool
         if probability(0.5) { args.append("--lazy-new-space-shrinking") }
         if probability(0.5) { args.append("--stress-wasm-memory-moving") }
         if probability(0.5) { args.append("--stress-background-compile") }
-        if probability(0.5) { args.append("--parallel-compile-tasks-for-lazy") }
-        if probability(0.5) { args.append("--parallel-compile-tasks-for-eager-toplevel") }
 
         chooseBooleanFlag("always-sparkplug")
         chooseBooleanFlag("always-osr")
@@ -1835,13 +1812,11 @@ public func v8ProcessArgs(randomize: Bool, isWasmEnabled: Bool, forSandbox: Bool
         chooseBooleanFlag("maglev-inline-api-calls")
         chooseBooleanFlag("maglev-inlining")
         chooseBooleanFlag("maglev-optimistic-peeled-loops")
-        chooseBooleanFlag("maglev-pretenure-store-values")
         chooseBooleanFlag("maglev-poly-calls")
         chooseBooleanFlag("maglev-truncation")
         chooseBooleanFlag("maglev-cse")
         chooseBooleanFlag("maglev-range-analysis")
         chooseBooleanFlag("maglev-escape-analysis")
-        chooseBooleanFlag("maglev-licm")
 
         // Compiler related flags
         chooseBooleanFlag("turbo-move-optimization")
@@ -1859,7 +1834,6 @@ public func v8ProcessArgs(randomize: Bool, isWasmEnabled: Bool, forSandbox: Bool
         chooseBooleanFlag("turbo-optimize-apply")
         chooseBooleanFlag("turbo-load-elimination")
         chooseBooleanFlag("turbo-inlining")
-        chooseBooleanFlag("turbo-splitting")
         args.append(
             chooseUniform(from: [
                 "--no-enable-sse3", "--no-enable-ssse3", "--no-enable-sse4-1", "--no-enable-sse4-2",

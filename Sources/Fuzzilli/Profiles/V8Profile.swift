@@ -78,7 +78,6 @@ public let v8Profile = Profile(
         (WasmStructGenerator, 15),
         (WasmArrayGenerator, 15),
         (SharedObjectGenerator, 5),
-        (PretenureAllocationSiteGenerator, 5),
         (HoleNanGenerator, 5),
         (UndefinedNanGenerator, 5),
         (StringShapeGenerator, 5),
