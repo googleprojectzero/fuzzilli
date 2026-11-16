@@ -223,7 +223,11 @@ public let WasmCodeGenerators: [CodeGenerator] = [
                 if shouldCallExports,
                     let (methodName, signature) = module.getExportedMethods().randomElement()
                 {
+                    // Hide exports so recursive code generation during argument generation cannot
+                    // reassign it and clobber its _fuzz_WasmExports type.
+                    b.hide(exports)
                     let args = b.findOrGenerateArguments(forSignature: signature)
+                    b.unhide(exports)
                     b.callMethod(methodName, on: exports, withArgs: args)
                 }
             },
