@@ -67,6 +67,7 @@ public let profiles = [
     "spidermonkey": spidermonkeyProfile,
     "v8": v8Profile,
     "v8Maglev": v8MaglevDifferentialProfile,
+    "v8MaglevFaultInjection": v8MaglevFaultInjectionProfile,
     "v8Sandbox": v8SandboxProfile,
     "v8Dumpling": v8DumplingProfile,
     "duktape": duktapeProfile,

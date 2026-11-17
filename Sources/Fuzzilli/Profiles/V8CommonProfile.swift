@@ -1513,6 +1513,40 @@ public let ProtoAssignSeqOptFuzzer = ProgramTemplate("ProtoAssignSeqOptFuzzer") 
     b.build(n: 10)
 }
 
+// Dedicated deterministic reproducer template for the
+// --maglev-fuzz-drop-heapobject-check V8 hook. The loop Phi is untagged to
+// Float64; the injected fault drops its HeapObjectness and corrupts the
+// post-loop retagging, which traps.
+public let MaglevPhiHeapObjectnessFaultFuzzer = ProgramTemplate(
+    "MaglevPhiHeapObjectnessFaultFuzzer"
+) { b in
+    b.buildPrefix()
+
+    let trigger = b.buildPlainFunction(with: .parameters(n: 0)) { _ in
+        let value = b.loadInt(0)
+        b.buildRepeatLoop(n: 8) { _ in
+            let incremented = b.binary(value, b.loadFloat(0.3), with: .Add)
+            b.reassign(variable: value, value: incremented)
+        }
+        b.doPrint(b.typeof(value))
+        b.doPrint(value)
+        b.doPrint(b.binary(b.loadInt(1), value, with: .Div))
+        let plusOne = b.binary(value, b.loadInt(1), with: .Add)
+        b.doPrint(plusOne)
+        let length = b.getProperty("length", of: value)
+        let element = b.getComputedProperty(b.loadInt(0), of: value)
+        b.doReturn(b.binary(length, element, with: .Add))
+    }
+
+    b.eval("%PrepareFunctionForOptimization(%@)", with: [trigger])
+    b.callFunction(trigger)
+    b.callFunction(trigger)
+    b.eval("%OptimizeMaglevOnNextCall(%@)", with: [trigger])
+    b.callFunction(trigger)
+    b.eval("gc()")
+    b.callFunction(trigger)
+}
+
 // This template targets Maglev type confusion bugs. It first warms up a function
 // with a single value representation so that Maglev collects monomorphic feedback
 // and can elide representation checks, then forces Maglev compilation and feeds
@@ -2058,6 +2092,32 @@ public let MaglevTypeConfusionFuzzer = ProgramTemplate("MaglevTypeConfusionFuzze
         printDigest(b.callFunction(caller, withArgs: [loadStringValue()]))
     }
 
+    // Deterministic 486657483 shape for
+    // --maglev-fuzz-drop-heapobject-check. The loop Phi starts as a Smi and is
+    // incremented by a HeapNumber, so it is untagged to Float64. With the
+    // injected fault its HeapObjectness is dropped and the post-loop retagging
+    // uses an unsafe Smi tag, which traps deterministically.
+    func runPhiHeapObjectnessFaultVariant() {
+        let trigger = b.buildPlainFunction(with: .parameters(n: 0)) { _ in
+            let value = b.loadInt(0)
+            b.buildRepeatLoop(n: 8) { _ in
+                let incremented = b.binary(value, b.loadFloat(0.3), with: .Add)
+                b.reassign(variable: value, value: incremented)
+            }
+            printDigest(value)
+            let incremented = b.binary(value, b.loadInt(1), with: .Add)
+            printDigest(incremented)
+            let length = b.getProperty("length", of: value)
+            let element = b.getComputedProperty(b.loadInt(0), of: value)
+            b.doReturn(b.binary(length, element, with: .Add))
+        }
+
+        prepareAndOptimize(trigger, withArgs: [])
+        printDigest(b.callFunction(trigger, withArgs: []))
+        forceGc()
+        printDigest(b.callFunction(trigger, withArgs: []))
+    }
+
     let variants: [() -> Void] = [
         runElementKindVariant,
         runPropertyRepresentationVariant,
@@ -2069,6 +2129,7 @@ public let MaglevTypeConfusionFuzzer = ProgramTemplate("MaglevTypeConfusionFuzze
         runPhiRepresentationVariant,
         runBackedgeRepresentationVariant,
         runInlinedCheckedSmiVariant,
+        runPhiHeapObjectnessFaultVariant,
     ]
     for variant in variants.shuffled().prefix(Int.random(in: 1...2)) {
         variant()

@@ -1,0 +1,130 @@
+diff --git a/src/flags/flag-definitions.h b/src/flags/flag-definitions.h
+index 5a5da932..c2cb2079 100644
+--- a/src/flags/flag-definitions.h
++++ b/src/flags/flag-definitions.h
+@@ -677,6 +677,9 @@ DEFINE_BOOL(maglev_cons_string_elision, true,
+             "Native support for cons strings and their elision in maglev.")
+ DEFINE_BOOL(maglev_poly_calls, true, "Support (inlining) polymorphic calls")
+ DEFINE_BOOL(maglev_truncation, true, "Enable Maglev truncation pass")
++DEFINE_BOOL(maglev_fuzz_drop_heapobject_check, false,
++            "Fuzzing: drop HeapObject checks for Phis whose HeapObjectness "
++            "was dropped during untagging")
+ DEFINE_DEVELOPER_FLAG(trace_maglev_truncation, "trace maglev truncation pass")
+ 
+ DEFINE_WEAK_IMPLICATION(maglev_future, maglev_speculative_hoist_phi_untagging)
+diff --git a/src/maglev/maglev-phi-representation-selector.cc b/src/maglev/maglev-phi-representation-selector.cc
+index 5b44744d..fde3a53e 100644
+--- a/src/maglev/maglev-phi-representation-selector.cc
++++ b/src/maglev/maglev-phi-representation-selector.cc
+@@ -989,6 +989,39 @@ void MaglevPhiRepresentationSelector::ConvertTaggedPhiTo(
+   DCHECK(repr == ValueRepresentation::kInt32 ||
+          repr == ValueRepresentation::kFloat64 ||
+          repr == ValueRepresentation::kHoleyFloat64);
++
++  if (v8_flags.maglev_fuzz_drop_heapobject_check) {
++    // Fault injection for the Phi-untagging HeapObjectness bug class: a numeric
++    // Phi that could contain a HeapNumber (a HeapObject) loses its HeapObject
++    // bits when it is untagged. Its CheckHeapObject uses are then removed
++    // below, so the retagged Smi reaches a tagged-field consumer unchecked.
++    NodeType type = phi->type();
++    if (NodeTypeIs(type, NodeType::kNumber) &&
++        NodeTypeCanBe(type, NodeType::kHeapNumber)) {
++      fuzz_dropped_heapobjectness_phis_.insert(phi);
++      phi->set_type(RemoveType(type, NodeType::kAnyHeapObject));
++    }
++  }
++
++  // Remember a tagged source input so that, after conversion, we can inject it
++  // back into the (now untagged) Phi. This deterministically corrupts the Phi's
++  // representation and is caught by the graph verifier or by codegen.
++  int fuzz_tagged_input_index = -1;
++  ValueNode* fuzz_tagged_input = nullptr;
++  if (v8_flags.maglev_fuzz_drop_heapobject_check &&
++      fuzz_dropped_heapobjectness_phis_.find(phi) !=
++          fuzz_dropped_heapobjectness_phis_.end()) {
++    for (int i = 0; i < phi->input_count(); i++) {
++      ValueNode* input = phi->input(i).node();
++      if (input->is_conversion() && input->input_count() == 1 &&
++          input->input(0).node()->is_tagged()) {
++        fuzz_tagged_input_index = i;
++        fuzz_tagged_input = input->input(0).node();
++        break;
++      }
++    }
++  }
++
+   phi->change_representation(repr);
+ 
+   for (int input_index = 0; input_index < phi->input_count(); input_index++) {
+@@ -1057,6 +1090,12 @@ void MaglevPhiRepresentationSelector::ConvertTaggedPhiTo(
+         UNREACHABLE();
+     }
+   }
++
++  if (fuzz_tagged_input_index >= 0) {
++    // Inject the tagged source back into the now-untagged Phi.
++    phi->change_input(fuzz_tagged_input_index, fuzz_tagged_input);
++  }
++
+ #ifdef DEBUG
+   eager_deopt_frame_ = nullptr;
+ #endif  // DEBUG
+@@ -1323,6 +1362,25 @@ ProcessResult MaglevPhiRepresentationSelector::UpdateNodePhiInput(
+   UNREACHABLE();
+ }
+ 
++ProcessResult MaglevPhiRepresentationSelector::UpdateNodePhiInput(
++    CheckHeapObject* node, Phi* phi, int input_index,
++    const ProcessingState* state) {
++  if (v8_flags.maglev_fuzz_drop_heapobject_check &&
++      fuzz_dropped_heapobjectness_phis_.find(phi) !=
++          fuzz_dropped_heapobjectness_phis_.end()) {
++    // Fault injection: ConvertTaggedPhiTo dropped this Phi's HeapObjectness, so
++    // the check that would normally reject a retagged Smi is omitted. Retag the
++    // value and replace the check by an Identity.
++    node->OverwriteWith<Identity>();
++    node->change_input(input_index,
++                       EnsurePhiTagged(phi, reducer_.current_block(),
++                                       BasicBlockPosition::Start(), state));
++    return ProcessResult::kContinue;
++  }
++  return UpdateNodePhiInput(static_cast<NodeBase*>(node), phi, input_index,
++                            state);
++}
++
+ ProcessResult MaglevPhiRepresentationSelector::UpdateNodePhiInput(
+     CheckNumber* node, Phi* phi, int input_index,
+     const ProcessingState* state) {
+diff --git a/src/maglev/maglev-phi-representation-selector.h b/src/maglev/maglev-phi-representation-selector.h
+index 3007727a..b2d652c4 100644
+--- a/src/maglev/maglev-phi-representation-selector.h
++++ b/src/maglev/maglev-phi-representation-selector.h
+@@ -6,6 +6,7 @@
+ #define V8_MAGLEV_MAGLEV_PHI_REPRESENTATION_SELECTOR_H_
+ 
+ #include <optional>
++#include <unordered_set>
+ 
+ #include "src/base/logging.h"
+ #include "src/base/small-vector.h"
+@@ -247,6 +248,9 @@ class MaglevPhiRepresentationSelector {
+                                    const ProcessingState* state);
+   ProcessResult UpdateNodePhiInput(CheckSmi* node, Phi* phi, int input_index,
+                                    const ProcessingState* state);
++  ProcessResult UpdateNodePhiInput(CheckHeapObject* node, Phi* phi,
++                                   int input_index,
++                                   const ProcessingState* state);
+   ProcessResult UpdateNodePhiInput(CheckNumber* node, Phi* phi, int input_index,
+                                    const ProcessingState* state);
+   ProcessResult UpdateNodePhiInput(CheckedNumberOrOddballToUint8Clamped* node,
+@@ -345,6 +349,10 @@ class MaglevPhiRepresentationSelector {
+ 
+   ZoneAbslFlatHashMap<Phi*, Key> phi_keys_;
+ 
++  // Phis for which --maglev-fuzz-drop-heapobject-check simulated a loss of
++  // HeapObjectness during untagging. Their CheckHeapObject uses are removed.
++  std::unordered_set<Phi*> fuzz_dropped_heapobjectness_phis_;
++
+   DeoptFrame* eager_deopt_frame_ = nullptr;
+ };
+ 

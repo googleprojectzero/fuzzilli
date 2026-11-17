@@ -110,6 +110,19 @@ struct ProgramBuilderTests {
         }
     }
 
+    // Verify that the fault-injection template produces valid programs.
+    @Test func testMaglevPhiHeapObjectnessFaultTemplate() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            for _ in 0..<50 {
+                MaglevPhiHeapObjectnessFaultFuzzer.generate(in: b)
+                let program = b.finalize()
+                #expect(program.size > 0)
+            }
+        }
+    }
+
     @Test func testValueBuilding() {
         // Test that buildValues() is always possible and generates at least the requested
         // number of new variables.

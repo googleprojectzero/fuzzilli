@@ -113,4 +113,18 @@ struct ProfileTests {
         #expect(referenceArgs!.contains("--gc-interval=100"))
         #expect(!referenceArgs!.contains("--maglev"))
     }
+
+    @Test func testMaglevFaultInjectionProfile() {
+        #expect(v8MaglevFaultInjectionProfile.isDifferential)
+        #expect(v8MaglevFaultInjectionProfile.differentialMode == .output)
+
+        let optimizedArgs = v8MaglevFaultInjectionProfile.processArgs(false, false)
+        #expect(optimizedArgs.contains("--maglev"))
+        #expect(optimizedArgs.contains("--maglev-fuzz-drop-heapobject-check"))
+
+        let referenceArgs = v8MaglevFaultInjectionProfile.processArgsReference
+        #expect(referenceArgs != nil)
+        #expect(referenceArgs!.contains("--no-maglev"))
+        #expect(referenceArgs!.contains("--maglev-fuzz-drop-heapobject-check"))
+    }
 }

@@ -80,7 +80,7 @@ A number of mutations can then be performed on these programs:
 * [OperationMutator](Sources/Fuzzilli/Mutators/OperationMutator.swift): mutates the parameters of operations, for example replacing an integer constant with a different one.
 * and more...
 
-A much more thorough discussion of how Fuzzilli works can be found [here](Docs/HowFuzzilliWorks.md).
+A much more thorough discussion of how Fuzzilli works can be found [here](Docs/HowFuzzilliWorks.md). For the end-to-end V8 crash/differential campaign, triage, and VRP reporting workflow, see [Docs/V8VRPWorkflow.md](Docs/V8VRPWorkflow.md).
 
 ## Implementation
 

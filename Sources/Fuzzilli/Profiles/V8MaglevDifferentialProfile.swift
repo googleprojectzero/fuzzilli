@@ -122,6 +122,119 @@ public let v8MaglevDifferentialProfile = Profile(
     differentialMode: .output
 )
 
+/// Determinism shim shared by the Maglev differential profiles.
+private let v8MaglevDeterminismShim = """
+    // --- Determinism Shim ---
+    (function() {
+        const originalDate = Date;
+        const FIXED_TIME = 1767225600000;
+        const FIXED_STRING = new originalDate(FIXED_TIME).toString();
+
+        Date.now = function() { return FIXED_TIME; };
+        globalThis.Date = new Proxy(originalDate, {
+            construct(target, args) {
+                if (args.length === 0) return new target(FIXED_TIME);
+                return new target(...args);
+            },
+            apply(target, thisArg, args) { return FIXED_STRING; }
+        });
+        globalThis.Date.prototype = originalDate.prototype;
+
+        const rng = function() {
+            let s = 0x12345678;
+            return function() {
+                s ^= s << 13; s ^= s >> 17; s ^= s << 5;
+                return (s >>> 0) / 4294967296;
+            };
+        }();
+        Math.random = rng;
+
+        // Timing-dependent values must not differ between the two runs.
+        if (typeof performance !== 'undefined' && performance.now) {
+            performance.now = function() { return FIXED_TIME; };
+        }
+    })();
+    // --- End Determinism Shim ---
+    """
+
+private let v8MaglevAdditionalCodeGenerators: [(CodeGenerator, Int)] = [
+    (ForceMaglevCompilationGenerator, 15),
+    (ForceJITCompilationThroughLoopGenerator, 10),
+    (CompileBaselineGenerator, 10),
+    (ForceOsrGenerator, 10),
+    (NeverOptimizeFunctionGenerator, 5),
+    (DisableEagerInliningGenerator, 5),
+    (DeoptimizeFunctionGenerator, 10),
+    (DeoptimizeNowGenerator, 5),
+    (SetForceSlowPathGenerator, 5),
+    (V8GcGenerator, 15),
+    (V8MajorGcGenerator, 10),
+    (V8SimulateNewspaceFullGenerator, 5),
+]
+
+/// Fault-injection variant of the Maglev differential profile. Requires a V8
+/// build with the `--maglev-fuzz-drop-heapobject-check` hook (see
+/// Targets/V8/Patches/maglev-fault-injection.patch). The hook drops the
+/// HeapObjectness of numeric Phis during untagging and removes the following
+/// CheckHeapObject, making the 486657483 shape crash deterministically.
+public let v8MaglevFaultInjectionProfile = Profile(
+    processArgs: { randomize, isWasmEnabled in
+        var args = v8MaglevCommonProcessArgs
+        args.append("--maglev")
+        args.append("--maglev-as-top-tier")
+        args.append("--maglev-inlining")
+        args.append("--maglev-assert")
+        args.append("--maglev-assert-types")
+        args.append("--maglev-fuzz-drop-heapobject-check")
+        return args
+    },
+
+    processArgsReference: v8MaglevCommonProcessArgs + [
+        "--no-maglev", "--maglev-fuzz-drop-heapobject-check",
+    ],
+
+    processEnv: [:],
+
+    maxExecsBeforeRespawn: 1000,
+
+    timeout: Timeout.interval(1000, 3000),
+
+    codePrefix: v8MaglevDeterminismShim,
+
+    codeSuffix: "",
+
+    ecmaVersion: ECMAScriptVersion.es6,
+
+    startupTests: [
+        ("fuzzilli('FUZZILLI_PRINT', 'test')", .shouldSucceed)
+    ],
+
+    additionalCodeGenerators: v8MaglevAdditionalCodeGenerators,
+
+    additionalProgramTemplates: WeightedList<ProgramTemplate>([
+        (MaglevPhiHeapObjectnessFaultFuzzer, 1000),
+        (MaglevTypeConfusionFuzzer, 10),
+    ]),
+
+    disabledCodeGenerators: [],
+
+    disabledMutators: [],
+
+    additionalBuiltins: [
+        "gc": .function([.opt(gcOptions.instanceType)] => (.undefined | .jsPromise()))
+    ],
+
+    additionalObjectGroups: [gcOptions],
+
+    additionalEnumerations: [.gcTypeEnum, .gcExecutionEnum],
+
+    additionalOptionsBags: [],
+
+    optionalPostProcessor: nil,
+
+    differentialMode: .output
+)
+
 /// Arguments shared by the optimized and the reference runner. Both runs must
 /// use identical flags except for the ones that select the execution tier, so
 /// that any output difference is attributable to Maglev.
