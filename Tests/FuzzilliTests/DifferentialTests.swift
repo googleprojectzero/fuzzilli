@@ -80,6 +80,14 @@ struct DiffExecutionTests {
         let result = DiffExecution.compareOutputs(optimized: optimized, unoptimized: reference)
         #expect(result.outcome == .succeeded)
     }
+
+    @Test func testBothFailedIsNotDifferential() {
+        let optimized = testExecution("", outcome: .failed(1))
+        let reference = testExecution("", outcome: .failed(1))
+
+        let result = DiffExecution.compareOutputs(optimized: optimized, unoptimized: reference)
+        #expect(result.outcome == .succeeded)
+    }
 }
 
 struct ProfileTests {

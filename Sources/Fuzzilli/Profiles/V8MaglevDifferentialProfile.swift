@@ -65,6 +65,11 @@ public let v8MaglevDifferentialProfile = Profile(
                 };
             }();
             Math.random = rng;
+
+            // Timing-dependent values must not differ between the two runs.
+            if (typeof performance !== 'undefined' && performance.now) {
+                performance.now = function() { return FIXED_TIME; };
+            }
         })();
         // --- End Determinism Shim ---
         """,

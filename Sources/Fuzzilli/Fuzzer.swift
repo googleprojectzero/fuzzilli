@@ -1510,12 +1510,17 @@ public class Fuzzer {
         // runner and compare the observable output. This does not require a
         // Dumpling-enabled target build.
         if config.diffConfig == nil {
+            // Only successful executions are compared; preserve crash/failure
+            // signals as-is.
+            guard execution.outcome == .succeeded else { return execution }
+            guard let referenceRunner else { return execution }
+
             // The unoptimized reference run is expected to be slower than the
             // optimized run, so give it more time and don't treat its timeout as
             // a differential.
             let referenceTimeout: UInt32 =
                 timeout <= UInt32.max / 2 ? timeout * 2 : UInt32.max
-            let unoptimizedExecution = referenceRunner!.run(
+            let unoptimizedExecution = referenceRunner.run(
                 script, withTimeout: referenceTimeout)
             if unoptimizedExecution.outcome == .timedOut {
                 return execution

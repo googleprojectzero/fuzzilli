@@ -1873,6 +1873,11 @@ public let MaglevTypeConfusionFuzzer = ProgramTemplate("MaglevTypeConfusionFuzze
     func runValueEqualHeapNumberVariant() {
         let property = b.randomCustomPropertyName()
         let object = b.createObject(with: [property: b.loadInt(0)])
+        // Promote the object to old space first. A young->young edge does not
+        // require a remembered-set entry, so the missing write barrier would not
+        // be observable otherwise.
+        forceGc()
+        forceGc()
         let storeAndLoad = b.buildPlainFunction(with: .parameters(n: 2)) { args in
             b.setProperty(property, of: args[0], to: args[1])
             let value = b.getProperty(property, of: args[0])
@@ -1906,9 +1911,11 @@ public let MaglevTypeConfusionFuzzer = ProgramTemplate("MaglevTypeConfusionFuzze
     }
 
     // C1.1 / 486657483: Phi untagging drops HeapObjectness.
-    // A Phi that merges a Smi and the parameter is warmed with a HeapNumber so
-    // that Maglev selects Float64 for it, then a HeapObject is fed through the
-    // same Phi and consumed as a number.
+    // The Phi merges a Smi with the parameter and is warmed with a HeapNumber so
+    // that Maglev selects Float64 for it. Its tagged result is then passed to a
+    // consumer whose property-load feedback comes from HeapObjects. A missing
+    // CheckHeapObject/CheckString after untagging makes the consumer interpret
+    // the unboxed double as an object.
     func runPhiRepresentationVariant() {
         func buildPhiFunction() -> Variable {
             b.buildPlainFunction(with: .parameters(n: 1)) { args in
@@ -1919,40 +1926,49 @@ public let MaglevTypeConfusionFuzzer = ProgramTemplate("MaglevTypeConfusionFuzze
                     let phi = b.ternary(parity, args[0], incremented)
                     b.reassign(variable: merged, value: phi)
                 }
-                printDigest(merged)
-                let result = b.binary(merged, b.loadInt(1), with: .Add)
-                printDigest(result)
-                b.doReturn(result)
+                b.doReturn(merged)
             }
         }
 
-        // Warm up with a HeapNumber so the Phi can be untagged as Float64.
-        let heapNumberWarmup = buildPhiFunction()
+        // Warm the Phi with a HeapNumber so it can be untagged as Float64.
+        let phiFunction = buildPhiFunction()
         let heapNumber = b.loadFloat(1.5)
-        prepareAndOptimize(heapNumberWarmup, withArgs: [heapNumber])
-        printDigest(b.callFunction(heapNumberWarmup, withArgs: [heapNumber]))
-        forceGc()
+        prepareAndOptimize(phiFunction, withArgs: [heapNumber])
 
-        for value in [
-            b.createObject(with: [b.randomCustomPropertyName(): loadSmi()]),
-            b.createArray(with: [loadSmi(), loadDouble()]), loadStringValue(), loadSmi(),
-            loadDouble(),
-        ] {
-            let result = b.callFunction(heapNumberWarmup, withArgs: [value])
-            forceGc()
+        // The consumer expects a HeapObject: length and element access install
+        // CheckHeapObject/string checks from the HeapObject warm-up.
+        let consumer = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            let length = b.getProperty("length", of: args[0])
+            let element = b.getComputedProperty(b.loadInt(0), of: args[0])
+            let result = b.binary(length, element, with: .Add)
             printDigest(result)
+            b.doReturn(result)
         }
+        let consumerWarmup = b.loadString("abc")
+        b.eval("%PrepareFunctionForOptimization(%@)", with: [consumer])
+        b.callFunction(consumer, withArgs: [consumerWarmup])
+        b.callFunction(consumer, withArgs: [b.loadString("def")])
+        b.eval("%OptimizeMaglevOnNextCall(%@)", with: [consumer])
+        b.callFunction(consumer, withArgs: [consumerWarmup])
 
-        // Reverse direction: warm with Smis, then feed a HeapNumber/HeapObject.
-        let smiWarmup = buildPhiFunction()
-        let smi = loadSmi()
-        prepareAndOptimize(smiWarmup, withArgs: [smi])
-        printDigest(b.callFunction(smiWarmup, withArgs: [smi]))
+        let trigger = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            let tagged = b.callFunction(phiFunction, withArgs: [args[0]])
+            let result = b.callFunction(consumer, withArgs: [tagged])
+            printDigest(tagged)
+            b.doReturn(result)
+        }
+        prepareAndOptimize(trigger, withArgs: [heapNumber])
+        printDigest(b.callFunction(trigger, withArgs: [heapNumber]))
+
+        // The HeapObject cases are the actual 486657483 shape: the Phi result
+        // flows into the HeapObject consumer after Maglev untagged it.
         for value in [
-            loadDouble(), b.createObject(with: [b.randomCustomPropertyName(): loadSmi()]),
-            loadStringValue(),
+            b.loadString(b.randomString()),
+            b.createArray(with: [loadSmi(), loadDouble()]),
+            b.createObject(with: [b.randomCustomPropertyName(): loadSmi()]),
+            loadSmi(), loadDouble(),
         ] {
-            let result = b.callFunction(smiWarmup, withArgs: [value])
+            let result = b.callFunction(trigger, withArgs: [value])
             forceGc()
             printDigest(result)
         }
@@ -1962,11 +1978,13 @@ public let MaglevTypeConfusionFuzzer = ProgramTemplate("MaglevTypeConfusionFuzze
     // The loop Phi is specialized for Smis during warm-up, and only the backedge
     // carries the changed representation (on the last iteration).
     func runBackedgeRepresentationVariant() {
+        let loopCount = Int.random(in: 20...50)
         func buildBackedgeFunction() -> Variable {
             b.buildPlainFunction(with: .parameters(n: 1)) { args in
                 let value = b.loadInt(0)
-                b.buildRepeatLoop(n: 6) { i in
-                    let isLast = b.compare(i, with: b.loadInt(5), using: .equal)
+                b.buildRepeatLoop(n: loopCount) { i in
+                    let isLast = b.compare(
+                        i, with: b.loadInt(Int64(loopCount - 1)), using: .equal)
                     let incremented = b.binary(value, b.loadInt(1), with: .Add)
                     let merged = b.ternary(isLast, args[0], incremented)
                     b.reassign(variable: value, value: merged)
@@ -2007,6 +2025,15 @@ public let MaglevTypeConfusionFuzzer = ProgramTemplate("MaglevTypeConfusionFuzze
         }
 
         let callee = buildCallee()
+        // Warm the callee separately so that Maglev's inliner sees a hot, small
+        // callee and is more likely to inline it into the caller.
+        let calleeSeed = loadSmi()
+        b.eval("%PrepareFunctionForOptimization(%@)", with: [callee])
+        b.callFunction(callee, withArgs: [calleeSeed])
+        b.callFunction(callee, withArgs: [calleeSeed])
+        b.eval("%OptimizeMaglevOnNextCall(%@)", with: [callee])
+        b.callFunction(callee, withArgs: [calleeSeed])
+
         let caller = b.buildPlainFunction(with: .parameters(n: 1)) { args in
             let result = b.callFunction(callee, withArgs: [args[0]])
             let final = b.binary(result, b.loadInt(1), with: .Add)

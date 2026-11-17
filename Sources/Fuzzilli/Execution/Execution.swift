@@ -152,11 +152,30 @@ struct DiffExecution: Execution {
                 """
         }
 
-        let bothSucceeded = optimized.outcome == .succeeded && unoptimized.outcome == .succeeded
+        let optimizedSucceeded = optimized.outcome == .succeeded
+        let referenceSucceeded = unoptimized.outcome == .succeeded
+
         // The unoptimized execution is expected to be slower. A timeout of the
         // reference run is therefore not a differential; otherwise slow programs
         // would constantly be reported as false positives.
         if unoptimized.outcome == .timedOut {
+            return DiffExecution(
+                outcome: .succeeded,
+                execTime: optimized.execTime,
+                stdout: formatDiff(
+                    label: "STDOUT", optData: optimized.stdout, unoptData: unoptimized.stdout),
+                stderr: "=== REFERENCE TIMEOUT ===\n"
+                    + formatDiff(
+                        label: "STDERR", optData: optimized.stderr,
+                        unoptData: unoptimized.stderr),
+                fuzzout: formatDiff(
+                    label: "FUZZOUT", optData: optimized.fuzzout, unoptData: unoptimized.fuzzout)
+            )
+        }
+
+        // If both executions failed, this is a program-level failure, not a
+        // difference between the optimized and unoptimized engine.
+        if !optimizedSucceeded && !referenceSucceeded {
             return DiffExecution(
                 outcome: .succeeded,
                 execTime: optimized.execTime,
@@ -168,10 +187,13 @@ struct DiffExecution: Execution {
                     label: "FUZZOUT", optData: optimized.fuzzout, unoptData: unoptimized.fuzzout)
             )
         }
+
+        // Only stdout and fuzzout are compared. stderr is included in the diff
+        // report for triage, but often contains benign, timing-dependent logs.
         let outputsMatch =
             normalize(optimized.fuzzout) == normalize(unoptimized.fuzzout)
             && normalize(optimized.stdout) == normalize(unoptimized.stdout)
-        let isDifferential = !bothSucceeded || !outputsMatch
+        let isDifferential = optimizedSucceeded != referenceSucceeded || !outputsMatch
 
         return DiffExecution(
             outcome: isDifferential ? .differential : .succeeded,

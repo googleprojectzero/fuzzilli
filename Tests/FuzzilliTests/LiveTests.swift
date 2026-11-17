@@ -87,7 +87,8 @@ struct LiveTests {
         let runner = JavaScriptExecutor(
             withArguments: [
                 "--allow-natives-syntax", "--expose-gc", "--maglev", "--maglev-inlining",
-                "--maglev-assert", "--maglev-assert-types",
+                "--maglev-assert", "--maglev-assert-types", "--future", "--harmony",
+                "--js-staging", "--fuzzing",
             ])!
 
         // As above, measure the random prefix/code separately so that unrelated
