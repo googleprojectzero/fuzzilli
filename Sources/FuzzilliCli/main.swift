@@ -778,7 +778,7 @@ let mainConfig = Configuration(
     corpusGenerationIterations: corpusGenerationIterations,
     forDifferentialFuzzing: forDifferentialFuzzing,
     instanceId: 0,
-    dumplingEnabled: profile.isDifferential,
+    dumplingEnabled: profile.isDifferential && profile.differentialMode == .dump,
     enableCustomDescriptors: enableCustomDescriptors,
     trackConvergencePatterns: trackConvergencePatterns,
     machineReadableStats: machineReadableStats)
@@ -1021,7 +1021,7 @@ func makeWorkerConfig(instanceId: Int) -> Configuration {
         corpusGenerationIterations: corpusGenerationIterations,
         forDifferentialFuzzing: forDifferentialFuzzing,
         instanceId: instanceId,
-        dumplingEnabled: profile.isDifferential,
+        dumplingEnabled: profile.isDifferential && profile.differentialMode == .dump,
         enableCustomDescriptors: enableCustomDescriptors,
         trackConvergencePatterns: trackConvergencePatterns,
         machineReadableStats: false)

@@ -1506,6 +1506,39 @@ public class Fuzzer {
     private func executeDifferentialIfNeeded(
         _ execution: Execution, _ script: String, withTimeout timeout: UInt32
     ) -> Execution {
+        // Output-based differential mode: execute the same script in the reference
+        // runner and compare the observable output. This does not require a
+        // Dumpling-enabled target build.
+        if config.diffConfig == nil {
+            // The unoptimized reference run is expected to be slower than the
+            // optimized run, so give it more time and don't treat its timeout as
+            // a differential.
+            let referenceTimeout: UInt32 =
+                timeout <= UInt32.max / 2 ? timeout * 2 : UInt32.max
+            let unoptimizedExecution = referenceRunner!.run(
+                script, withTimeout: referenceTimeout)
+            if unoptimizedExecution.outcome == .timedOut {
+                return execution
+            }
+
+            let result = DiffExecution.compareOutputs(
+                optimized: execution, unoptimized: unoptimizedExecution)
+
+            if result.outcome == .differential {
+                logger.error(
+                    """
+                    ================================================================
+                    [OUTPUT DIFFERENTIAL]  POTENTIAL DIFFERENTIAL DETECTED
+                    ================================================================
+                    """)
+                logger.error(script)
+                logger.error(result.stderr)
+                logger.error(result.fuzzout)
+            }
+
+            return result
+        }
+
         do {
             let optPath = config.diffConfig!.getDumpFilename(isOptimized: true)
             let unoptPath = config.diffConfig!.getDumpFilename(isOptimized: false)

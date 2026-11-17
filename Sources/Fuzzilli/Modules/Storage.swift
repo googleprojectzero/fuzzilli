@@ -74,7 +74,7 @@ public class Storage: Module {
                 try FileManager.default.createDirectory(
                     atPath: diagnosticsDir, withIntermediateDirectories: true)
             }
-            if fuzzer.isDifferentialFuzzing {
+            if fuzzer.config.diffConfig != nil {
                 try FileManager.default.createDirectory(
                     atPath: optimizedDumpDir, withIntermediateDirectories: true)
                 try FileManager.default.createDirectory(

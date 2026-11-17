@@ -92,6 +92,8 @@ public let v8Profile = Profile(
         (MapTransitionFuzzer, 1),
         (ValueSerializerFuzzer, 1),
         (V8RegExpFuzzer, 1),
+        (IteratorHelpersFuzzer, 1),
+        (MaglevTypeConfusionFuzzer, 1),
         (WasmFastCallFuzzer, 1),
         (FastApiCallFuzzer, 1),
         (IndirectLazyDeoptFuzzer, 1),

@@ -130,4 +130,58 @@ struct DiffExecution: Execution {
                 label: "FUZZOUT", optData: optExec.fuzzout, unoptData: unoptExec.fuzzout)
         )
     }
+
+    /// Compares an optimized and a reference execution based on their observable output.
+    ///
+    /// This is used by output-based differential fuzzing (e.g. Maglev vs. `--no-maglev`)
+    /// and does not require a Dumpling-enabled target build. Outputs are compared after
+    /// trimming surrounding whitespace. A non-successful reference execution is also
+    /// considered a differential since the optimized execution succeeded.
+    static func compareOutputs(optimized: Execution, unoptimized: Execution) -> Execution {
+        func normalize(_ output: String) -> String {
+            return output.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        func formatDiff(label: String, optData: String, unoptData: String) -> String {
+            return """
+                === OPT \(label) ===
+                \(optData)
+
+                === UNOPT \(label) ===
+                \(unoptData)
+                """
+        }
+
+        let bothSucceeded = optimized.outcome == .succeeded && unoptimized.outcome == .succeeded
+        // The unoptimized execution is expected to be slower. A timeout of the
+        // reference run is therefore not a differential; otherwise slow programs
+        // would constantly be reported as false positives.
+        if unoptimized.outcome == .timedOut {
+            return DiffExecution(
+                outcome: .succeeded,
+                execTime: optimized.execTime,
+                stdout: formatDiff(
+                    label: "STDOUT", optData: optimized.stdout, unoptData: unoptimized.stdout),
+                stderr: formatDiff(
+                    label: "STDERR", optData: optimized.stderr, unoptData: unoptimized.stderr),
+                fuzzout: formatDiff(
+                    label: "FUZZOUT", optData: optimized.fuzzout, unoptData: unoptimized.fuzzout)
+            )
+        }
+        let outputsMatch =
+            normalize(optimized.fuzzout) == normalize(unoptimized.fuzzout)
+            && normalize(optimized.stdout) == normalize(unoptimized.stdout)
+        let isDifferential = !bothSucceeded || !outputsMatch
+
+        return DiffExecution(
+            outcome: isDifferential ? .differential : .succeeded,
+            execTime: optimized.execTime,
+            stdout: formatDiff(
+                label: "STDOUT", optData: optimized.stdout, unoptData: unoptimized.stdout),
+            stderr: formatDiff(
+                label: "STDERR", optData: optimized.stderr, unoptData: unoptimized.stderr),
+            fuzzout: formatDiff(
+                label: "FUZZOUT", optData: optimized.fuzzout, unoptData: unoptimized.fuzzout)
+        )
+    }
 }

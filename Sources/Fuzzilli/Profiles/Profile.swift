@@ -13,6 +13,16 @@
 // limitations under the License.
 
 public struct Profile {
+    /// How optimized and reference executions are compared in differential mode.
+    public enum DifferentialMode: Equatable {
+        /// Compare the IR/frame dumps produced by a Dumpling-enabled V8 build.
+        /// Requires the target to support `--maglev-dumping`, `--dump-out-filename`, etc.
+        case dump
+        /// Execute the program in both runners and compare their observable output.
+        /// Works with a standard `v8_fuzzilli` build (no Dumpling support needed).
+        case output
+    }
+
     public let processArgs: (_ randomize: Bool, _ isWasmEnabled: Bool) -> [String]
     // if not nil, then this is profile for differential fuzzing
     public let processArgsReference: [String]?
@@ -41,6 +51,10 @@ public struct Profile {
     // An optional post-processor that is executed for every sample generated for fuzzing and can modify it.
     public let optionalPostProcessor: FuzzingPostProcessor?
 
+    /// How differential executions are compared. Defaults to the existing Dumpling-based mode.
+    /// Declared as `var` (with a default) so that it is part of the memberwise initializer.
+    public var differentialMode: DifferentialMode = .dump
+
     public var isDifferential: Bool {
         return processArgsReference != nil
     }
@@ -52,6 +66,7 @@ public let profiles = [
     "jsc": jscProfile,
     "spidermonkey": spidermonkeyProfile,
     "v8": v8Profile,
+    "v8Maglev": v8MaglevDifferentialProfile,
     "v8Sandbox": v8SandboxProfile,
     "v8Dumpling": v8DumplingProfile,
     "duktape": duktapeProfile,

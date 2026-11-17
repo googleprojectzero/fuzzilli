@@ -84,6 +84,32 @@ struct ProgramBuilderTests {
         }
     }
 
+    // Verify that the V8 iterator helpers fuzzer produces valid programs.
+    @Test func testIteratorHelpersFuzzerTemplate() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            for _ in 0..<50 {
+                IteratorHelpersFuzzer.generate(in: b)
+                let program = b.finalize()
+                #expect(program.size > 0)
+            }
+        }
+    }
+
+    // Verify that the Maglev type confusion fuzzer produces valid programs.
+    @Test func testMaglevTypeConfusionFuzzerTemplate() {
+        let fuzzer = makeMockFuzzer()
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            for _ in 0..<50 {
+                MaglevTypeConfusionFuzzer.generate(in: b)
+                let program = b.finalize()
+                #expect(program.size > 0)
+            }
+        }
+    }
+
     @Test func testValueBuilding() {
         // Test that buildValues() is always possible and generates at least the requested
         // number of new variables.

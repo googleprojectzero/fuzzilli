@@ -850,6 +850,195 @@ public let V8RegExpFuzzer = ProgramTemplate("RegExpFuzzer") { b in
     b.build(n: 15)
 }
 
+// This template fuzzes the Iterator Helpers proposal: map(), filter(), take(), drop(),
+// flatMap(), reduce(), toArray(), forEach(), some(), every(), find(), join() and
+// includes(), as well as the newer chunks() and windows() helpers.
+// It focuses on lazily evaluated helper chains, early termination through return(),
+// abrupt completion in callbacks, reentrancy, different element representations and
+// JIT tier-up of the callbacks invoked by the helper builtins.
+public let IteratorHelpersFuzzer = ProgramTemplate("IteratorHelpersFuzzer") { b in
+    b.buildPrefix()
+    b.build(n: 5)
+
+    let iteratorConstructor = b.createNamedVariable(forBuiltin: "Iterator")
+
+    // Builds a generator function that yields a mix of Smis, doubles, strings and
+    // heap objects to exercise the various element representations.
+    func buildValueGenerator() -> Variable {
+        b.buildGeneratorFunction(with: .parameters(n: 0)) { _ in
+            let numValues = Int.random(in: 0...30)
+            let mixValueKinds = Bool.random()
+            b.buildRepeatLoop(n: numValues) { i in
+                if mixValueKinds && probability(0.3) {
+                    withEqualProbability(
+                        { b.yield(b.loadFloat(Double.random(in: -100...100))) },
+                        { b.yield(b.loadString(b.randomString())) },
+                        { b.yield(b.createArray(with: [i])) },
+                        { b.yield(b.createObject(with: [b.randomCustomPropertyName(): i])) }
+                    )
+                } else {
+                    b.yield(i)
+                }
+            }
+        }
+    }
+
+    // Creates a fresh Iterator backed by a generating function.
+    func buildIterator() -> Variable {
+        let generator = b.callFunction(buildValueGenerator())
+        return b.callMethod("from", on: iteratorConstructor, withArgs: [generator])
+    }
+
+    let mapper = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+        b.doReturn(args[0])
+    }
+    let predicate = b.buildPlainFunction(with: .parameters(n: 1)) { _ in
+        b.doReturn(b.loadBool(Bool.random()))
+    }
+    let flatMapper = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+        withEqualProbability(
+            { b.doReturn(b.createArray(with: [args[0]])) },
+            { b.doReturn(b.createArray(with: [])) },
+            { b.doReturn(b.loadString("ab")) },
+            { b.doReturn(b.createArray(with: [args[0], b.randomJsVariable()])) }
+        )
+    }
+    let reducer = b.buildPlainFunction(with: .parameters(n: 2)) { args in
+        withEqualProbability(
+            { b.doReturn(args[0]) },
+            { b.doReturn(args[1]) },
+            { b.doReturn(b.randomJsVariable()) }
+        )
+    }
+    let throwingMapper = b.buildPlainFunction(with: .parameters(n: 1)) { _ in
+        b.throwException(b.loadString("iterator helper"))
+    }
+
+    // Builds a lazily evaluated chain of iterator helpers over a fresh iterator.
+    func buildHelperChain() -> Variable {
+        var iterator = buildIterator()
+
+        if probability(0.3) {
+            b.callMethod("next", on: iterator)
+        }
+
+        for _ in 0..<Int.random(in: 1...5) {
+            switch Int.random(in: 0...7) {
+            case 0:
+                iterator = b.callMethod("map", on: iterator, withArgs: [mapper])
+            case 1:
+                iterator = b.callMethod("filter", on: iterator, withArgs: [predicate])
+            case 2:
+                iterator = b.callMethod(
+                    "take", on: iterator, withArgs: [b.loadInt(Int64.random(in: 0...10))])
+            case 3:
+                iterator = b.callMethod(
+                    "drop", on: iterator, withArgs: [b.loadInt(Int64.random(in: 0...10))])
+            case 4:
+                iterator = b.callMethod("flatMap", on: iterator, withArgs: [flatMapper])
+            case 5:
+                let size = chooseUniform(from: [1, 2, Int64.random(in: 3...10), 1025])
+                iterator = b.callMethod("chunks", on: iterator, withArgs: [b.loadInt(size)])
+            case 6:
+                let size = chooseUniform(from: [1, 2, Int64.random(in: 3...10), 1025])
+                let arguments: [Variable] =
+                    probability(0.5)
+                    ? [b.loadInt(size)]
+                    : [b.loadInt(size), b.loadEnum(ObjectGroup.jsIteratorWindowsUndersizedEnum)]
+                iterator = b.callMethod("windows", on: iterator, withArgs: arguments)
+            case 7:
+                // Reentrancy: advance the iterator from inside its own map callback.
+                // The call is guarded as generators reject reentrant next() calls.
+                let reentrantMapper = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+                    b.callMethod("next", on: iterator, guard: true)
+                    b.doReturn(args[0])
+                }
+                iterator = b.callMethod("map", on: iterator, withArgs: [reentrantMapper])
+            default:
+                break
+            }
+        }
+
+        return iterator
+    }
+
+    // Consumes the iterator in one of the supported ways.
+    func consume(_ iterator: Variable) {
+        switch Int.random(in: 0...8) {
+        case 0:
+            b.callMethod("toArray", on: iterator)
+        case 1:
+            b.callMethod("next", on: iterator)
+            b.callMethod("return", on: iterator)
+        case 2:
+            // reduce without an initial value throws on empty iterators.
+            b.callMethod("reduce", on: iterator, withArgs: [reducer], guard: true)
+        case 3:
+            b.callMethod("reduce", on: iterator, withArgs: [reducer, b.randomJsVariable()])
+        case 4:
+            b.callMethod("forEach", on: iterator, withArgs: [mapper])
+        case 5:
+            b.callMethod("some", on: iterator, withArgs: [predicate])
+            b.callMethod("every", on: iterator, withArgs: [predicate])
+        case 6:
+            b.callMethod("find", on: iterator, withArgs: [predicate])
+        case 7:
+            let separator: [Variable] = probability(0.5) ? [] : [b.loadString(",")]
+            b.callMethod("join", on: iterator, withArgs: separator)
+        case 8:
+            b.callMethod("includes", on: iterator, withArgs: [b.randomJsVariable()])
+        default:
+            break
+        }
+    }
+
+    consume(buildHelperChain())
+
+    // Exercise abrupt completion in callbacks and the subsequent closing of the
+    // underlying iterator.
+    if probability(0.6) {
+        let throwingChain = b.callMethod("map", on: buildIterator(), withArgs: [throwingMapper])
+        b.buildTryCatchFinally(
+            tryBody: {
+                b.callMethod("toArray", on: throwingChain)
+            },
+            catchBody: { _ in })
+        // The iterator must be closed now, so consuming it again is a no-op.
+        b.callMethod("toArray", on: throwingChain)
+    }
+
+    // Exercise Iterator.concat() and Iterator.zip(), which return lazy iterators.
+    if probability(0.3) {
+        let array = b.createArray(with: [b.loadInt(1), b.loadInt(2)])
+        let concatenated = b.callMethod(
+            "concat", on: iteratorConstructor, withArgs: [array, buildIterator()], guard: true)
+        b.callMethod("toArray", on: concatenated, guard: true)
+    }
+    if probability(0.2) {
+        let iterables = (0..<Int.random(in: 1...4)).map { _ in
+            b.createArray(with: (0..<Int.random(in: 0...4)).map { _ in b.randomJsVariable() })
+        }
+        let arguments: [Variable] =
+            probability(0.5)
+            ? [b.createArray(with: iterables)]
+            : [b.createArray(with: iterables), b.createOptionsBag(.jsIteratorZipSettings)]
+        let zipped = b.callMethod(
+            "zip", on: iteratorConstructor, withArgs: arguments, guard: true)
+        // strict mode throws if the input iterables have different lengths.
+        b.callMethod("toArray", on: zipped, guard: true)
+    }
+
+    // Call the helper callbacks many times so that they tier up in the JIT while
+    // being invoked by the (optimized) builtins.
+    if probability(0.6) {
+        b.buildRepeatLoop(n: 100) { _ in
+            let mapped = b.callMethod("map", on: buildIterator(), withArgs: [mapper])
+            let filtered = b.callMethod("filter", on: mapped, withArgs: [predicate])
+            b.callMethod("toArray", on: filtered)
+        }
+    }
+}
+
 public let HomomorphicFeedbackFuzzer = ProgramTemplate("HomomorphicFeedbackFuzzer") { b in
     b.buildPrefix()
     b.build(n: 10)
@@ -1322,6 +1511,541 @@ public let ProtoAssignSeqOptFuzzer = ProgramTemplate("ProtoAssignSeqOptFuzzer") 
     let sig = b.type(of: containingFct).signature ?? Signature.forUnknownFunction
     b.callFunction(containingFct, withArgs: b.randomArguments(forCalling: containingFct))
     b.build(n: 10)
+}
+
+// This template targets Maglev type confusion bugs. It first warms up a function
+// with a single value representation so that Maglev collects monomorphic feedback
+// and can elide representation checks, then forces Maglev compilation and feeds
+// values with a different representation, map or elements kind. This stresses the
+// speculative checks (CheckSmi, CheckNumber, CheckMaps, elements kind checks,
+// typed array element kind checks, ...) that Maglev relies on to avoid type
+// confusion.
+public let MaglevTypeConfusionFuzzer = ProgramTemplate("MaglevTypeConfusionFuzzer") { b in
+    b.buildPrefix()
+    b.build(n: 5)
+
+    let objectConstructor = b.createNamedVariable(forBuiltin: "Object")
+
+    func loadSmi() -> Variable {
+        b.loadInt(Int64.random(in: -1000...1000))
+    }
+
+    func loadDouble() -> Variable {
+        b.loadFloat(Double.random(in: -1e6...1e6))
+    }
+
+    func loadStringValue() -> Variable {
+        b.loadString(
+            chooseUniform(from: ["", "0", "1", "1.5", "42", "foo", b.randomString()]))
+    }
+
+    func buildSmiArray() -> Variable {
+        b.createArray(with: (0..<Int.random(in: 1...5)).map { _ in loadSmi() })
+    }
+
+    func buildDoubleArray() -> Variable {
+        b.createArray(with: (0..<Int.random(in: 1...5)).map { _ in loadDouble() })
+    }
+
+    func buildObjectArray() -> Variable {
+        b.createArray(
+            with: (0..<Int.random(in: 1...5)).map { _ in
+                withEqualProbability(
+                    { loadStringValue() },
+                    { b.createObject(with: [b.randomCustomPropertyName(): loadSmi()]) })
+            })
+    }
+
+    func buildHoleyArray() -> Variable {
+        let hole = b.loadUndefined()
+        // Hide 'undefined' so it is inlined as a hole by the lifter.
+        b.hide(hole)
+        var elements = (0..<Int.random(in: 1...4)).map { _ in
+            probability(0.5) ? loadSmi() : loadDouble()
+        }
+        elements.insert(hole, at: Int.random(in: 0...elements.count))
+        return b.createArray(with: elements)
+    }
+
+    let typedArrayConstructorNames = [
+        "Int8Array", "Uint8Array", "Int16Array", "Uint16Array",
+        "Int32Array", "Uint32Array", "Float32Array", "Float64Array",
+    ]
+
+    func buildTypedArray(_ constructorName: String) -> Variable {
+        let constructor = b.createNamedVariable(forBuiltin: constructorName)
+        return b.construct(constructor, withArgs: [b.loadInt(Int64.random(in: 1...16))])
+    }
+
+    let numericBinaryOperators: [BinaryOperator] = [
+        .Add, .Sub, .Mul, .Mod, .BitAnd, .BitOr, .Xor, .LShift, .RShift, .UnRShift,
+    ]
+
+    // Collects monomorphic feedback for `f`, then forces Maglev to compile it on
+    // the next call.
+    func prepareAndOptimize(_ f: Variable, withArgs seedArgs: [Variable]) {
+        b.eval("%PrepareFunctionForOptimization(%@)", with: [f])
+        b.callFunction(f, withArgs: seedArgs)
+        b.callFunction(f, withArgs: seedArgs)
+        b.eval("%OptimizeMaglevOnNextCall(%@)", with: [f])
+        b.callFunction(f, withArgs: seedArgs)
+    }
+
+    // `gc` is available via --expose-gc. Calling it explicitly forces observation
+    // of suspect stores and value-equal representations. Using eval() here avoids
+    // requiring the `gc` builtin to be part of the environment model (which the
+    // unit-test mock environment does not have).
+    func forceGc() {
+        b.eval("gc()")
+    }
+
+    // Prints a normalized digest of a value so that output-based differential
+    // fuzzing can compare optimized and unoptimized executions. The reciprocal
+    // distinguishes -0.0 from 0.0 and NaN from ordinary numbers.
+    func printDigest(_ value: Variable) {
+        b.doPrint(b.typeof(value))
+        b.doPrint(value)
+        b.doPrint(b.binary(b.loadInt(1), value, with: .Div))
+    }
+
+    // Specializes an element load/store for a Smi elements kind and then changes
+    // the elements kind of the same array and the representation of the index.
+    func runElementKindVariant() {
+        let index = b.loadInt(0)
+        let array = buildSmiArray()
+        let f = b.buildPlainFunction(with: .parameters(n: 2)) { args in
+            let length = b.getProperty("length", of: args[0])
+            let element = b.getComputedProperty(args[1], of: args[0])
+            let result = b.binary(element, length, with: .Add)
+            b.setComputedProperty(args[1], of: args[0], to: result)
+            b.doReturn(result)
+        }
+
+        prepareAndOptimize(f, withArgs: [array, index])
+        b.callFunction(f, withArgs: [array, index])
+
+        // Transition the same array through the different elements kinds.
+        b.setElement(0, of: array, to: loadDouble())
+        b.callFunction(f, withArgs: [array, index])
+        b.setElement(
+            1, of: array, to: b.createObject(with: [b.randomCustomPropertyName(): loadSmi()]))
+        b.callFunction(f, withArgs: [array, index])
+        b.setElement(100, of: array, to: loadSmi())
+        b.callFunction(f, withArgs: [array, index])
+        _ = b.deleteElement(0, of: array)
+        b.callFunction(f, withArgs: [array, index])
+        b.setProperty("length", of: array, to: b.loadInt(0))
+        b.callFunction(f, withArgs: [array, index])
+
+        // Other element representations at the same call site.
+        for otherArray in [buildDoubleArray(), buildObjectArray(), buildHoleyArray()] {
+            b.callFunction(f, withArgs: [otherArray, index])
+        }
+        b.callFunction(
+            f, withArgs: [buildTypedArray(chooseUniform(from: typedArrayConstructorNames)), index])
+        b.callFunction(f, withArgs: [loadStringValue(), index])
+
+        // Different index representations.
+        b.callFunction(f, withArgs: [array, loadDouble()])
+        b.callFunction(f, withArgs: [array, loadStringValue()])
+        b.callFunction(f, withArgs: [array, b.loadBigInt(Int64.random(in: 0...3))])
+
+        b.eval("%DeoptimizeFunction(%@)", with: [f])
+        b.setElement(2, of: array, to: loadDouble())
+        let finalResult = b.callFunction(f, withArgs: [array, index])
+        forceGc()
+        printDigest(finalResult)
+    }
+
+    // Specializes an own property load/store for a Smi field and then generalizes
+    // the field representation, changes the map, turns the object into dictionary
+    // mode, and adds a property to the prototype after optimizing a load that
+    // previously missed it.
+    func runPropertyRepresentationVariant() {
+        let propertyName = b.randomCustomPropertyName()
+        let object = b.createObject(with: [propertyName: loadSmi()])
+        let f = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            let value = b.getProperty(propertyName, of: args[0])
+            let result = b.binary(value, b.loadInt(1), with: .Add)
+            b.setProperty(propertyName, of: args[0], to: result)
+            b.doReturn(result)
+        }
+
+        prepareAndOptimize(f, withArgs: [object])
+        b.callFunction(f, withArgs: [object])
+
+        b.setProperty(propertyName, of: object, to: loadDouble())
+        b.callFunction(f, withArgs: [object])
+        b.setProperty(
+            propertyName, of: object,
+            to: b.createObject(with: [b.randomCustomPropertyName(): loadSmi()]))
+        b.callFunction(f, withArgs: [object])
+
+        // Grow the map and then turn the object into dictionary mode.
+        for _ in 0..<Int.random(in: 1...6) {
+            b.setProperty(b.randomCustomPropertyName(), of: object, to: b.randomJsVariable())
+        }
+        b.callFunction(f, withArgs: [object])
+        _ = b.deleteProperty(propertyName, of: object)
+        b.callFunction(f, withArgs: [object])
+
+        // Different maps for the same property.
+        for value in [
+            loadSmi(), loadDouble(),
+            b.createObject(with: [b.randomCustomPropertyName(): loadSmi()]),
+        ] {
+            b.callFunction(f, withArgs: [b.createObject(with: [propertyName: value])])
+        }
+        b.callFunction(f, withArgs: [buildSmiArray()])
+        b.callFunction(f, withArgs: [loadStringValue()])
+
+        let prototypeProperty = b.randomCustomPropertyName()
+        let prototype = b.createObject(with: [:])
+        let objectWithPrototype = b.buildObjectLiteral { obj in
+            obj.setPrototype(to: prototype)
+        }
+        let prototypeLoadFunction = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            b.doReturn(b.getProperty(prototypeProperty, of: args[0]))
+        }
+        prepareAndOptimize(prototypeLoadFunction, withArgs: [objectWithPrototype])
+        b.callFunction(prototypeLoadFunction, withArgs: [objectWithPrototype])
+        b.setProperty(prototypeProperty, of: prototype, to: loadDouble())
+        b.callFunction(prototypeLoadFunction, withArgs: [objectWithPrototype])
+        b.setProperty(
+            prototypeProperty, of: prototype,
+            to: b.createObject(with: [b.randomCustomPropertyName(): loadSmi()]))
+        b.callFunction(prototypeLoadFunction, withArgs: [objectWithPrototype])
+        let otherPrototype = b.createObject(with: [prototypeProperty: loadSmi()])
+        b.callMethod(
+            "setPrototypeOf", on: objectConstructor,
+            withArgs: [objectWithPrototype, otherPrototype])
+        let finalResult = b.callFunction(prototypeLoadFunction, withArgs: [objectWithPrototype])
+        forceGc()
+        printDigest(finalResult)
+    }
+
+    // Specializes binary operations for Smis and, in a second function, for
+    // HeapNumbers, then changes the input representation.
+    func runBinaryFeedbackVariant() {
+        let smiFunction = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            let a = b.binary(
+                args[0], b.loadInt(1), with: chooseUniform(from: numericBinaryOperators))
+            let c = b.unary(.BitwiseNot, a)
+            b.doReturn(b.binary(c, b.loadInt(2), with: chooseUniform(from: numericBinaryOperators)))
+        }
+        let smi = loadSmi()
+        prepareAndOptimize(smiFunction, withArgs: [smi])
+        b.callFunction(smiFunction, withArgs: [smi])
+        for value in [
+            loadDouble(), loadStringValue(), buildSmiArray(),
+            b.createObject(with: [b.randomCustomPropertyName(): loadSmi()]),
+        ] {
+            b.callFunction(smiFunction, withArgs: [value])
+        }
+        // Mixing BigInt and Smi throws for most operators.
+        b.callFunction(
+            smiFunction, withArgs: [b.loadBigInt(Int64.random(in: -10...10))], guard: true)
+
+        // The reverse direction: specialize for HeapNumbers, then pass Smis and heap objects.
+        let doubleFunction = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            let a = b.binary(
+                args[0], b.loadFloat(0.5), with: chooseUniform(from: [.Add, .Sub, .Mul, .Div]))
+            b.doReturn(b.binary(a, b.loadFloat(1.5), with: .Mul))
+        }
+        let double = loadDouble()
+        prepareAndOptimize(doubleFunction, withArgs: [double])
+        b.callFunction(doubleFunction, withArgs: [double])
+        for value in [
+            loadSmi(), loadStringValue(),
+            b.createObject(with: [b.randomCustomPropertyName(): loadSmi()]),
+        ] {
+            b.callFunction(doubleFunction, withArgs: [value])
+        }
+        b.eval("%DeoptimizeFunction(%@)", with: [doubleFunction])
+        let finalResult = b.callFunction(doubleFunction, withArgs: [loadSmi()])
+        forceGc()
+        printDigest(finalResult)
+    }
+
+    // Specializes a typed array element load/store for one element kind, then
+    // calls the same code with typed arrays of different element kinds (and
+    // therefore different element sizes/representations).
+    func runTypedArrayVariant() {
+        let warmupConstructorName = chooseUniform(from: typedArrayConstructorNames)
+        let targetConstructorNames = typedArrayConstructorNames.filter {
+            $0 != warmupConstructorName
+        }.shuffled().prefix(3)
+        let index = b.loadInt(0)
+
+        func buildTypedArrayFunction() -> Variable {
+            b.buildPlainFunction(with: .parameters(n: 2)) { args in
+                let value = b.getComputedProperty(args[1], of: args[0])
+                let length = b.getProperty("length", of: args[0])
+                let result = b.binary(value, length, with: .Add)
+                b.setComputedProperty(args[1], of: args[0], to: result)
+                b.doReturn(result)
+            }
+        }
+
+        for targetConstructorName in targetConstructorNames {
+            let f = buildTypedArrayFunction()
+            prepareAndOptimize(f, withArgs: [buildTypedArray(warmupConstructorName), index])
+            b.callFunction(f, withArgs: [buildTypedArray(warmupConstructorName), index])
+            b.callFunction(f, withArgs: [buildTypedArray(targetConstructorName), index])
+        }
+
+        // Index representation changes on the last function.
+        let f = buildTypedArrayFunction()
+        prepareAndOptimize(f, withArgs: [buildTypedArray(warmupConstructorName), index])
+        b.callFunction(f, withArgs: [buildTypedArray(warmupConstructorName), loadDouble()])
+        let finalResult = b.callFunction(
+            f, withArgs: [buildTypedArray(warmupConstructorName), loadStringValue()])
+        forceGc()
+        printDigest(finalResult)
+    }
+
+    // Warms up a call site with a specific callee and argument type, then changes
+    // the argument type and the callee. This stresses Maglev's call feedback,
+    // inlining and callee/argument type assumptions.
+    func runCallInliningVariant() {
+        let smiCallee = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            b.doReturn(
+                b.binary(args[0], b.loadInt(1), with: chooseUniform(from: numericBinaryOperators)))
+        }
+        let heapCallee = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            b.doReturn(b.createObject(with: [b.randomCustomPropertyName(): args[0]]))
+        }
+        let caller = b.buildPlainFunction(with: .parameters(.function(), .jsAnything)) { args in
+            let result = b.callFunction(args[0], withArgs: [args[1]])
+            b.doReturn(b.binary(result, b.loadInt(1), with: .Add))
+        }
+        let smi = loadSmi()
+        prepareAndOptimize(caller, withArgs: [smiCallee, smi])
+        b.callFunction(caller, withArgs: [smiCallee, smi])
+        b.callFunction(caller, withArgs: [smiCallee, loadDouble()])
+        b.callFunction(caller, withArgs: [smiCallee, loadStringValue()])
+        b.callFunction(caller, withArgs: [heapCallee, smi])
+        b.callFunction(caller, withArgs: [heapCallee, loadDouble()])
+        b.eval("%DeoptimizeFunction(%@)", with: [caller])
+        let finalResult = b.callFunction(
+            caller,
+            withArgs: [
+                heapCallee,
+                b.createObject(with: [b.randomCustomPropertyName(): loadSmi()]),
+            ])
+        forceGc()
+        printDigest(finalResult)
+    }
+
+    // Warms up a loop specialized for Smi elements and then changes the elements
+    // kind of the array. This also exercises OSR and phi representation handling.
+    func runLoopVariant() {
+        let loopCount = Int.random(in: 4...10)
+        let array = b.createArray(with: (0..<loopCount).map { _ in loadSmi() })
+        let f = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            let sum = b.loadInt(0)
+            b.buildRepeatLoop(n: loopCount) { i in
+                let value = b.getComputedProperty(i, of: args[0])
+                b.reassign(variable: sum, value: value, with: .Add)
+            }
+            b.doReturn(sum)
+        }
+        prepareAndOptimize(f, withArgs: [array])
+        b.callFunction(f, withArgs: [array])
+        b.setElement(0, of: array, to: loadDouble())
+        b.setElement(1, of: array, to: b.loadString("1.5"))
+        b.callFunction(f, withArgs: [array])
+        b.callFunction(f, withArgs: [buildDoubleArray()])
+        b.callFunction(f, withArgs: [buildObjectArray()])
+        b.callFunction(f, withArgs: [buildHoleyArray()])
+        b.eval("%DeoptimizeFunction(%@)", with: [f])
+        b.setElement(
+            2, of: array, to: b.createObject(with: [b.randomCustomPropertyName(): loadSmi()]))
+        let finalResult = b.callFunction(f, withArgs: [array])
+        forceGc()
+        printDigest(finalResult)
+    }
+
+    // C1.1 / 500880819: value-equality based Smi check elision.
+    // The field is specialized for Smis, then a value-equal HeapNumber (5.0) is
+    // stored and observed after a GC. BuildCheckSmi must not elide the check just
+    // because CheckFloat64SameValue(5.0, 5) holds.
+    func runValueEqualHeapNumberVariant() {
+        let property = b.randomCustomPropertyName()
+        let object = b.createObject(with: [property: b.loadInt(0)])
+        let storeAndLoad = b.buildPlainFunction(with: .parameters(n: 2)) { args in
+            b.setProperty(property, of: args[0], to: args[1])
+            let value = b.getProperty(property, of: args[0])
+            let result = b.binary(value, b.loadInt(1), with: .Add)
+            printDigest(result)
+            b.doReturn(result)
+        }
+
+        let seed = b.loadInt(5)
+        prepareAndOptimize(storeAndLoad, withArgs: [object, seed])
+        b.callFunction(storeAndLoad, withArgs: [object, b.loadInt(6)])
+
+        // Value-equal HeapNumber: 5.0 must behave exactly like Smi 5.
+        let valueEqualResult = b.callFunction(storeAndLoad, withArgs: [object, b.loadFloat(5.0)])
+        forceGc()
+        printDigest(valueEqualResult)
+        printDigest(b.getProperty(property, of: object))
+
+        let values = [
+            b.loadFloat(-0.0), b.loadFloat(0.0), b.loadFloat(Double.nan),
+            b.loadFloat(Double.infinity), b.loadInt(0), b.loadString("5"),
+            b.createArray(with: [b.loadInt(1), b.loadInt(2)]),
+            b.createObject(with: [b.randomCustomPropertyName(): b.loadInt(1)]),
+        ]
+        for value in values {
+            let result = b.callFunction(storeAndLoad, withArgs: [object, value])
+            forceGc()
+            printDigest(result)
+            printDigest(b.getProperty(property, of: object))
+        }
+    }
+
+    // C1.1 / 486657483: Phi untagging drops HeapObjectness.
+    // A Phi that merges a Smi and the parameter is warmed with a HeapNumber so
+    // that Maglev selects Float64 for it, then a HeapObject is fed through the
+    // same Phi and consumed as a number.
+    func runPhiRepresentationVariant() {
+        func buildPhiFunction() -> Variable {
+            b.buildPlainFunction(with: .parameters(n: 1)) { args in
+                let merged = b.loadInt(0)
+                b.buildRepeatLoop(n: 8) { i in
+                    let parity = b.binary(i, b.loadInt(1), with: .BitAnd)
+                    let incremented = b.binary(merged, b.loadInt(1), with: .Add)
+                    let phi = b.ternary(parity, args[0], incremented)
+                    b.reassign(variable: merged, value: phi)
+                }
+                printDigest(merged)
+                let result = b.binary(merged, b.loadInt(1), with: .Add)
+                printDigest(result)
+                b.doReturn(result)
+            }
+        }
+
+        // Warm up with a HeapNumber so the Phi can be untagged as Float64.
+        let heapNumberWarmup = buildPhiFunction()
+        let heapNumber = b.loadFloat(1.5)
+        prepareAndOptimize(heapNumberWarmup, withArgs: [heapNumber])
+        printDigest(b.callFunction(heapNumberWarmup, withArgs: [heapNumber]))
+        forceGc()
+
+        for value in [
+            b.createObject(with: [b.randomCustomPropertyName(): loadSmi()]),
+            b.createArray(with: [loadSmi(), loadDouble()]), loadStringValue(), loadSmi(),
+            loadDouble(),
+        ] {
+            let result = b.callFunction(heapNumberWarmup, withArgs: [value])
+            forceGc()
+            printDigest(result)
+        }
+
+        // Reverse direction: warm with Smis, then feed a HeapNumber/HeapObject.
+        let smiWarmup = buildPhiFunction()
+        let smi = loadSmi()
+        prepareAndOptimize(smiWarmup, withArgs: [smi])
+        printDigest(b.callFunction(smiWarmup, withArgs: [smi]))
+        for value in [
+            loadDouble(), b.createObject(with: [b.randomCustomPropertyName(): loadSmi()]),
+            loadStringValue(),
+        ] {
+            let result = b.callFunction(smiWarmup, withArgs: [value])
+            forceGc()
+            printDigest(result)
+        }
+    }
+
+    // C1.1 / 489280531: wrong backedge type.
+    // The loop Phi is specialized for Smis during warm-up, and only the backedge
+    // carries the changed representation (on the last iteration).
+    func runBackedgeRepresentationVariant() {
+        func buildBackedgeFunction() -> Variable {
+            b.buildPlainFunction(with: .parameters(n: 1)) { args in
+                let value = b.loadInt(0)
+                b.buildRepeatLoop(n: 6) { i in
+                    let isLast = b.compare(i, with: b.loadInt(5), using: .equal)
+                    let incremented = b.binary(value, b.loadInt(1), with: .Add)
+                    let merged = b.ternary(isLast, args[0], incremented)
+                    b.reassign(variable: value, value: merged)
+                }
+                printDigest(value)
+                let result = b.binary(value, b.loadInt(1), with: .Add)
+                printDigest(result)
+                b.doReturn(result)
+            }
+        }
+
+        let f = buildBackedgeFunction()
+        let smi = loadSmi()
+        prepareAndOptimize(f, withArgs: [smi])
+        printDigest(b.callFunction(f, withArgs: [smi]))
+        for value in [
+            loadDouble(), b.createObject(with: [b.randomCustomPropertyName(): loadSmi()]),
+            b.createArray(with: [loadSmi(), loadDouble()]), loadStringValue(),
+        ] {
+            let result = b.callFunction(f, withArgs: [value])
+            forceGc()
+            printDigest(result)
+        }
+    }
+
+    // C1.1 / 493534950: Smi proof does not survive inlining.
+    // The callee performs Smi-specific bit operations and is inlined into the
+    // caller based on Smi feedback. The caller is then invoked with non-Smi
+    // values, invalidating the callee-local proof.
+    func runInlinedCheckedSmiVariant() {
+        func buildCallee() -> Variable {
+            b.buildPlainFunction(with: .parameters(n: 1)) { args in
+                let shifted = b.binary(args[0], b.loadInt(1), with: .LShift)
+                let masked = b.binary(shifted, b.loadInt(3), with: .BitAnd)
+                printDigest(masked)
+                b.doReturn(masked)
+            }
+        }
+
+        let callee = buildCallee()
+        let caller = b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            let result = b.callFunction(callee, withArgs: [args[0]])
+            let final = b.binary(result, b.loadInt(1), with: .Add)
+            printDigest(final)
+            b.doReturn(final)
+        }
+        let smi = loadSmi()
+        prepareAndOptimize(caller, withArgs: [smi])
+        printDigest(b.callFunction(caller, withArgs: [smi]))
+        for value in [
+            loadDouble(), b.loadFloat(5.0),
+            b.createObject(with: [b.randomCustomPropertyName(): loadSmi()]), loadStringValue(),
+            b.createArray(with: [loadSmi(), loadDouble()]),
+        ] {
+            let result = b.callFunction(caller, withArgs: [value])
+            forceGc()
+            printDigest(result)
+        }
+
+        // Re-optimize after the deopts and trigger once more with a string.
+        b.eval("%OptimizeMaglevOnNextCall(%@)", with: [caller])
+        printDigest(b.callFunction(caller, withArgs: [loadStringValue()]))
+    }
+
+    let variants: [() -> Void] = [
+        runElementKindVariant,
+        runPropertyRepresentationVariant,
+        runBinaryFeedbackVariant,
+        runTypedArrayVariant,
+        runCallInliningVariant,
+        runLoopVariant,
+        runValueEqualHeapNumberVariant,
+        runPhiRepresentationVariant,
+        runBackedgeRepresentationVariant,
+        runInlinedCheckedSmiVariant,
+    ]
+    for variant in variants.shuffled().prefix(Int.random(in: 1...2)) {
+        variant()
+    }
 }
 
 private func turbofanTierUpCallFuzzer(

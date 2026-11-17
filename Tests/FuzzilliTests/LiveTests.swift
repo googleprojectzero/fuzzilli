@@ -61,6 +61,93 @@ struct LiveTests {
         checkFailureRate(testResults: results, maxFailureRate: 0.15)
     }
 
+    @Test func testIteratorHelpersFuzzer() throws {
+        let runner = JavaScriptExecutor(
+            withArguments: ["--harmony", "--js-staging", "--future"])!
+
+        // The template starts with a random prefix and some random code, like most
+        // other program templates. Measure that baseline separately so that failures
+        // caused by unrelated code generation don't mask failures of the iterator
+        // helpers fuzzer itself.
+        let baseline = try Self.runLiveTest(iterations: 200, withRunner: runner) { b in
+            b.buildPrefix()
+            b.build(n: 5)
+        }
+
+        let results = try Self.runLiveTest(iterations: 200, withRunner: runner) { b in
+            IteratorHelpersFuzzer.generate(in: b)
+        }
+
+        // The template's own code should not noticeably increase the failure rate
+        // over the baseline. Allow a small margin for statistical noise.
+        checkFailureRate(testResults: results, maxFailureRate: baseline.failureRate + 0.05)
+    }
+
+    @Test func testMaglevTypeConfusionFuzzer() throws {
+        let runner = JavaScriptExecutor(
+            withArguments: [
+                "--allow-natives-syntax", "--expose-gc", "--maglev", "--maglev-inlining",
+                "--maglev-assert", "--maglev-assert-types",
+            ])!
+
+        // As above, measure the random prefix/code separately so that unrelated
+        // code generation noise does not mask errors in the template itself.
+        let baseline = try Self.runLiveTest(iterations: 200, withRunner: runner) { b in
+            b.buildPrefix()
+            b.build(n: 5)
+        }
+
+        let results = try Self.runLiveTest(iterations: 200, withRunner: runner) { b in
+            MaglevTypeConfusionFuzzer.generate(in: b)
+        }
+
+        checkFailureRate(testResults: results, maxFailureRate: baseline.failureRate + 0.1)
+    }
+
+    @Test func testMaglevDifferentialOutput() throws {
+        let optimizedRunner = JavaScriptExecutor(
+            withArguments: [
+                "--allow-natives-syntax", "--expose-gc", "--maglev", "--no-turbofan",
+                "--future", "--harmony", "--js-staging", "--fuzzing",
+            ])!
+        let referenceRunner = JavaScriptExecutor(
+            withArguments: [
+                "--allow-natives-syntax", "--expose-gc", "--no-maglev", "--no-turbofan",
+                "--future", "--harmony", "--js-staging", "--fuzzing",
+            ])!
+
+        let iterations = 25
+        var successfulPairs = 0
+        var differentials = 0
+
+        let fuzzer = makeMockFuzzer(environment: JavaScriptEnvironment())
+        fuzzer.sync {
+            let b = fuzzer.makeBuilder()
+            for _ in 0..<iterations {
+                MaglevTypeConfusionFuzzer.generate(in: b)
+                let program = b.finalize()
+                let script = fuzzer.lifter.lift(program)
+
+                guard let optimized = try? optimizedRunner.executeScript(script, withTimeout: 10),
+                    let reference = try? referenceRunner.executeScript(script, withTimeout: 10),
+                    optimized.isSuccess, reference.isSuccess
+                else {
+                    continue
+                }
+
+                successfulPairs += 1
+                if optimized.output != reference.output {
+                    differentials += 1
+                }
+            }
+        }
+
+        // The template prints a digest of every interesting value, so with a
+        // correct engine the optimized and reference runs must agree.
+        #expect(differentials == 0)
+        #expect(successfulPairs >= iterations / 2)
+    }
+
     @Test func testWasmCodeGenerationAndCompilation() throws {
         let runner = JavaScriptExecutor(
             type: .any,

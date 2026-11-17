@@ -146,6 +146,8 @@ let v8DumplingProfile = Profile(
         (MapTransitionFuzzer, 1),
         (ValueSerializerFuzzer, 1),
         (V8RegExpFuzzer, 1),
+        (IteratorHelpersFuzzer, 1),
+        (MaglevTypeConfusionFuzzer, 1),
         (FastApiCallFuzzer, 1),
         (RecursiveLazyDeoptFuzzer, 1),
         (IndirectLazyDeoptFuzzer, 1),
